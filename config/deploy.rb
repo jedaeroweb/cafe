@@ -2,7 +2,7 @@
 #lock "~> 3.15.0"
 
 set :application, "cafe"
-set :repo_url, "git@github.com:sleepinglion/cafe.git"
+set :repo_url, "git@github.com:jedaeroweb/cafe.git"
 
 # Default branch is :master
 # ask :branch, `git rev-parse --abbrev-ref HEAD`.chomp
