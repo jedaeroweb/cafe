@@ -26,7 +26,7 @@ set :ssh_options, verify_host_key: :never
 set :default_env, {'NODE_OPTIONS'=>'--openssl-legacy-provider'}
 
 # Default value for :linked_files is []
-append :linked_files, "config/database.yml", ".env"
+append :linked_files, 'config/database.yml', 'config/master.key', '.env'
 
 # Default value for linked_dirs is []
 append :linked_dirs, "log", "tmp/pids", "tmp/cache", "tmp/sockets", "public/system", "public/uploads"
