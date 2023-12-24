@@ -1,0 +1,15 @@
+<%= form_with(model: [:admin, product_category], local: true) do |form| %>
+  <div class="card">
+    <div class="card-body">
+      <div class="form-group">
+        <%= form.label :title %>
+        <%= form.text_field :title, :class => "form-control", :required => "required" %>
+      </div>
+      <div class="form-group">
+        <%= form.label :order_no %>
+        <%= form.number_field :order_no, :class => "form-control" %>
+      </div>
+    </div>
+  </div>
+  <%= form.submit :class => 'btn btn-primary btn-block  btn-lg' %>
+<% end %>

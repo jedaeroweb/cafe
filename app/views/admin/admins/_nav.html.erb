@@ -1,0 +1,22 @@
+<%
+  a_class='nav-link'
+  b_class='nav-link'
+
+  if params[:controller]=='admin/admins'
+    a_class+=' active'
+  end
+
+  if params[:controller]=='admin/branches'
+    b_class+=' active'
+  end
+%>
+<div class="col-12">
+  <nav class="sub-nav">
+    <ul class="nav nav-pills">
+      <li class="nav-item"><%=link_to t(:admin, scope: [:activerecord, :models]),admin_admins_path,{:class=>a_class} %></li>
+      <li class="nav-item"><%=link_to t(:branch, scope: [:activerecord, :models]),admin_branches_path,{:class=>b_class} %></li>
+      <li class="nav-item"><%=link_to t(:language),'',{:class=>b_class} %></li>
+      <li class="nav-item"><%=link_to t(:theme),'',{:class=>b_class} %></li>
+    </ul>
+  </nav>
+</div>

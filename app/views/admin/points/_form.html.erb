@@ -1,0 +1,27 @@
+<%= form_with(model: [:admin, point], local: true) do |form| %>
+  <div class="card">
+    <div class="card-body">
+      <%= form.fields_for :user_point do |up| %>
+        <div class="form-group">
+          <%= up.label :user_id %>
+          <%
+            selected_id = nil
+            if @point.user_point.user_id.present?
+              selected_user_id = @point.user_point.user_id.to_i
+            else
+              unless @selected_user.nil?
+                selected_user_id = @selected_user.id.to_i
+              end
+            end
+          %>
+          <%= up.select :user_id, options_from_collection_for_select(User.select('users.*').includes(:user_anon).where(:branch_id => session[:branch_id], :enable => true, :'user_anons.id' => nil).all, 'id', 'name',selected_user_id), {}, { :class => "form-control" } %>
+        </div>
+      <% end %>
+      <div class="form-group">
+        <%= form.label :point %>
+        <%= form.number_field :point, :class => "form-control", :required => "required" %>
+      </div>
+    </div>
+  </div>
+  <%= form.submit :class => 'btn btn-primary btn-block btn-lg' %>
+<% end %>

@@ -1,0 +1,45 @@
+<aside id="main-menu" class="col-12 col-md-2 col-xxl-1">
+  <h1><%= link_to @current_branch.title, new_admin_order_path %></h1>
+  <nav>
+    <ul class="nav">
+      <li class="nav-item
+            <% if params[:controller] == 'admin/orders' && params[:action] == 'new' %> active
+            <% end %>">
+        <%= link_to new_admin_order_path, :class => "nav-link" do %>
+          <i class="material-icons">payment</i><span><%= t(:order, scope: [:activerecord, :models]) %></span>
+        <% end %>
+      </li>
+      <li class="nav-item
+            <% if ['admin/products','admin/product_categories'].include?(params[:controller]) %> active
+            <% end %>">
+        <%= link_to admin_products_path, :class => "nav-link" do %>
+          <i class="material-icons">local_cafe</i><span><%= t(:product, scope: [:activerecord, :models]) %></span>
+        <% end %>
+      </li>
+      <li class="nav-item
+            <% if ['admin/accounts_products', 'admin/accounts_product_categories'].include?(params[:controller]) or (params[:controller] == 'admin/orders' && params[:action] != 'new')  %> active
+            <% end %>">
+        <%= link_to admin_orders_path, :class => "nav-link" do %>
+          <i class="material-icons">attach_money</i><span><%= t(:account, scope: [:activerecord, :models]) %></span>
+        <% end %>
+      </li>
+      <% unless @current_branch_setting.user_type.id==2 %>
+      <li class="nav-item
+            <% if ['admin/users','admin/groups','admin/points'].include?(params[:controller]) %> active
+            <% end %>">
+        <%= link_to admin_users_path, :class => "nav-link" do %>
+          <i class="material-icons">person</i><span><%= t(:user, scope: [:activerecord, :models]) %></span>
+        <% end %>
+      </li>
+      <% end %>
+      <li class="nav-item
+            <% if ['admin/admins','admin/branches'].include?(params[:controller]) %> active
+            <% end %>">
+        <%= link_to admin_admins_path, :class => "nav-link" do %>
+          <i class="material-icons">settings</i><span><%= t(:setting) %></span>
+        <% end %>
+      </li>
+    </ul>
+  </nav>
+</aside>
+

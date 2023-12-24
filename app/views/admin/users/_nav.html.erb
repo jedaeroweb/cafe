@@ -1,0 +1,30 @@
+<% if @use_point or @current_branch_setting.use_group %>
+  <%
+    a_class = 'nav-link'
+    b_class = 'nav-link'
+    c_class = 'nav-link'
+
+    if params[:controller] == 'admin/users'
+      a_class += ' active'
+    end
+
+    if params[:controller] == 'admin/points'
+      b_class += ' active'
+    end
+
+    if params[:controller] == 'admin/groups'
+      c_class += ' active'
+    end
+  %>
+  <div class="col-12">
+    <nav class="sub-nav">
+      <ul class="nav nav-pills">
+        <li class="nav-item"><%= link_to t(:user, scope: [:activerecord, :models]), admin_users_path, { :class => a_class } %></li>
+        <li class="nav-item"><%= link_to t(:point, scope: [:activerecord, :models]), admin_points_path, { :class => b_class } %></li>
+        <% if @current_branch_setting.use_group %>
+          <li class="nav-item"><%= link_to t(:group, scope: [:activerecord, :models]), admin_groups_path, { :class => c_class } %></li>
+        <% end %>
+      </ul>
+    </nav>
+  </div>
+<% end %>

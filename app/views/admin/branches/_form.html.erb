@@ -1,0 +1,49 @@
+<%= form_with(model: [:admin, branch], local: true) do |form| %>
+  <div class="card">
+    <div class="card-body">
+      <div class="form-row">
+        <div class="col-12 form-group">
+          <%= form.label :title %>
+          <%= form.text_field :title, :class => 'form-control', :required => 'required' %>
+        </div>
+        <%= form.fields_for :branch_setting do |bs| %>
+          <!-- <div class="col-12 form-group">
+            <%= bs.label :locale %>
+            <%= bs.select :locale,  options_for_select([[t(:korean), 'ko'], [t(:english), 'en'], [t(:chineses), 'zh-CN']], @branch.branch_setting.locale), {}, { :class => "form-control" } %>
+          </div> -->
+          <%= bs.fields_for :branch_setting_user_type do |ut| %>
+            <div class="col-12 form-group">
+              <%= ut.label :user_type_id %>
+              <%= ut.select :user_type_id, options_from_collection_for_select(UserType.where(:enable => true), 'id', 'title', @branch.branch_setting.branch_setting_user_type.user_type_id), {}, { :class => "form-control" } %>
+            </div>
+          <% end %>
+          <div class="col-12 form-group">
+            <%= label_tag t(:payment_method) %>
+            <div class="form-check">
+            <%= bs.collection_check_boxes(:payment_ids, Payment.where(:enable => true),:id,:title) %>
+            </div>
+          </div>
+          <div class="col-12 col-lg-6 form-group">
+            <%= bs.label :use_group %>
+            <%= bs.check_box :use_group %>
+          </div>
+          <div class="col-12 col-lg-6 form-group">
+            <%= bs.label :use_unique_number %>
+            <%= bs.check_box :use_unique_number %>
+          </div>
+          <div class="col-12 col-lg-6 form-group">
+            <%= bs.label :use_product_category %>
+            <%= bs.check_box :use_product_category %>
+          </div>
+        <% end %>
+        <%= form.fields_for :branch_picture do |bp| %>
+          <div class="col-12 form-group">
+            <%= bp.label :picture %>
+            <%= bp.file_field :picture, :class => "form-control-file" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+    <%= form.submit :class => 'btn btn-primary btn-block btn-lg' %>
+<% end %>

@@ -1,0 +1,51 @@
+<section id="show-branch" class="col-12">
+  <div class="row">
+    <%= render :partial => 'layouts/notice', :locals => { :errors => @branch.errors, :notice => notice, :alert => alert } %>
+  </div>
+  <div class="row">
+    <div class="col-12">
+      <article class="card">
+        <h3 class="card-header"><%=@branch.title %></h3>
+        <div class="card-body">
+          <dl>
+            <dt><%= t(:user_type_id, scope: [:activerecord, :attributes, :branch_setting_user_type]) %></dt>
+            <dd><%= @branch.branch_setting.user_type.title %></dd>
+            <dt><%= t(:payment_method) %></dt>
+            <dd>
+              <% @branch.branch_setting.payments.each do |payment| %>
+                <%= payment.title %>
+              <% end %>
+            </dd>
+            <dt><%= t(:admins_count, scope: [:activerecord, :attributes, :branch]) %></dt>
+            <dd><%= @branch.admins_count %></dd>
+            <dt><%= t(:users_count, scope: [:activerecord, :attributes, :branch]) %></dt>
+            <dd><%= @branch.users_count %></dd>
+            <dt><%= t(:products_count, scope: [:activerecord, :attributes, :branch]) %></dt>
+            <dd><%= @branch.products_count %></dd>
+            <dt><%= t(:orders_count, scope: [:activerecord, :attributes, :branch]) %></dt>
+            <dd><%= @branch.orders_count %></dd>
+            <dt><%= t(:use_group, scope: [:activerecord, :attributes, :branch_setting]) %></dt>
+            <dd><%= display_use_trans(@branch.branch_setting.use_group) %></dd>
+            <dt><%= t(:use_unique_number, scope: [:activerecord, :attributes, :branch_setting]) %></dt>
+            <dd><%= display_use_trans(@branch.branch_setting.use_unique_number) %></dd>
+            <dt><%= t(:use_product_category, scope: [:activerecord, :attributes, :branch_setting]) %></dt>
+            <dd><%= display_use_trans(@branch.branch_setting.use_product_category) %></dd>
+            <dt><%= t(:created_at, scope: [:activerecord, :attributes, :product]) %></dt>
+            <dd><%= I18n.l @branch.created_at.to_date, :format => :long %></dd>
+            <dt><%= t(:updated_at, scope: [:activerecord, :attributes, :product]) %></dt>
+            <dd><%= I18n.l @branch.updated_at.to_date, :format => :long %></dd>
+          </dl>
+        </div>
+      </article>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-12 col-xl-6">
+      <%= link_to t(:link_list), admin_branches_path, class: 'btn btn-secondary' %>
+    </div>
+    <div class="col-12 col-xl-6 text-right">
+      <%= link_to t(:edit), edit_admin_branch_path(@branch), class: 'btn btn-secondary' %>
+      <%= link_to t(:delete), admin_branch_path(@branch), class: 'btn btn-danger' %>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,40 @@
+<%
+
+  if @user.present?
+    user_id = @user.id.to_s
+  else
+    user_id = ''
+  end
+%>
+<%= form.hidden_field :user_id, value: user_id, id: 'order-user-id' %>
+<% unless @current_branch_setting.user_type.id==2 %>
+<article id="user-info"
+         <% if user_id.empty? %> style="display:none"
+         <% end %>>
+
+  <h3><span><%= t(:select_user) %></span></h3>
+  <div class="card p-2">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-12 col-lg-4">
+          <label><%= t(:user, scope: [:activerecord, :models]) %></label>
+          <p>
+            <span id="user_name"><% if @user %><%= @user.name %><% end %></span>
+          </p>
+        </div>
+        <div class="col-12 col-lg-5">
+          <label><%= t(:phone) %></label>
+          <p>
+            <span id="user_phone">
+              <% if user_id.empty? %>-<% else %><%= @user.phone %><% end %>
+            </span>
+          </p>
+        </div>
+        <div class="col-12 col-lg-3 text-right">
+          <input type="button" id="user_select_cancel" value="<%= t(:cancel) %>" class="btn btn-danger"/>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+<% end %>

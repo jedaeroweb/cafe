@@ -1,0 +1,25 @@
+<section id="intro" class="container">
+  <h2><%=t(:cafe_program) %></h2>
+  <article>
+    <h3><%=t(:cafe_program_description) %></h3>
+    <p><%=t(:cafe_program_content) %></p>
+  </article>
+  <article>
+    <h3><%=raw t(:it_is_free_program) %></h3>
+    <p><%=t(:free_prgram_description) %></p>
+  </article>
+
+  <div class="jumbotron hero-unit text-center">
+    <%=link_to t(:use_it_now),admin_path %>
+  </div>
+
+  <article>
+    <h3><%=t(:source_download) %></h3>
+    <p><%=raw t(:source_download_description) %></p>
+    <p><%=link_to 'GitHub','https://github.com/sleepinglion/cafe',:target =>'_blank' %></p>
+  </article>
+  <article>
+    <h3><%=t(:use_method) %></h3>
+    <p><%=raw t(:use_method_description) %></p>
+  </article>
+</section>

@@ -1,0 +1,81 @@
+<article id="branches" class="col-12">
+  <div class="row">
+    <%= render :partial => 'layouts/notice', :locals => { :errors => nil, :notice => notice, :alert => alert } %>
+  </div>
+  <h2 class="float-left"><%= t(:branch_list) %></h2>
+  <div class="float-right">
+    <p class="summary">
+      <span id="list_count" style="display:none"><%= @branch_count %></span>
+      <%= raw t(:there_are_n_branches, count: @branch_count) %>
+    </p>
+  </div>
+  <table class="table table-hover">
+    <colgroup>
+      <col style="width:150px">
+      <col>
+      <col>
+      <col>
+      <col>
+      <% if can?(:update, Branch) or can?(:delete, Branch) %>
+        <col<%= manage_width(Branch) %>>
+      <% end %>
+    </colgroup>
+    <thead class="thead-default">
+    <tr>
+      <th><%= t(:enable, scope: [:activerecord, :attributes, :branch]) %></th>
+      <th><%= t(:title, scope: [:activerecord, :attributes, :branch]) %></th>
+      <th class="text-center"><%= t(:user_type_id, scope: [:activerecord, :attributes, :branch_setting_user_type]) %></th>
+      <th class="text-center"><%= t(:payment_method) %></th>
+      <th class="text-right"><%= t(:picture, scope: [:activerecord, :attributes, :branch_picture]) %></th>
+      <th class="text-center"><%= t(:manage) %></th>
+    </tr>
+    </thead>
+    <tbody>
+    <% unless @branch_count.zero? %>
+      <% @branches.each_with_index do |branch, index| %>
+        <tr>
+          <td>
+            <% if session[:branch_id].to_i == branch.id.to_i %>
+              현재 사용중
+            <% else %>
+              <%= link_to '지점변경', admin_branch_switch_path(branch.id.to_i), :class => 'btn btn-secondary' %>
+            <% end %>
+          </td>
+          <td><%= link_to branch.title, admin_branch_path(branch) %></td>
+          <td class="text-center"><%= branch.branch_setting.user_type.title %></td>
+          <td class="text-center">
+            <% branch.branch_setting.payments.each do |payment| %>
+              <%= payment.title %>
+            <% end %>
+          </td>
+          <td class="text-right">
+            <% if branch.branch_picture.present? %>
+              <%= image_tag branch.branch_picture.picture.small_thumb.url %>
+            <% else %>
+              <%= t(:not_insert) %>
+            <% end %>
+          </td>
+          <% if can?(:update, branch) or can?(:delete, branch) %>
+            <td class="text-center">
+              <% if can? :update, branch %>
+                <%= link_to edit_admin_branch_path(branch), :class => "btn btn-secondary" do %>
+                  <%= t(:edit) %>
+                <% end %>
+              <% end %>
+              <% if can? :delete, branch %>
+                <%= link_to admin_branch_path(branch), :method => :delete, :data => { :confirm => t(:delete_cascade_confirm) }, :class => "btn btn-danger" do %>
+                  <%= t(:delete) %>
+                <% end %>
+              <% end %>
+            </td>
+          <% end %>
+        </tr>
+      <% end %>
+    <% end %>
+    </tbody>
+  </table>
+  <%= paginate @branches %>
+  <% if can? :create, Branch %>
+    <%= link_to t(:add), new_admin_branch_path, :class => "btn btn-primary" %>
+  <% end %>
+</article>
