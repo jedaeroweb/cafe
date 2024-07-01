@@ -1,6 +1,6 @@
-# What is SL Cafe
+# What is Jedaeroweb Cafe
 
-SL Cafe is Simple Order Management System(Like Cafe,Store)
+Jedaeroweb Cafe is simple order and payment management system(Like Cafe,Store)
 
 This Application is composed of [Rails](http://rubyonrails.org/)(user-pages,admin-pages) + UI [Boostrap](http://getbootstrap.com)
 
