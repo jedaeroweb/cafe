@@ -404,6 +404,11 @@ var ready=function(){
         $('.payment-layer').show();
     });
 
+    $("#select-again").click(function() {
+        $('.order-layer').show();
+        $('.payment-layer').hide();
+    });
+
     $("#cancel_all").click(function(){
         $("#order-new .list article .card input.quantity").val(0);
 

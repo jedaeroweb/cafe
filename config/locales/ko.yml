@@ -29,6 +29,8 @@ ko:
   setting: '설정'
 
   start_order : '주문시작'
+  order_complete : '주문완료'
+  select_again : '다시선택'
   select_complete : '선택완료'
   search_order : "주문내역"
   search_user : "회원검색"

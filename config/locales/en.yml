@@ -25,6 +25,10 @@ en:
   display : 'display'
   hidden : 'hidden'
 
+  start_order : 'start order'
+  order_complete : 'order complete'
+  select_again : 'select again'
+  select_complete : 'select complete'
   add_order : "add order"
   order : "order"
   product : "product"

@@ -308,6 +308,10 @@ var ready = function() {
     $(".order-layer").hide();
     $(".payment-layer").show();
   });
+  $("#select-again").click(function() {
+    $(".order-layer").show();
+    $(".payment-layer").hide();
+  });
   $("#cancel_all").click(function() {
     $("#order-new .list article .card input.quantity").val(0);
     $("#order_form tbody").empty();

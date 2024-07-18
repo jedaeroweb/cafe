@@ -1,6 +1,6 @@
 set :application, "cafe"
 set :repo_url, "git@github.com:jedaeroweb/cafe.git"
-set :branch, 'main'
+set :branch, 'master'
 set :deploy_to, '/home/deploy/cafe'
 
 # set :format, :pretty

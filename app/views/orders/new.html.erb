@@ -1,7 +1,7 @@
 <div class="row">
 <div id="order-new" class="col-12">
   <%= render :partial => 'layouts/notice', :locals => { :errors => @order.errors, :notice => notice, :alert => alert } %>
-
+  <h1 class="order-layer mt-3""><%= t(:select_product) %></h1>
     <%= form_with(model: @order, local: true, :html=>{:id=>"order_form", :class=>"row"}) do |form| %>
      <% unless @current_branch_setting.branch_setting_user_type.user_type_id==1 %>
       <%= render 'search_user_form' %>
@@ -21,9 +21,14 @@
     <div class="col-12 payment-layer">
     <%= render 'payment' %>
     </div>
-      <div  class="col-12 payment-layer">
+      <div class="col-8 payment-layer">
       <div class="d-grid gap-2 mt-3">
         <%= form.submit :value=>t(:order),:class=>"btn btn-primary btn-lg" %>
+      </div>
+    </div>
+    <div class="col-4 payment-layer">
+      <div class="d-grid gap-2 mt-3">
+      <%= button_tag t(:select_again), :type => 'button', id: 'select-again', class: "btn btn-danger btn-lg " %>
       </div>
     </div>
     <% end %>
