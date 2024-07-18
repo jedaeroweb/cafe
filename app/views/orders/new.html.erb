@@ -1,16 +1,31 @@
+<div class="row">
 <div id="order-new" class="col-12">
-  <div class="row">
-    <%= render :partial => 'layouts/notice', :locals => { :errors => @order.errors, :notice => notice, :alert => alert } %>
-  </div>
-  <div class="row">
-    <%= render 'admin/products/product_list' %>
-    <aside class="col-12 col-lg-4 left-form">
-      <article class="row">
-        <div class="col-12 p-4">
-          <%= render 'search_user_form' %>
-          <%= render 'form', order: @order %>
+  <%= render :partial => 'layouts/notice', :locals => { :errors => @order.errors, :notice => notice, :alert => alert } %>
+
+    <%= form_with(model: @order, local: true, :html=>{:id=>"order_form", :class=>"row"}) do |form| %>
+     <% unless @current_branch_setting.branch_setting_user_type.user_type_id==1 %>
+      <%= render 'search_user_form' %>
+      <% end  %>
+    <%= render 'products/product_list' %>
+    <aside class="col-12 col-lg-4 left-form order-layer">
+      <div class="row">
+        <%= render 'order_list',:order => @order %>
         </div>
-      </article>
+
     </aside>
+    <div  class="col-12 order-layer">
+    <div class="d-grid gap-2 mt-3">
+      <%= button_tag t(:select_complete), :type => 'button', id: 'select-complete', class: "btn btn-primary btn-lg disabled" %>
+    </div>
+    </div>
+    <div class="col-12 payment-layer">
+    <%= render 'payment' %>
+    </div>
+      <div  class="col-12 payment-layer">
+      <div class="d-grid gap-2 mt-3">
+        <%= form.submit :value=>t(:order),:class=>"btn btn-primary btn-lg" %>
+      </div>
+    </div>
+    <% end %>
   </div>
 </div>

@@ -55,7 +55,7 @@
         <td class="text-right d-none d-sm-table-cell"><%= I18n.l order.transaction_date.to_date, :format => :long %></td>
         <td class="text-right d-none d-sm-table-cell"><%= I18n.l order.created_at.to_datetime, :format => :short %></td>
         <% if can?(:update, order) or can?(:delete, order) %>
-          <td class="text-right">
+          <td class="text-center">
             <% if can? :update, order %>
               <%= link_to edit_admin_order_path(order), :class => "btn btn-secondary" do %>
                 <i class="glyphicon glyphicon-pencil"></i> <%= t(:edit) %>

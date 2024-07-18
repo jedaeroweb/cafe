@@ -1,5 +1,6 @@
 class BranchSetting < ApplicationRecord
   belongs_to :branch
+  belongs_to :user, optional: true
   has_many :branch_setting_payments
   has_one :branch_setting_user_type
   has_many :payments, through: :branch_setting_payments

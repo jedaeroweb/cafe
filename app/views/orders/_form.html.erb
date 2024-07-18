@@ -1,6 +1,0 @@
-<%= form_with(model: [:admin, order], local: true, :html=>{:id=>"order_form"}) do |form| %>
-  <%= render 'selected_user',:form => form %>
-  <%= render 'order_list',:order => form %>
-  <%= render 'payment' %>
-  <%= form.submit :value=>t(:order),:class=>"btn btn-primary btn-lg btn-block" %>
-<% end %>

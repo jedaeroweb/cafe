@@ -1,0 +1,20 @@
+<div class="row">
+  <div id="order-new" class="col-12">
+    <%= render :partial => 'layouts/notice', :locals => { :errors => @order.errors, :notice => notice, :alert => alert } %>
+    <h1><%=t(:complete_order) %></h1>
+    <p><span id="timer_span"></span></p>
+  </div>
+</div>
+<script>
+
+    var seconds_left = 10;
+    var interval = setInterval(function() {
+        document.getElementById('timer_span').innerHTML = --seconds_left;
+
+        if (seconds_left <= 0)
+        {
+            location.href = '/';
+            clearInterval(interval);
+        }
+    }, 1000);
+</script>

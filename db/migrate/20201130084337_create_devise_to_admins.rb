@@ -4,9 +4,8 @@ class CreateDeviseToAdmins < ActiveRecord::Migration[6.0]
       t.references :branch, null: false
 
       ## Database authenticatable
-      t.string :email, null: false, limit: 100
       t.string :name, null: false, limit: 60
-      t.string :encrypted_password, null: false, limit: 60
+      t.string :email, limit: 100
       t.string :phone, limit: 20
       t.date :birthday
       t.boolean :gender
@@ -46,7 +45,6 @@ class CreateDeviseToAdmins < ActiveRecord::Migration[6.0]
     end
 
     add_index :admins, :email, unique: true
-    add_index :admins, :name, unique: true
     # add_index :admins, :reset_password_token, :unique => true
     # add_index :admins, :confirmation_token,   :unique => true
     # add_index :admins, :unlock_token,         :unique => true

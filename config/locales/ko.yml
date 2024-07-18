@@ -2,6 +2,7 @@ ko:
   service_name: "제대로웹 간단주문 시스템"
   hello: "Hello world"
 
+  title: '제대로웹 카페'
   language: '언어'
   theme : '테마'
   korean: '한국어'
@@ -27,6 +28,8 @@ ko:
   browse: '찾기'
   setting: '설정'
 
+  start_order : '주문시작'
+  select_complete : '선택완료'
   search_order : "주문내역"
   search_user : "회원검색"
   select_user : "회원선택"

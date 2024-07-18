@@ -1,18 +1,28 @@
 class Admin::AdminController < ApplicationController
-  #load_and_authorize_resource except: [:create]
   load_and_authorize_resource
   before_action :set_branch_setting
+  helper_method :current_admin
+
+  def current_admin
+    Admin.find(session[:admin_id])
+  rescue
+    nil
+  end
 
   def current_ability
-    @current_ability ||= AdminAbility.new(current_admin)
+    unless session[:admin_id]
+      return AdminAbility.new(nil)
+    end
+
+    return @current_ability ||= AdminAbility.new(Admin.find(session[:admin_id]))
   end
 
   def resource_name
-    :admin
+    :user
   end
 
   def resource
-    @resource ||= Admin.new
+    @resource ||= User.new
   end
 
   def devise_mapping
@@ -23,7 +33,7 @@ class Admin::AdminController < ApplicationController
     if current_admin
       render file: "#{Rails.root}/public/403.html", status: 403, layout: false
     else
-      redirect_to new_admin_session_path
+      redirect_to new_user_session_path
     end
   end
 
@@ -35,23 +45,6 @@ class Admin::AdminController < ApplicationController
         'admin/popup'
       else
         'admin/application'
-      end
-    end
-  end
-
-  protected
-
-  def set_branch_setting
-    @current_branch = Branch.where(id: session[:branch_id], enable: true).first
-    @current_branch_setting = BranchSetting.where(branch_id: @current_branch, enable: true).first
-
-    @use_point = false
-
-    unless @current_branch_setting.user_type.id == 2
-      @current_branch_setting.payments.each do |payment|
-        if payment.id == 3
-          @use_point = true
-        end
       end
     end
   end

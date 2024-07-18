@@ -2,6 +2,7 @@ class CreateBranchSettings < ActiveRecord::Migration[6.0]
   def change
     create_table :branch_settings do |t|
       t.references :branch, null: false
+      t.references :user
       t.string :locale, null: false, limit: 10, default: I18n.default_locale
       t.boolean :use_group, null: false, default: true
       t.boolean :use_unique_number, null: false, default: true

@@ -1,15 +1,11 @@
 <div id="order-new" class="col-12">
-  <div class="row">
-    <%= render :partial => 'layouts/notice', :locals => { :errors => @order.errors, :notice => notice, :alert => alert } %>
-  </div>
+  <%= render :partial => 'layouts/notice', :locals => { :errors => @order.errors, :notice => notice, :alert => alert } %>
   <div class="row">
     <%= render 'admin/products/product_list' %>
     <aside class="col-12 col-lg-4 left-form">
       <div class="row">
-        <div class="col-12 p-4">
           <%= render 'search_user_form' %>
           <%= render 'form', order: @order %>
-        </div>
       </div>
     </aside>
   </div>

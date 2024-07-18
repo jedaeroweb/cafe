@@ -1,12 +1,20 @@
 class User < ApplicationRecord
   after_initialize :default_values
 
-  validates_length_of :name, within: 2..50
-  # mount_uploader :photo, UserUploader
+  include OmniauthAttributesConcern
+  devise :database_authenticatable, :registerable, :recoverable, :rememberable,  :validatable, :omniauthable, omniauth_providers: [:kakao, :naver, :twitter, :facebook, :apple, :google_oauth2, :github]
 
-  belongs_to :branch, counter_cache: true
+  validates_length_of :name, within: 1..60
+  validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
+  validates_uniqueness_of :email
+  validates_length_of :email, within: 4..150, allow_blank: true
+  validates_uniqueness_of :phone
+  validates :password, length: { within: 5..255}, allow_blank: true
+  validates_confirmation_of :password, allow_blank: true
+
   has_one :point, dependent: :destroy
   has_one :user_admin, dependent: :destroy
+  has_one :admin, through: :user_admin
   has_one :user_picture, -> { order id: :desc }, dependent: :destroy
   has_one :user_group, dependent: :destroy
   has_one :user_unique_number, dependent: :destroy
@@ -15,10 +23,18 @@ class User < ApplicationRecord
   has_one :user_point, dependent: :destroy
   has_many :orders, dependent: :nullify
   has_many :accounts, dependent: :nullify
-  has_many :user_contents, dependent: :destroy
+  has_many :user_authentications, dependent: :destroy
 
   accepts_nested_attributes_for :user_picture, allow_destroy: true, :reject_if => lambda { |c| c[:picture].blank? }
-  accepts_nested_attributes_for :user_contents, allow_destroy: true, :reject_if => lambda { |c| c[:content].blank? }
+  accepts_nested_attributes_for :user_authentications, allow_destroy: true
+
+  def self.create_from_omniauth(params)
+    self.__send__(params.provider, params)
+  end
+
+  def remember_me
+    true
+  end
 
   private
 

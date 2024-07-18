@@ -266,7 +266,7 @@ Devise.setup do |config|
   # config.navigational_formats = ['*/*', :html]
 
   # The default HTTP method used to sign out a resource. Default is :delete.
-  # config.sign_out_via = :get
+  config.sign_out_via = :get
 
   # ==> OmniAuth
   # Add a new OmniAuth provider. Check the wiki for more information on setting
@@ -308,8 +308,16 @@ Devise.setup do |config|
   # When set to false, does not sign a user in automatically after their password is
   # changed. Defaults to true, so a user is signed in automatically after changing a password.
   # config.sign_in_after_change_password = true
-  #
-  config.omniauth :facebook, ENV['FACEBOOK_KEY'] ,  ENV['FACEBOOK_SECRET'], :display => "popup" , :scope => 'email,publish_actions', info_fields: 'email,name,gender'
-  config.omniauth :twitter,  ENV['TWITTER_KEY'] ,  ENV['TWITTER_SECRET'] , :display => "popup" , :scope => 'email'
-  config.omniauth :google_oauth2, ENV['GOOGLE_CLIENT_ID'], ENV['GOOGLE_CLIENT_SECRET'], :display => "popup", scope: 'userinfo.email, userinfo.profile'
+  # 
+  #config.omniauth :kakao, ENV['KAKAO_KEY'] , ENV['KAKAO_SECRET']
+  config.omniauth :naver, ENV['NAVER_KEY'], ENV['NAVER_SECRET']
+  config.omniauth :facebook, ENV['FACEBOOK_APP_ID'], ENV['FACEBOOK_APP_SECRET']
+  config.omniauth :google_oauth2, ENV['GOOGLE_CLIENT_ID'], ENV['GOOGLE_CLIENT_SECRET'], { }
+  config.omniauth :twitter,  ENV['TWITTER_KEY'] ,  ENV['TWITTER_SECRET'], :scope => 'email'
+  config.omniauth :apple, ENV['CLIENT_ID'], '', {
+    scope: 'email name',
+    team_id: ENV['TEAM_ID'],
+    key_id: ENV['KEY_ID'],
+    pem: ENV['PRIVATE_KEY']
+  }
 end

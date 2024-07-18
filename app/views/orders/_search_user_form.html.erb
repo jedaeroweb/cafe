@@ -1,4 +1,4 @@
-<article id="user-search"<% if @user %> style="display:none"<% end %>>
+<article id="user-search" class="col-12 order-layer">
   <h3><span><%= t(:search_user) %></span></h3>
   <%= form_with(url: "/admin", method: "get", id: "user-search-form",class: "card") do %>
     <div class="card-body">

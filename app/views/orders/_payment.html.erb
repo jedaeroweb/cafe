@@ -1,4 +1,4 @@
-<article>
+<article class="mt-3">
   <h3><%= t(:payment_method) %>,<%= t(:total) %></h3>
   <div class="card">
     <input type="hidden" id="order_count" value=""/>
@@ -13,10 +13,12 @@
                 <label for="p_type<%= index %>" class="form-check-label">&nbsp;<%= payment.title %></label>
               </div>
             <% end %>
+            <% else %>
+            <input name="payment_method" id="p_type0" value="<%=@payments[0].id %>" type="hidden" checked="checked">
+            <% end %>
           <% end %>
-        <% end %>
       </div>
-      <%= t(:total_price) %>: <span id="total_price"></span><%= t(:currency) %>
+      <%= t(:total_price) %>: <span id="total-price">0</span>
     </div>
   </div>
 </article>

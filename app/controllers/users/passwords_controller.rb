@@ -1,6 +1,4 @@
-class Admins::PasswordsController < Devise::PasswordsController
-    layout 'admin/login'
-
+class Users::PasswordsController < Devise::PasswordsController
     protected
 
     def after_sending_reset_password_instructions_path_for(_resource_name)

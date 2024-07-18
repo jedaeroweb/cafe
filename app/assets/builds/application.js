@@ -4,9 +4,6 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __esm = (fn2, res) => function __init() {
-  return fn2 && (res = (0, fn2[__getOwnPropNames(fn2)[0]])(fn2 = 0)), res;
-};
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
@@ -30,592 +27,6 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
-
-// node_modules/@rails/actioncable/src/adapters.js
-var adapters_default;
-var init_adapters = __esm({
-  "node_modules/@rails/actioncable/src/adapters.js"() {
-    adapters_default = {
-      logger: typeof console !== "undefined" ? console : void 0,
-      WebSocket: typeof WebSocket !== "undefined" ? WebSocket : void 0
-    };
-  }
-});
-
-// node_modules/@rails/actioncable/src/logger.js
-var logger_default;
-var init_logger = __esm({
-  "node_modules/@rails/actioncable/src/logger.js"() {
-    init_adapters();
-    logger_default = {
-      log(...messages) {
-        if (this.enabled) {
-          messages.push(Date.now());
-          adapters_default.logger.log("[ActionCable]", ...messages);
-        }
-      }
-    };
-  }
-});
-
-// node_modules/@rails/actioncable/src/connection_monitor.js
-var now, secondsSince, ConnectionMonitor, connection_monitor_default;
-var init_connection_monitor = __esm({
-  "node_modules/@rails/actioncable/src/connection_monitor.js"() {
-    init_logger();
-    now = () => (/* @__PURE__ */ new Date()).getTime();
-    secondsSince = (time) => (now() - time) / 1e3;
-    ConnectionMonitor = class {
-      constructor(connection) {
-        this.visibilityDidChange = this.visibilityDidChange.bind(this);
-        this.connection = connection;
-        this.reconnectAttempts = 0;
-      }
-      start() {
-        if (!this.isRunning()) {
-          this.startedAt = now();
-          delete this.stoppedAt;
-          this.startPolling();
-          addEventListener("visibilitychange", this.visibilityDidChange);
-          logger_default.log(`ConnectionMonitor started. stale threshold = ${this.constructor.staleThreshold} s`);
-        }
-      }
-      stop() {
-        if (this.isRunning()) {
-          this.stoppedAt = now();
-          this.stopPolling();
-          removeEventListener("visibilitychange", this.visibilityDidChange);
-          logger_default.log("ConnectionMonitor stopped");
-        }
-      }
-      isRunning() {
-        return this.startedAt && !this.stoppedAt;
-      }
-      recordPing() {
-        this.pingedAt = now();
-      }
-      recordConnect() {
-        this.reconnectAttempts = 0;
-        this.recordPing();
-        delete this.disconnectedAt;
-        logger_default.log("ConnectionMonitor recorded connect");
-      }
-      recordDisconnect() {
-        this.disconnectedAt = now();
-        logger_default.log("ConnectionMonitor recorded disconnect");
-      }
-      // Private
-      startPolling() {
-        this.stopPolling();
-        this.poll();
-      }
-      stopPolling() {
-        clearTimeout(this.pollTimeout);
-      }
-      poll() {
-        this.pollTimeout = setTimeout(
-          () => {
-            this.reconnectIfStale();
-            this.poll();
-          },
-          this.getPollInterval()
-        );
-      }
-      getPollInterval() {
-        const { staleThreshold, reconnectionBackoffRate } = this.constructor;
-        const backoff = Math.pow(1 + reconnectionBackoffRate, Math.min(this.reconnectAttempts, 10));
-        const jitterMax = this.reconnectAttempts === 0 ? 1 : reconnectionBackoffRate;
-        const jitter = jitterMax * Math.random();
-        return staleThreshold * 1e3 * backoff * (1 + jitter);
-      }
-      reconnectIfStale() {
-        if (this.connectionIsStale()) {
-          logger_default.log(`ConnectionMonitor detected stale connection. reconnectAttempts = ${this.reconnectAttempts}, time stale = ${secondsSince(this.refreshedAt)} s, stale threshold = ${this.constructor.staleThreshold} s`);
-          this.reconnectAttempts++;
-          if (this.disconnectedRecently()) {
-            logger_default.log(`ConnectionMonitor skipping reopening recent disconnect. time disconnected = ${secondsSince(this.disconnectedAt)} s`);
-          } else {
-            logger_default.log("ConnectionMonitor reopening");
-            this.connection.reopen();
-          }
-        }
-      }
-      get refreshedAt() {
-        return this.pingedAt ? this.pingedAt : this.startedAt;
-      }
-      connectionIsStale() {
-        return secondsSince(this.refreshedAt) > this.constructor.staleThreshold;
-      }
-      disconnectedRecently() {
-        return this.disconnectedAt && secondsSince(this.disconnectedAt) < this.constructor.staleThreshold;
-      }
-      visibilityDidChange() {
-        if (document.visibilityState === "visible") {
-          setTimeout(
-            () => {
-              if (this.connectionIsStale() || !this.connection.isOpen()) {
-                logger_default.log(`ConnectionMonitor reopening stale connection on visibilitychange. visibilityState = ${document.visibilityState}`);
-                this.connection.reopen();
-              }
-            },
-            200
-          );
-        }
-      }
-    };
-    ConnectionMonitor.staleThreshold = 6;
-    ConnectionMonitor.reconnectionBackoffRate = 0.15;
-    connection_monitor_default = ConnectionMonitor;
-  }
-});
-
-// node_modules/@rails/actioncable/src/internal.js
-var internal_default;
-var init_internal = __esm({
-  "node_modules/@rails/actioncable/src/internal.js"() {
-    internal_default = {
-      "message_types": {
-        "welcome": "welcome",
-        "disconnect": "disconnect",
-        "ping": "ping",
-        "confirmation": "confirm_subscription",
-        "rejection": "reject_subscription"
-      },
-      "disconnect_reasons": {
-        "unauthorized": "unauthorized",
-        "invalid_request": "invalid_request",
-        "server_restart": "server_restart",
-        "remote": "remote"
-      },
-      "default_mount_path": "/cable",
-      "protocols": [
-        "actioncable-v1-json",
-        "actioncable-unsupported"
-      ]
-    };
-  }
-});
-
-// node_modules/@rails/actioncable/src/connection.js
-var message_types, protocols, supportedProtocols, indexOf, Connection, connection_default;
-var init_connection = __esm({
-  "node_modules/@rails/actioncable/src/connection.js"() {
-    init_adapters();
-    init_connection_monitor();
-    init_internal();
-    init_logger();
-    ({ message_types, protocols } = internal_default);
-    supportedProtocols = protocols.slice(0, protocols.length - 1);
-    indexOf = [].indexOf;
-    Connection = class {
-      constructor(consumer2) {
-        this.open = this.open.bind(this);
-        this.consumer = consumer2;
-        this.subscriptions = this.consumer.subscriptions;
-        this.monitor = new connection_monitor_default(this);
-        this.disconnected = true;
-      }
-      send(data) {
-        if (this.isOpen()) {
-          this.webSocket.send(JSON.stringify(data));
-          return true;
-        } else {
-          return false;
-        }
-      }
-      open() {
-        if (this.isActive()) {
-          logger_default.log(`Attempted to open WebSocket, but existing socket is ${this.getState()}`);
-          return false;
-        } else {
-          const socketProtocols = [...protocols, ...this.consumer.subprotocols || []];
-          logger_default.log(`Opening WebSocket, current state is ${this.getState()}, subprotocols: ${socketProtocols}`);
-          if (this.webSocket) {
-            this.uninstallEventHandlers();
-          }
-          this.webSocket = new adapters_default.WebSocket(this.consumer.url, socketProtocols);
-          this.installEventHandlers();
-          this.monitor.start();
-          return true;
-        }
-      }
-      close({ allowReconnect } = { allowReconnect: true }) {
-        if (!allowReconnect) {
-          this.monitor.stop();
-        }
-        if (this.isOpen()) {
-          return this.webSocket.close();
-        }
-      }
-      reopen() {
-        logger_default.log(`Reopening WebSocket, current state is ${this.getState()}`);
-        if (this.isActive()) {
-          try {
-            return this.close();
-          } catch (error) {
-            logger_default.log("Failed to reopen WebSocket", error);
-          } finally {
-            logger_default.log(`Reopening WebSocket in ${this.constructor.reopenDelay}ms`);
-            setTimeout(this.open, this.constructor.reopenDelay);
-          }
-        } else {
-          return this.open();
-        }
-      }
-      getProtocol() {
-        if (this.webSocket) {
-          return this.webSocket.protocol;
-        }
-      }
-      isOpen() {
-        return this.isState("open");
-      }
-      isActive() {
-        return this.isState("open", "connecting");
-      }
-      triedToReconnect() {
-        return this.monitor.reconnectAttempts > 0;
-      }
-      // Private
-      isProtocolSupported() {
-        return indexOf.call(supportedProtocols, this.getProtocol()) >= 0;
-      }
-      isState(...states) {
-        return indexOf.call(states, this.getState()) >= 0;
-      }
-      getState() {
-        if (this.webSocket) {
-          for (let state in adapters_default.WebSocket) {
-            if (adapters_default.WebSocket[state] === this.webSocket.readyState) {
-              return state.toLowerCase();
-            }
-          }
-        }
-        return null;
-      }
-      installEventHandlers() {
-        for (let eventName in this.events) {
-          const handler = this.events[eventName].bind(this);
-          this.webSocket[`on${eventName}`] = handler;
-        }
-      }
-      uninstallEventHandlers() {
-        for (let eventName in this.events) {
-          this.webSocket[`on${eventName}`] = function() {
-          };
-        }
-      }
-    };
-    Connection.reopenDelay = 500;
-    Connection.prototype.events = {
-      message(event) {
-        if (!this.isProtocolSupported()) {
-          return;
-        }
-        const { identifier, message, reason, reconnect, type } = JSON.parse(event.data);
-        switch (type) {
-          case message_types.welcome:
-            if (this.triedToReconnect()) {
-              this.reconnectAttempted = true;
-            }
-            this.monitor.recordConnect();
-            return this.subscriptions.reload();
-          case message_types.disconnect:
-            logger_default.log(`Disconnecting. Reason: ${reason}`);
-            return this.close({ allowReconnect: reconnect });
-          case message_types.ping:
-            return this.monitor.recordPing();
-          case message_types.confirmation:
-            this.subscriptions.confirmSubscription(identifier);
-            if (this.reconnectAttempted) {
-              this.reconnectAttempted = false;
-              return this.subscriptions.notify(identifier, "connected", { reconnected: true });
-            } else {
-              return this.subscriptions.notify(identifier, "connected", { reconnected: false });
-            }
-          case message_types.rejection:
-            return this.subscriptions.reject(identifier);
-          default:
-            return this.subscriptions.notify(identifier, "received", message);
-        }
-      },
-      open() {
-        logger_default.log(`WebSocket onopen event, using '${this.getProtocol()}' subprotocol`);
-        this.disconnected = false;
-        if (!this.isProtocolSupported()) {
-          logger_default.log("Protocol is unsupported. Stopping monitor and disconnecting.");
-          return this.close({ allowReconnect: false });
-        }
-      },
-      close(event) {
-        logger_default.log("WebSocket onclose event");
-        if (this.disconnected) {
-          return;
-        }
-        this.disconnected = true;
-        this.monitor.recordDisconnect();
-        return this.subscriptions.notifyAll("disconnected", { willAttemptReconnect: this.monitor.isRunning() });
-      },
-      error() {
-        logger_default.log("WebSocket onerror event");
-      }
-    };
-    connection_default = Connection;
-  }
-});
-
-// node_modules/@rails/actioncable/src/subscription.js
-var extend, Subscription;
-var init_subscription = __esm({
-  "node_modules/@rails/actioncable/src/subscription.js"() {
-    extend = function(object, properties) {
-      if (properties != null) {
-        for (let key in properties) {
-          const value = properties[key];
-          object[key] = value;
-        }
-      }
-      return object;
-    };
-    Subscription = class {
-      constructor(consumer2, params = {}, mixin) {
-        this.consumer = consumer2;
-        this.identifier = JSON.stringify(params);
-        extend(this, mixin);
-      }
-      // Perform a channel action with the optional data passed as an attribute
-      perform(action, data = {}) {
-        data.action = action;
-        return this.send(data);
-      }
-      send(data) {
-        return this.consumer.send({ command: "message", identifier: this.identifier, data: JSON.stringify(data) });
-      }
-      unsubscribe() {
-        return this.consumer.subscriptions.remove(this);
-      }
-    };
-  }
-});
-
-// node_modules/@rails/actioncable/src/subscription_guarantor.js
-var SubscriptionGuarantor, subscription_guarantor_default;
-var init_subscription_guarantor = __esm({
-  "node_modules/@rails/actioncable/src/subscription_guarantor.js"() {
-    init_logger();
-    SubscriptionGuarantor = class {
-      constructor(subscriptions) {
-        this.subscriptions = subscriptions;
-        this.pendingSubscriptions = [];
-      }
-      guarantee(subscription) {
-        if (this.pendingSubscriptions.indexOf(subscription) == -1) {
-          logger_default.log(`SubscriptionGuarantor guaranteeing ${subscription.identifier}`);
-          this.pendingSubscriptions.push(subscription);
-        } else {
-          logger_default.log(`SubscriptionGuarantor already guaranteeing ${subscription.identifier}`);
-        }
-        this.startGuaranteeing();
-      }
-      forget(subscription) {
-        logger_default.log(`SubscriptionGuarantor forgetting ${subscription.identifier}`);
-        this.pendingSubscriptions = this.pendingSubscriptions.filter((s) => s !== subscription);
-      }
-      startGuaranteeing() {
-        this.stopGuaranteeing();
-        this.retrySubscribing();
-      }
-      stopGuaranteeing() {
-        clearTimeout(this.retryTimeout);
-      }
-      retrySubscribing() {
-        this.retryTimeout = setTimeout(
-          () => {
-            if (this.subscriptions && typeof this.subscriptions.subscribe === "function") {
-              this.pendingSubscriptions.map((subscription) => {
-                logger_default.log(`SubscriptionGuarantor resubscribing ${subscription.identifier}`);
-                this.subscriptions.subscribe(subscription);
-              });
-            }
-          },
-          500
-        );
-      }
-    };
-    subscription_guarantor_default = SubscriptionGuarantor;
-  }
-});
-
-// node_modules/@rails/actioncable/src/subscriptions.js
-var Subscriptions;
-var init_subscriptions = __esm({
-  "node_modules/@rails/actioncable/src/subscriptions.js"() {
-    init_subscription();
-    init_subscription_guarantor();
-    init_logger();
-    Subscriptions = class {
-      constructor(consumer2) {
-        this.consumer = consumer2;
-        this.guarantor = new subscription_guarantor_default(this);
-        this.subscriptions = [];
-      }
-      create(channelName, mixin) {
-        const channel = channelName;
-        const params = typeof channel === "object" ? channel : { channel };
-        const subscription = new Subscription(this.consumer, params, mixin);
-        return this.add(subscription);
-      }
-      // Private
-      add(subscription) {
-        this.subscriptions.push(subscription);
-        this.consumer.ensureActiveConnection();
-        this.notify(subscription, "initialized");
-        this.subscribe(subscription);
-        return subscription;
-      }
-      remove(subscription) {
-        this.forget(subscription);
-        if (!this.findAll(subscription.identifier).length) {
-          this.sendCommand(subscription, "unsubscribe");
-        }
-        return subscription;
-      }
-      reject(identifier) {
-        return this.findAll(identifier).map((subscription) => {
-          this.forget(subscription);
-          this.notify(subscription, "rejected");
-          return subscription;
-        });
-      }
-      forget(subscription) {
-        this.guarantor.forget(subscription);
-        this.subscriptions = this.subscriptions.filter((s) => s !== subscription);
-        return subscription;
-      }
-      findAll(identifier) {
-        return this.subscriptions.filter((s) => s.identifier === identifier);
-      }
-      reload() {
-        return this.subscriptions.map((subscription) => this.subscribe(subscription));
-      }
-      notifyAll(callbackName, ...args) {
-        return this.subscriptions.map((subscription) => this.notify(subscription, callbackName, ...args));
-      }
-      notify(subscription, callbackName, ...args) {
-        let subscriptions;
-        if (typeof subscription === "string") {
-          subscriptions = this.findAll(subscription);
-        } else {
-          subscriptions = [subscription];
-        }
-        return subscriptions.map((subscription2) => typeof subscription2[callbackName] === "function" ? subscription2[callbackName](...args) : void 0);
-      }
-      subscribe(subscription) {
-        if (this.sendCommand(subscription, "subscribe")) {
-          this.guarantor.guarantee(subscription);
-        }
-      }
-      confirmSubscription(identifier) {
-        logger_default.log(`Subscription confirmed ${identifier}`);
-        this.findAll(identifier).map((subscription) => this.guarantor.forget(subscription));
-      }
-      sendCommand(subscription, command) {
-        const { identifier } = subscription;
-        return this.consumer.send({ command, identifier });
-      }
-    };
-  }
-});
-
-// node_modules/@rails/actioncable/src/consumer.js
-function createWebSocketURL(url) {
-  if (typeof url === "function") {
-    url = url();
-  }
-  if (url && !/^wss?:/i.test(url)) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.href = a.href;
-    a.protocol = a.protocol.replace("http", "ws");
-    return a.href;
-  } else {
-    return url;
-  }
-}
-var Consumer;
-var init_consumer = __esm({
-  "node_modules/@rails/actioncable/src/consumer.js"() {
-    init_connection();
-    init_subscriptions();
-    Consumer = class {
-      constructor(url) {
-        this._url = url;
-        this.subscriptions = new Subscriptions(this);
-        this.connection = new connection_default(this);
-        this.subprotocols = [];
-      }
-      get url() {
-        return createWebSocketURL(this._url);
-      }
-      send(data) {
-        return this.connection.send(data);
-      }
-      connect() {
-        return this.connection.open();
-      }
-      disconnect() {
-        return this.connection.close({ allowReconnect: false });
-      }
-      ensureActiveConnection() {
-        if (!this.connection.isActive()) {
-          return this.connection.open();
-        }
-      }
-      addSubProtocol(subprotocol) {
-        this.subprotocols = [...this.subprotocols, subprotocol];
-      }
-    };
-  }
-});
-
-// node_modules/@rails/actioncable/src/index.js
-var src_exports = {};
-__export(src_exports, {
-  Connection: () => connection_default,
-  ConnectionMonitor: () => connection_monitor_default,
-  Consumer: () => Consumer,
-  INTERNAL: () => internal_default,
-  Subscription: () => Subscription,
-  SubscriptionGuarantor: () => subscription_guarantor_default,
-  Subscriptions: () => Subscriptions,
-  adapters: () => adapters_default,
-  createConsumer: () => createConsumer,
-  createWebSocketURL: () => createWebSocketURL,
-  getConfig: () => getConfig,
-  logger: () => logger_default
-});
-function createConsumer(url = getConfig("url") || internal_default.default_mount_path) {
-  return new Consumer(url);
-}
-function getConfig(name) {
-  const element = document.head.querySelector(`meta[name='action-cable-${name}']`);
-  if (element) {
-    return element.getAttribute("content");
-  }
-}
-var init_src = __esm({
-  "node_modules/@rails/actioncable/src/index.js"() {
-    init_connection();
-    init_connection_monitor();
-    init_consumer();
-    init_internal();
-    init_subscription();
-    init_subscriptions();
-    init_subscription_guarantor();
-    init_adapters();
-    init_logger();
-  }
-});
 
 // node_modules/jquery/dist/jquery.js
 var require_jquery = __commonJS({
@@ -643,7 +54,7 @@ var require_jquery = __commonJS({
         return arr.concat.apply([], array);
       };
       var push = arr.push;
-      var indexOf2 = arr.indexOf;
+      var indexOf = arr.indexOf;
       var class2type = {};
       var toString = class2type.toString;
       var hasOwn = class2type.hasOwnProperty;
@@ -878,7 +289,7 @@ var require_jquery = __commonJS({
           return ret;
         },
         inArray: function(elem, arr2, i) {
-          return arr2 == null ? -1 : indexOf2.call(arr2, elem, i);
+          return arr2 == null ? -1 : indexOf.call(arr2, elem, i);
         },
         isXMLDoc: function(elem) {
           var namespace = elem && elem.namespaceURI, docElem = elem && (elem.ownerDocument || elem).documentElement;
@@ -895,14 +306,14 @@ var require_jquery = __commonJS({
           return first;
         },
         grep: function(elems, callback, invert) {
-          var callbackInverse, matches = [], i = 0, length = elems.length, callbackExpect = !invert;
+          var callbackInverse, matches2 = [], i = 0, length = elems.length, callbackExpect = !invert;
           for (; i < length; i++) {
             callbackInverse = !callback(elems[i], i);
             if (callbackInverse !== callbackExpect) {
-              matches.push(elems[i]);
+              matches2.push(elems[i]);
             }
           }
-          return matches;
+          return matches2;
         },
         // arg is for internal usage only
         map: function(elems, callback, arg) {
@@ -979,7 +390,7 @@ var require_jquery = __commonJS({
       };
       var preferredDoc = document2, pushNative = push;
       (function() {
-        var i, Expr, outermostContext, sortInput, hasDuplicate, push2 = pushNative, document3, documentElement2, documentIsHTML, rbuggyQSA, matches, expando = jQuery2.expando, dirruns = 0, done = 0, classCache = createCache(), tokenCache = createCache(), compilerCache = createCache(), nonnativeSelectorCache = createCache(), sortOrder = function(a, b) {
+        var i, Expr, outermostContext, sortInput, hasDuplicate, push2 = pushNative, document3, documentElement2, documentIsHTML, rbuggyQSA, matches2, expando = jQuery2.expando, dirruns = 0, done = 0, classCache = createCache(), tokenCache = createCache(), compilerCache = createCache(), nonnativeSelectorCache = createCache(), sortOrder = function(a, b) {
           if (a === b) {
             hasDuplicate = true;
           }
@@ -1037,7 +448,7 @@ var require_jquery = __commonJS({
           };
         }
         function find(selector, context, results, seed) {
-          var m, i2, elem, nid, match, groups, newSelector, newContext = context && context.ownerDocument, nodeType = context ? context.nodeType : 9;
+          var m2, i2, elem, nid, match, groups, newSelector, newContext = context && context.ownerDocument, nodeType = context ? context.nodeType : 9;
           results = results || [];
           if (typeof selector !== "string" || !selector || nodeType !== 1 && nodeType !== 9 && nodeType !== 11) {
             return results;
@@ -1047,10 +458,10 @@ var require_jquery = __commonJS({
             context = context || document3;
             if (documentIsHTML) {
               if (nodeType !== 11 && (match = rquickExpr2.exec(selector))) {
-                if (m = match[1]) {
+                if (m2 = match[1]) {
                   if (nodeType === 9) {
-                    if (elem = context.getElementById(m)) {
-                      if (elem.id === m) {
+                    if (elem = context.getElementById(m2)) {
+                      if (elem.id === m2) {
                         push2.call(results, elem);
                         return results;
                       }
@@ -1058,7 +469,7 @@ var require_jquery = __commonJS({
                       return results;
                     }
                   } else {
-                    if (newContext && (elem = newContext.getElementById(m)) && find.contains(context, elem) && elem.id === m) {
+                    if (newContext && (elem = newContext.getElementById(m2)) && find.contains(context, elem) && elem.id === m2) {
                       push2.call(results, elem);
                       return results;
                     }
@@ -1066,8 +477,8 @@ var require_jquery = __commonJS({
                 } else if (match[2]) {
                   push2.apply(results, context.getElementsByTagName(selector));
                   return results;
-                } else if ((m = match[3]) && context.getElementsByClassName) {
-                  push2.apply(results, context.getElementsByClassName(m));
+                } else if ((m2 = match[3]) && context.getElementsByClassName) {
+                  push2.apply(results, context.getElementsByClassName(m2));
                   return results;
                 }
               }
@@ -1110,13 +521,13 @@ var require_jquery = __commonJS({
         }
         function createCache() {
           var keys = [];
-          function cache2(key, value) {
+          function cache(key, value) {
             if (keys.push(key + " ") > Expr.cacheLength) {
-              delete cache2[keys.shift()];
+              delete cache[keys.shift()];
             }
-            return cache2[key + " "] = value;
+            return cache[key + " "] = value;
           }
-          return cache2;
+          return cache;
         }
         function markFunction(fn2) {
           fn2[expando] = true;
@@ -1169,11 +580,11 @@ var require_jquery = __commonJS({
         function createPositionalPseudo(fn2) {
           return markFunction(function(argument) {
             argument = +argument;
-            return markFunction(function(seed, matches2) {
+            return markFunction(function(seed, matches3) {
               var j, matchIndexes = fn2([], seed.length, argument), i2 = matchIndexes.length;
               while (i2--) {
                 if (seed[j = matchIndexes[i2]]) {
-                  seed[j] = !(matches2[j] = seed[j]);
+                  seed[j] = !(matches3[j] = seed[j]);
                 }
               }
             });
@@ -1190,7 +601,7 @@ var require_jquery = __commonJS({
           document3 = doc;
           documentElement2 = document3.documentElement;
           documentIsHTML = !jQuery2.isXMLDoc(document3);
-          matches = documentElement2.matches || documentElement2.webkitMatchesSelector || documentElement2.msMatchesSelector;
+          matches2 = documentElement2.matches || documentElement2.webkitMatchesSelector || documentElement2.msMatchesSelector;
           if (documentElement2.msMatchesSelector && // Support: IE 11+, Edge 17 - 18+
           // IE/Edge sometimes throw a "Permission denied" error when strict-comparing
           // two documents; shallow comparisons work.
@@ -1203,7 +614,7 @@ var require_jquery = __commonJS({
             return !document3.getElementsByName || !document3.getElementsByName(jQuery2.expando).length;
           });
           support.disconnectedMatch = assert(function(el) {
-            return matches.call(el, "*");
+            return matches2.call(el, "*");
           });
           support.scope = assert(function() {
             return document3.querySelectorAll(":scope");
@@ -1272,7 +683,7 @@ var require_jquery = __commonJS({
           };
           rbuggyQSA = [];
           assert(function(el) {
-            var input;
+            var input2;
             documentElement2.appendChild(el).innerHTML = "<a id='" + expando + "' href='' disabled='disabled'></a><select id='" + expando + "-\r\\' disabled='disabled'><option selected=''></option></select>";
             if (!el.querySelectorAll("[selected]").length) {
               rbuggyQSA.push("\\[" + whitespace + "*(?:value|" + booleans + ")");
@@ -1286,16 +697,16 @@ var require_jquery = __commonJS({
             if (!el.querySelectorAll(":checked").length) {
               rbuggyQSA.push(":checked");
             }
-            input = document3.createElement("input");
-            input.setAttribute("type", "hidden");
-            el.appendChild(input).setAttribute("name", "D");
+            input2 = document3.createElement("input");
+            input2.setAttribute("type", "hidden");
+            el.appendChild(input2).setAttribute("name", "D");
             documentElement2.appendChild(el).disabled = true;
             if (el.querySelectorAll(":disabled").length !== 2) {
               rbuggyQSA.push(":enabled", ":disabled");
             }
-            input = document3.createElement("input");
-            input.setAttribute("name", "");
-            el.appendChild(input);
+            input2 = document3.createElement("input");
+            input2.setAttribute("name", "");
+            el.appendChild(input2);
             if (!el.querySelectorAll("[name='']").length) {
               rbuggyQSA.push("\\[" + whitespace + "*name" + whitespace + "*=" + whitespace + `*(?:''|"")`);
             }
@@ -1324,7 +735,7 @@ var require_jquery = __commonJS({
               if (b === document3 || b.ownerDocument == preferredDoc && find.contains(preferredDoc, b)) {
                 return 1;
               }
-              return sortInput ? indexOf2.call(sortInput, a) - indexOf2.call(sortInput, b) : 0;
+              return sortInput ? indexOf.call(sortInput, a) - indexOf.call(sortInput, b) : 0;
             }
             return compare & 4 ? -1 : 1;
           };
@@ -1337,7 +748,7 @@ var require_jquery = __commonJS({
           setDocument(elem);
           if (documentIsHTML && !nonnativeSelectorCache[expr + " "] && (!rbuggyQSA || !rbuggyQSA.test(expr))) {
             try {
-              var ret = matches.call(elem, expr);
+              var ret = matches2.call(elem, expr);
               if (ret || support.disconnectedMatch || // As well, disconnected nodes are said to be in a document
               // fragment in IE 9
               elem.document && elem.document.nodeType !== 11) {
@@ -1499,7 +910,7 @@ var require_jquery = __commonJS({
                   return !!elem.parentNode;
                 }
               ) : function(elem, _context, xml) {
-                var cache2, outerCache, node, nodeIndex, start3, dir2 = simple !== forward ? "nextSibling" : "previousSibling", parent = elem.parentNode, name = ofType && elem.nodeName.toLowerCase(), useCache = !xml && !ofType, diff = false;
+                var cache, outerCache, node, nodeIndex, start3, dir2 = simple !== forward ? "nextSibling" : "previousSibling", parent = elem.parentNode, name = ofType && elem.nodeName.toLowerCase(), useCache = !xml && !ofType, diff = false;
                 if (parent) {
                   if (simple) {
                     while (dir2) {
@@ -1516,9 +927,9 @@ var require_jquery = __commonJS({
                   start3 = [forward ? parent.firstChild : parent.lastChild];
                   if (forward && useCache) {
                     outerCache = parent[expando] || (parent[expando] = {});
-                    cache2 = outerCache[type] || [];
-                    nodeIndex = cache2[0] === dirruns && cache2[1];
-                    diff = nodeIndex && cache2[2];
+                    cache = outerCache[type] || [];
+                    nodeIndex = cache[0] === dirruns && cache[1];
+                    diff = nodeIndex && cache[2];
                     node = nodeIndex && parent.childNodes[nodeIndex];
                     while (node = ++nodeIndex && node && node[dir2] || // Fallback to seeking `elem` from the start
                     (diff = nodeIndex = 0) || start3.pop()) {
@@ -1530,8 +941,8 @@ var require_jquery = __commonJS({
                   } else {
                     if (useCache) {
                       outerCache = elem[expando] || (elem[expando] = {});
-                      cache2 = outerCache[type] || [];
-                      nodeIndex = cache2[0] === dirruns && cache2[1];
+                      cache = outerCache[type] || [];
+                      nodeIndex = cache[0] === dirruns && cache[1];
                       diff = nodeIndex;
                     }
                     if (diff === false) {
@@ -1560,11 +971,11 @@ var require_jquery = __commonJS({
               }
               if (fn2.length > 1) {
                 args = [pseudo, pseudo, "", argument];
-                return Expr.setFilters.hasOwnProperty(pseudo.toLowerCase()) ? markFunction(function(seed, matches2) {
+                return Expr.setFilters.hasOwnProperty(pseudo.toLowerCase()) ? markFunction(function(seed, matches3) {
                   var idx, matched = fn2(seed, argument), i2 = matched.length;
                   while (i2--) {
-                    idx = indexOf2.call(seed, matched[i2]);
-                    seed[idx] = !(matches2[idx] = matched[i2]);
+                    idx = indexOf.call(seed, matched[i2]);
+                    seed[idx] = !(matches3[idx] = matched[i2]);
                   }
                 }) : function(elem) {
                   return fn2(elem, 0, args);
@@ -1576,18 +987,18 @@ var require_jquery = __commonJS({
           pseudos: {
             // Potentially complex pseudos
             not: markFunction(function(selector) {
-              var input = [], results = [], matcher = compile(selector.replace(rtrimCSS, "$1"));
-              return matcher[expando] ? markFunction(function(seed, matches2, _context, xml) {
+              var input2 = [], results = [], matcher = compile(selector.replace(rtrimCSS, "$1"));
+              return matcher[expando] ? markFunction(function(seed, matches3, _context, xml) {
                 var elem, unmatched = matcher(seed, null, xml, []), i2 = seed.length;
                 while (i2--) {
                   if (elem = unmatched[i2]) {
-                    seed[i2] = !(matches2[i2] = elem);
+                    seed[i2] = !(matches3[i2] = elem);
                   }
                 }
               }) : function(elem, _context, xml) {
-                input[0] = elem;
-                matcher(input, null, xml, results);
-                input[0] = null;
+                input2[0] = elem;
+                matcher(input2, null, xml, results);
+                input2[0] = null;
                 return !results.pop();
               };
             }),
@@ -1916,7 +1327,7 @@ var require_jquery = __commonJS({
                 }
                 i2 = matcherOut.length;
                 while (i2--) {
-                  if ((elem = matcherOut[i2]) && (temp = postFinder ? indexOf2.call(seed, elem) : preMap[i2]) > -1) {
+                  if ((elem = matcherOut[i2]) && (temp = postFinder ? indexOf.call(seed, elem) : preMap[i2]) > -1) {
                     seed[temp] = !(results[temp] = elem);
                   }
                 }
@@ -1937,7 +1348,7 @@ var require_jquery = __commonJS({
           var checkContext, matcher, j, len = tokens.length, leadingRelative = Expr.relative[tokens[0].type], implicitRelative = leadingRelative || Expr.relative[" "], i2 = leadingRelative ? 1 : 0, matchContext = addCombinator(function(elem) {
             return elem === checkContext;
           }, implicitRelative, true), matchAnyContext = addCombinator(function(elem) {
-            return indexOf2.call(checkContext, elem) > -1;
+            return indexOf.call(checkContext, elem) > -1;
           }, implicitRelative, true), matchers = [function(elem, context, xml) {
             var ret = !leadingRelative && (xml || context != outermostContext) || ((checkContext = context).nodeType ? matchContext(elem, context, xml) : matchAnyContext(elem, context, xml));
             checkContext = null;
@@ -2159,7 +1570,7 @@ var require_jquery = __commonJS({
         }
         if (typeof qualifier !== "string") {
           return jQuery2.grep(elements, function(elem) {
-            return indexOf2.call(qualifier, elem) > -1 !== not;
+            return indexOf.call(qualifier, elem) > -1 !== not;
           });
         }
         return jQuery2.filter(qualifier, elements, not);
@@ -2178,11 +1589,11 @@ var require_jquery = __commonJS({
       };
       jQuery2.fn.extend({
         find: function(selector) {
-          var i, ret, len = this.length, self2 = this;
+          var i, ret, len = this.length, self = this;
           if (typeof selector !== "string") {
             return this.pushStack(jQuery2(selector).filter(function() {
               for (i = 0; i < len; i++) {
-                if (jQuery2.contains(self2[i], this)) {
+                if (jQuery2.contains(self[i], this)) {
                   return true;
                 }
               }
@@ -2190,7 +1601,7 @@ var require_jquery = __commonJS({
           }
           ret = this.pushStack([]);
           for (i = 0; i < len; i++) {
-            jQuery2.find(selector, self2[i], ret);
+            jQuery2.find(selector, self[i], ret);
           }
           return len > 1 ? jQuery2.uniqueSort(ret) : ret;
         },
@@ -2308,9 +1719,9 @@ var require_jquery = __commonJS({
             return this[0] && this[0].parentNode ? this.first().prevAll().length : -1;
           }
           if (typeof elem === "string") {
-            return indexOf2.call(jQuery2(elem), this[0]);
+            return indexOf.call(jQuery2(elem), this[0]);
           }
-          return indexOf2.call(
+          return indexOf.call(
             this,
             // If it receives a jQuery object, the first element is used
             elem.jquery ? elem[0] : elem
@@ -2411,7 +1822,7 @@ var require_jquery = __commonJS({
       }
       jQuery2.Callbacks = function(options) {
         options = typeof options === "string" ? createOptions(options) : jQuery2.extend({}, options);
-        var firing, memory, fired, locked, list = [], queue = [], firingIndex = -1, fire = function() {
+        var firing, memory, fired, locked, list = [], queue = [], firingIndex = -1, fire2 = function() {
           locked = locked || options.once;
           fired = firing = true;
           for (; queue.length; firingIndex = -1) {
@@ -2434,7 +1845,7 @@ var require_jquery = __commonJS({
               list = "";
             }
           }
-        }, self2 = {
+        }, self = {
           // Add a callback or a collection of callbacks to the list
           add: function() {
             if (list) {
@@ -2445,7 +1856,7 @@ var require_jquery = __commonJS({
               (function add(args) {
                 jQuery2.each(args, function(_, arg) {
                   if (isFunction(arg)) {
-                    if (!options.unique || !self2.has(arg)) {
+                    if (!options.unique || !self.has(arg)) {
                       list.push(arg);
                     }
                   } else if (arg && arg.length && toType2(arg) !== "string") {
@@ -2454,7 +1865,7 @@ var require_jquery = __commonJS({
                 });
               })(arguments);
               if (memory && !firing) {
-                fire();
+                fire2();
               }
             }
             return this;
@@ -2515,14 +1926,14 @@ var require_jquery = __commonJS({
               args = [context, args.slice ? args.slice() : args];
               queue.push(args);
               if (!firing) {
-                fire();
+                fire2();
               }
             }
             return this;
           },
           // Call all the callbacks with the given arguments
           fire: function() {
-            self2.fireWith(this, arguments);
+            self.fireWith(this, arguments);
             return this;
           },
           // To know if the callbacks have already been called at least once
@@ -2530,7 +1941,7 @@ var require_jquery = __commonJS({
             return !!fired;
           }
         };
-        return self2;
+        return self;
       };
       function Identity(v) {
         return v;
@@ -2906,15 +2317,15 @@ var require_jquery = __commonJS({
           return value;
         },
         set: function(owner, data, value) {
-          var prop, cache2 = this.cache(owner);
+          var prop, cache = this.cache(owner);
           if (typeof data === "string") {
-            cache2[camelCase(data)] = value;
+            cache[camelCase(data)] = value;
           } else {
             for (prop in data) {
-              cache2[camelCase(prop)] = data[prop];
+              cache[camelCase(prop)] = data[prop];
             }
           }
-          return cache2;
+          return cache;
         },
         get: function(owner, key) {
           return key === void 0 ? this.cache(owner) : (
@@ -2930,8 +2341,8 @@ var require_jquery = __commonJS({
           return value !== void 0 ? value : key;
         },
         remove: function(owner, key) {
-          var i, cache2 = owner[this.expando];
-          if (cache2 === void 0) {
+          var i, cache = owner[this.expando];
+          if (cache === void 0) {
             return;
           }
           if (key !== void 0) {
@@ -2939,14 +2350,14 @@ var require_jquery = __commonJS({
               key = key.map(camelCase);
             } else {
               key = camelCase(key);
-              key = key in cache2 ? [key] : key.match(rnothtmlwhite) || [];
+              key = key in cache ? [key] : key.match(rnothtmlwhite) || [];
             }
             i = key.length;
             while (i--) {
-              delete cache2[key[i]];
+              delete cache[key[i]];
             }
           }
-          if (key === void 0 || jQuery2.isEmptyObject(cache2)) {
+          if (key === void 0 || jQuery2.isEmptyObject(cache)) {
             if (owner.nodeType) {
               owner[this.expando] = void 0;
             } else {
@@ -2955,14 +2366,14 @@ var require_jquery = __commonJS({
           }
         },
         hasData: function(owner) {
-          var cache2 = owner[this.expando];
-          return cache2 !== void 0 && !jQuery2.isEmptyObject(cache2);
+          var cache = owner[this.expando];
+          return cache !== void 0 && !jQuery2.isEmptyObject(cache);
         }
       };
       var dataPriv = new Data2();
       var dataUser = new Data2();
       var rbrace = /^(?:\{[\w\W]*\}|\[[\w\W]*\])$/, rmultiDash = /[A-Z]/g;
-      function getData(data) {
+      function getData2(data) {
         if (data === "true") {
           return true;
         }
@@ -2987,7 +2398,7 @@ var require_jquery = __commonJS({
           data = elem.getAttribute(name);
           if (typeof data === "string") {
             try {
-              data = getData(data);
+              data = getData2(data);
             } catch (e) {
             }
             dataUser.set(elem, key, data);
@@ -3287,11 +2698,11 @@ var require_jquery = __commonJS({
       var rtagName = /<([a-z][^\/\0>\x20\t\r\n\f]*)/i;
       var rscriptType = /^$|^module$|\/(?:java|ecma)script/i;
       (function() {
-        var fragment = document2.createDocumentFragment(), div = fragment.appendChild(document2.createElement("div")), input = document2.createElement("input");
-        input.setAttribute("type", "radio");
-        input.setAttribute("checked", "checked");
-        input.setAttribute("name", "t");
-        div.appendChild(input);
+        var fragment = document2.createDocumentFragment(), div = fragment.appendChild(document2.createElement("div")), input2 = document2.createElement("input");
+        input2.setAttribute("type", "radio");
+        input2.setAttribute("checked", "checked");
+        input2.setAttribute("name", "t");
+        div.appendChild(input2);
         support.checkClone = div.cloneNode(true).cloneNode(true).lastChild.checked;
         div.innerHTML = "<textarea>x</textarea>";
         support.noCloneChecked = !!div.cloneNode(true).lastChild.defaultValue;
@@ -4009,11 +3420,11 @@ var require_jquery = __commonJS({
         var fragment, first, scripts, hasScripts, node, doc, i = 0, l = collection.length, iNoClone = l - 1, value = args[0], valueIsFunction = isFunction(value);
         if (valueIsFunction || l > 1 && typeof value === "string" && !support.checkClone && rchecked.test(value)) {
           return collection.each(function(index) {
-            var self2 = collection.eq(index);
+            var self = collection.eq(index);
             if (valueIsFunction) {
-              args[0] = value.call(this, index, self2.html());
+              args[0] = value.call(this, index, self.html());
             }
-            domManip(self2, args, callback, ignored);
+            domManip(self, args, callback, ignored);
           });
         }
         if (l) {
@@ -4408,10 +3819,10 @@ var require_jquery = __commonJS({
         fontWeight: "400"
       };
       function setPositiveNumber(_elem, value, subtract) {
-        var matches = rcssNum.exec(value);
-        return matches ? (
+        var matches2 = rcssNum.exec(value);
+        return matches2 ? (
           // Guard against undefined "subtract", e.g., when used as in cssHooks
-          Math.max(0, matches[2] - (subtract || 0)) + (matches[3] || "px")
+          Math.max(0, matches2[2] - (subtract || 0)) + (matches2[3] || "px")
         ) : value;
       }
       function boxModelAdjustment(elem, dimension, box, isBorderBox, styles, computedVal) {
@@ -4607,7 +4018,7 @@ var require_jquery = __commonJS({
             }
           },
           set: function(elem, value, extra) {
-            var matches, styles = getStyles(elem), scrollboxSizeBuggy = !support.scrollboxSize() && styles.position === "absolute", boxSizingNeeded = scrollboxSizeBuggy || extra, isBorderBox = boxSizingNeeded && jQuery2.css(elem, "boxSizing", false, styles) === "border-box", subtract = extra ? boxModelAdjustment(
+            var matches2, styles = getStyles(elem), scrollboxSizeBuggy = !support.scrollboxSize() && styles.position === "absolute", boxSizingNeeded = scrollboxSizeBuggy || extra, isBorderBox = boxSizingNeeded && jQuery2.css(elem, "boxSizing", false, styles) === "border-box", subtract = extra ? boxModelAdjustment(
               elem,
               dimension,
               extra,
@@ -4619,7 +4030,7 @@ var require_jquery = __commonJS({
                 elem["offset" + dimension[0].toUpperCase() + dimension.slice(1)] - parseFloat(styles[dimension]) - boxModelAdjustment(elem, dimension, "border", false, styles) - 0.5
               );
             }
-            if (subtract && (matches = rcssNum.exec(value)) && (matches[3] || "px") !== "px") {
+            if (subtract && (matches2 = rcssNum.exec(value)) && (matches2[3] || "px") !== "px") {
               elem.style[dimension] = value;
               value = jQuery2.css(elem, dimension);
             }
@@ -5230,14 +4641,14 @@ var require_jquery = __commonJS({
         });
       };
       (function() {
-        var input = document2.createElement("input"), select = document2.createElement("select"), opt = select.appendChild(document2.createElement("option"));
-        input.type = "checkbox";
-        support.checkOn = input.value !== "";
+        var input2 = document2.createElement("input"), select = document2.createElement("select"), opt = select.appendChild(document2.createElement("option"));
+        input2.type = "checkbox";
+        support.checkOn = input2.value !== "";
         support.optSelected = opt.selected;
-        input = document2.createElement("input");
-        input.value = "t";
-        input.type = "radio";
-        support.radioValue = input.value === "t";
+        input2 = document2.createElement("input");
+        input2.value = "t";
+        input2.type = "radio";
+        support.radioValue = input2.value === "t";
       })();
       var boolHook, attrHandle = jQuery2.expr.attrHandle;
       jQuery2.fn.extend({
@@ -5487,7 +4898,7 @@ var require_jquery = __commonJS({
           return this;
         },
         toggleClass: function(value, stateVal) {
-          var classNames, className, i, self2, type = typeof value, isValidValue = type === "string" || Array.isArray(value);
+          var classNames, className, i, self, type = typeof value, isValidValue = type === "string" || Array.isArray(value);
           if (isFunction(value)) {
             return this.each(function(i2) {
               jQuery2(this).toggleClass(
@@ -5502,13 +4913,13 @@ var require_jquery = __commonJS({
           classNames = classesToArray(value);
           return this.each(function() {
             if (isValidValue) {
-              self2 = jQuery2(this);
+              self = jQuery2(this);
               for (i = 0; i < classNames.length; i++) {
                 className = classNames[i];
-                if (self2.hasClass(className)) {
-                  self2.removeClass(className);
+                if (self.hasClass(className)) {
+                  self.removeClass(className);
                 } else {
-                  self2.addClass(className);
+                  self.addClass(className);
                 }
               }
             } else if (value === void 0 || type === "boolean") {
@@ -5647,7 +5058,7 @@ var require_jquery = __commonJS({
         }
       });
       var location2 = window2.location;
-      var nonce = { guid: Date.now() };
+      var nonce2 = { guid: Date.now() };
       var rquery = /\?/;
       jQuery2.parseXML = function(data) {
         var xml, parserErrorElem;
@@ -6173,7 +5584,7 @@ var require_jquery = __commonJS({
             }
             if (s.cache === false) {
               cacheURL = cacheURL.replace(rantiCache, "$1");
-              uncached = (rquery.test(cacheURL) ? "&" : "?") + "_=" + nonce.guid++ + uncached;
+              uncached = (rquery.test(cacheURL) ? "&" : "?") + "_=" + nonce2.guid++ + uncached;
             }
             s.url = cacheURL + uncached;
           } else if (s.data && s.processData && (s.contentType || "").indexOf("application/x-www-form-urlencoded") === 0) {
@@ -6386,11 +5797,11 @@ var require_jquery = __commonJS({
             });
           }
           return this.each(function() {
-            var self2 = jQuery2(this), contents = self2.contents();
+            var self = jQuery2(this), contents = self.contents();
             if (contents.length) {
               contents.wrapAll(html);
             } else {
-              self2.append(html);
+              self.append(html);
             }
           });
         },
@@ -6570,7 +5981,7 @@ var require_jquery = __commonJS({
       jQuery2.ajaxSetup({
         jsonp: "callback",
         jsonpCallback: function() {
-          var callback = oldCallbacks.pop() || jQuery2.expando + "_" + nonce.guid++;
+          var callback = oldCallbacks.pop() || jQuery2.expando + "_" + nonce2.guid++;
           this[callback] = true;
           return callback;
         }
@@ -6649,7 +6060,7 @@ var require_jquery = __commonJS({
         return jQuery2.merge([], parsed.childNodes);
       };
       jQuery2.fn.load = function(url, params, callback) {
-        var selector, type, response, self2 = this, off = url.indexOf(" ");
+        var selector, type, response, self = this, off = url.indexOf(" ");
         if (off > -1) {
           selector = stripAndCollapse(url.slice(off));
           url = url.slice(0, off);
@@ -6660,7 +6071,7 @@ var require_jquery = __commonJS({
         } else if (params && typeof params === "object") {
           type = "POST";
         }
-        if (self2.length > 0) {
+        if (self.length > 0) {
           jQuery2.ajax({
             url,
             // If "type" variable is undefined, then "GET" method will be used.
@@ -6671,7 +6082,7 @@ var require_jquery = __commonJS({
             data: params
           }).done(function(responseText) {
             response = arguments;
-            self2.html(selector ? (
+            self.html(selector ? (
               // If a selector was specified, locate the right elements in a dummy div
               // Exclude scripts to avoid IE 'Permission Denied' errors
               jQuery2("<div>").append(jQuery2.parseHTML(responseText)).find(selector)
@@ -6680,7 +6091,7 @@ var require_jquery = __commonJS({
               responseText
             ));
           }).always(callback && function(jqXHR, status) {
-            self2.each(function() {
+            self.each(function() {
               callback.apply(this, response || [jqXHR.responseText, status, jqXHR]);
             });
           });
@@ -6796,7 +6207,7 @@ var require_jquery = __commonJS({
         }
       });
       jQuery2.each({ scrollLeft: "pageXOffset", scrollTop: "pageYOffset" }, function(method, prop) {
-        var top3 = "pageYOffset" === prop;
+        var top2 = "pageYOffset" === prop;
         jQuery2.fn[method] = function(val) {
           return access(this, function(elem, method2, val2) {
             var win;
@@ -6810,8 +6221,8 @@ var require_jquery = __commonJS({
             }
             if (win) {
               win.scrollTo(
-                !top3 ? val2 : win.pageXOffset,
-                top3 ? val2 : win.pageYOffset
+                !top2 ? val2 : win.pageXOffset,
+                top2 ? val2 : win.pageYOffset
               );
             } else {
               elem[method2] = val2;
@@ -6967,5188 +6378,622 @@ var require_jquery = __commonJS({
   }
 });
 
-// node_modules/@hotwired/turbo/dist/turbo.es2017-esm.js
-var turbo_es2017_esm_exports = {};
-__export(turbo_es2017_esm_exports, {
-  FetchEnctype: () => FetchEnctype,
-  FetchMethod: () => FetchMethod,
-  FetchRequest: () => FetchRequest,
-  FetchResponse: () => FetchResponse,
-  FrameElement: () => FrameElement,
-  FrameLoadingStyle: () => FrameLoadingStyle,
-  FrameRenderer: () => FrameRenderer,
-  PageRenderer: () => PageRenderer,
-  PageSnapshot: () => PageSnapshot,
-  StreamActions: () => StreamActions,
-  StreamElement: () => StreamElement,
-  StreamSourceElement: () => StreamSourceElement,
-  cache: () => cache,
-  clearCache: () => clearCache,
-  connectStreamSource: () => connectStreamSource,
-  disconnectStreamSource: () => disconnectStreamSource,
-  fetch: () => fetchWithTurboHeaders,
-  fetchEnctypeFromString: () => fetchEnctypeFromString,
-  fetchMethodFromString: () => fetchMethodFromString,
-  isSafe: () => isSafe,
-  navigator: () => navigator$1,
-  registerAdapter: () => registerAdapter,
-  renderStreamMessage: () => renderStreamMessage,
-  session: () => session,
-  setConfirmMethod: () => setConfirmMethod,
-  setFormMode: () => setFormMode,
-  setProgressBarDelay: () => setProgressBarDelay,
-  start: () => start,
-  visit: () => visit
-});
-(function(prototype) {
-  if (typeof prototype.requestSubmit == "function") return;
-  prototype.requestSubmit = function(submitter) {
-    if (submitter) {
-      validateSubmitter(submitter, this);
-      submitter.click();
-    } else {
-      submitter = document.createElement("input");
-      submitter.type = "submit";
-      submitter.hidden = true;
-      this.appendChild(submitter);
-      submitter.click();
-      this.removeChild(submitter);
-    }
-  };
-  function validateSubmitter(submitter, form) {
-    submitter instanceof HTMLElement || raise(TypeError, "parameter 1 is not of type 'HTMLElement'");
-    submitter.type == "submit" || raise(TypeError, "The specified element is not a submit button");
-    submitter.form == form || raise(DOMException, "The specified element is not owned by this form element", "NotFoundError");
-  }
-  function raise(errorConstructor, message, name) {
-    throw new errorConstructor("Failed to execute 'requestSubmit' on 'HTMLFormElement': " + message + ".", name);
-  }
-})(HTMLFormElement.prototype);
-var submittersByForm = /* @__PURE__ */ new WeakMap();
-function findSubmitterFromClickTarget(target) {
-  const element = target instanceof Element ? target : target instanceof Node ? target.parentElement : null;
-  const candidate = element ? element.closest("input, button") : null;
-  return candidate?.type == "submit" ? candidate : null;
-}
-function clickCaptured(event) {
-  const submitter = findSubmitterFromClickTarget(event.target);
-  if (submitter && submitter.form) {
-    submittersByForm.set(submitter.form, submitter);
-  }
-}
-(function() {
-  if ("submitter" in Event.prototype) return;
-  let prototype = window.Event.prototype;
-  if ("SubmitEvent" in window) {
-    const prototypeOfSubmitEvent = window.SubmitEvent.prototype;
-    if (/Apple Computer/.test(navigator.vendor) && !("submitter" in prototypeOfSubmitEvent)) {
-      prototype = prototypeOfSubmitEvent;
-    } else {
-      return;
-    }
-  }
-  addEventListener("click", clickCaptured, true);
-  Object.defineProperty(prototype, "submitter", {
-    get() {
-      if (this.type == "submit" && this.target instanceof HTMLFormElement) {
-        return submittersByForm.get(this.target);
-      }
-    }
-  });
-})();
-var FrameLoadingStyle = {
-  eager: "eager",
-  lazy: "lazy"
+// node_modules/@rails/ujs/app/assets/javascripts/rails-ujs.esm.js
+var linkClickSelector = "a[data-confirm], a[data-method], a[data-remote]:not([disabled]), a[data-disable-with], a[data-disable]";
+var buttonClickSelector = {
+  selector: "button[data-remote]:not([form]), button[data-confirm]:not([form])",
+  exclude: "form button"
 };
-var FrameElement = class _FrameElement extends HTMLElement {
-  static delegateConstructor = void 0;
-  loaded = Promise.resolve();
-  static get observedAttributes() {
-    return ["disabled", "loading", "src"];
-  }
-  constructor() {
-    super();
-    this.delegate = new _FrameElement.delegateConstructor(this);
-  }
-  connectedCallback() {
-    this.delegate.connect();
-  }
-  disconnectedCallback() {
-    this.delegate.disconnect();
-  }
-  reload() {
-    return this.delegate.sourceURLReloaded();
-  }
-  attributeChangedCallback(name) {
-    if (name == "loading") {
-      this.delegate.loadingStyleChanged();
-    } else if (name == "src") {
-      this.delegate.sourceURLChanged();
-    } else if (name == "disabled") {
-      this.delegate.disabledChanged();
-    }
-  }
-  /**
-   * Gets the URL to lazily load source HTML from
-   */
-  get src() {
-    return this.getAttribute("src");
-  }
-  /**
-   * Sets the URL to lazily load source HTML from
-   */
-  set src(value) {
-    if (value) {
-      this.setAttribute("src", value);
-    } else {
-      this.removeAttribute("src");
-    }
-  }
-  /**
-   * Gets the refresh mode for the frame.
-   */
-  get refresh() {
-    return this.getAttribute("refresh");
-  }
-  /**
-   * Sets the refresh mode for the frame.
-   */
-  set refresh(value) {
-    if (value) {
-      this.setAttribute("refresh", value);
-    } else {
-      this.removeAttribute("refresh");
-    }
-  }
-  /**
-   * Determines if the element is loading
-   */
-  get loading() {
-    return frameLoadingStyleFromString(this.getAttribute("loading") || "");
-  }
-  /**
-   * Sets the value of if the element is loading
-   */
-  set loading(value) {
-    if (value) {
-      this.setAttribute("loading", value);
-    } else {
-      this.removeAttribute("loading");
-    }
-  }
-  /**
-   * Gets the disabled state of the frame.
-   *
-   * If disabled, no requests will be intercepted by the frame.
-   */
-  get disabled() {
-    return this.hasAttribute("disabled");
-  }
-  /**
-   * Sets the disabled state of the frame.
-   *
-   * If disabled, no requests will be intercepted by the frame.
-   */
-  set disabled(value) {
-    if (value) {
-      this.setAttribute("disabled", "");
-    } else {
-      this.removeAttribute("disabled");
-    }
-  }
-  /**
-   * Gets the autoscroll state of the frame.
-   *
-   * If true, the frame will be scrolled into view automatically on update.
-   */
-  get autoscroll() {
-    return this.hasAttribute("autoscroll");
-  }
-  /**
-   * Sets the autoscroll state of the frame.
-   *
-   * If true, the frame will be scrolled into view automatically on update.
-   */
-  set autoscroll(value) {
-    if (value) {
-      this.setAttribute("autoscroll", "");
-    } else {
-      this.removeAttribute("autoscroll");
-    }
-  }
-  /**
-   * Determines if the element has finished loading
-   */
-  get complete() {
-    return !this.delegate.isLoading;
-  }
-  /**
-   * Gets the active state of the frame.
-   *
-   * If inactive, source changes will not be observed.
-   */
-  get isActive() {
-    return this.ownerDocument === document && !this.isPreview;
-  }
-  /**
-   * Sets the active state of the frame.
-   *
-   * If inactive, source changes will not be observed.
-   */
-  get isPreview() {
-    return this.ownerDocument?.documentElement?.hasAttribute("data-turbo-preview");
-  }
+var inputChangeSelector = "select[data-remote], input[data-remote], textarea[data-remote]";
+var formSubmitSelector = "form:not([data-turbo=true])";
+var formInputClickSelector = "form:not([data-turbo=true]) input[type=submit], form:not([data-turbo=true]) input[type=image], form:not([data-turbo=true]) button[type=submit], form:not([data-turbo=true]) button:not([type]), input[type=submit][form], input[type=image][form], button[type=submit][form], button[form]:not([type])";
+var formDisableSelector = "input[data-disable-with]:enabled, button[data-disable-with]:enabled, textarea[data-disable-with]:enabled, input[data-disable]:enabled, button[data-disable]:enabled, textarea[data-disable]:enabled";
+var formEnableSelector = "input[data-disable-with]:disabled, button[data-disable-with]:disabled, textarea[data-disable-with]:disabled, input[data-disable]:disabled, button[data-disable]:disabled, textarea[data-disable]:disabled";
+var fileInputSelector = "input[name][type=file]:not([disabled])";
+var linkDisableSelector = "a[data-disable-with], a[data-disable]";
+var buttonDisableSelector = "button[data-remote][data-disable-with], button[data-remote][data-disable]";
+var nonce = null;
+var loadCSPNonce = () => {
+  const metaTag = document.querySelector("meta[name=csp-nonce]");
+  return nonce = metaTag && metaTag.content;
 };
-function frameLoadingStyleFromString(style) {
-  switch (style.toLowerCase()) {
-    case "lazy":
-      return FrameLoadingStyle.lazy;
-    default:
-      return FrameLoadingStyle.eager;
-  }
-}
-function expandURL(locatable) {
-  return new URL(locatable.toString(), document.baseURI);
-}
-function getAnchor(url) {
-  let anchorMatch;
-  if (url.hash) {
-    return url.hash.slice(1);
-  } else if (anchorMatch = url.href.match(/#(.*)$/)) {
-    return anchorMatch[1];
-  }
-}
-function getAction$1(form, submitter) {
-  const action = submitter?.getAttribute("formaction") || form.getAttribute("action") || form.action;
-  return expandURL(action);
-}
-function getExtension(url) {
-  return (getLastPathComponent(url).match(/\.[^.]*$/) || [])[0] || "";
-}
-function isHTML(url) {
-  return !!getExtension(url).match(/^(?:|\.(?:htm|html|xhtml|php))$/);
-}
-function isPrefixedBy(baseURL, url) {
-  const prefix = getPrefix(url);
-  return baseURL.href === expandURL(prefix).href || baseURL.href.startsWith(prefix);
-}
-function locationIsVisitable(location2, rootLocation) {
-  return isPrefixedBy(location2, rootLocation) && isHTML(location2);
-}
-function getRequestURL(url) {
-  const anchor = getAnchor(url);
-  return anchor != null ? url.href.slice(0, -(anchor.length + 1)) : url.href;
-}
-function toCacheKey(url) {
-  return getRequestURL(url);
-}
-function urlsAreEqual(left2, right2) {
-  return expandURL(left2).href == expandURL(right2).href;
-}
-function getPathComponents(url) {
-  return url.pathname.split("/").slice(1);
-}
-function getLastPathComponent(url) {
-  return getPathComponents(url).slice(-1)[0];
-}
-function getPrefix(url) {
-  return addTrailingSlash(url.origin + url.pathname);
-}
-function addTrailingSlash(value) {
-  return value.endsWith("/") ? value : value + "/";
-}
-var FetchResponse = class {
-  constructor(response) {
-    this.response = response;
-  }
-  get succeeded() {
-    return this.response.ok;
-  }
-  get failed() {
-    return !this.succeeded;
-  }
-  get clientError() {
-    return this.statusCode >= 400 && this.statusCode <= 499;
-  }
-  get serverError() {
-    return this.statusCode >= 500 && this.statusCode <= 599;
-  }
-  get redirected() {
-    return this.response.redirected;
-  }
-  get location() {
-    return expandURL(this.response.url);
-  }
-  get isHTML() {
-    return this.contentType && this.contentType.match(/^(?:text\/([^\s;,]+\b)?html|application\/xhtml\+xml)\b/);
-  }
-  get statusCode() {
-    return this.response.status;
-  }
-  get contentType() {
-    return this.header("Content-Type");
-  }
-  get responseText() {
-    return this.response.clone().text();
-  }
-  get responseHTML() {
-    if (this.isHTML) {
-      return this.response.clone().text();
-    } else {
-      return Promise.resolve(void 0);
-    }
-  }
-  header(name) {
-    return this.response.headers.get(name);
-  }
-};
-function activateScriptElement(element) {
-  if (element.getAttribute("data-turbo-eval") == "false") {
-    return element;
+var cspNonce = () => nonce || loadCSPNonce();
+var m = Element.prototype.matches || Element.prototype.matchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector || Element.prototype.webkitMatchesSelector;
+var matches = function(element, selector) {
+  if (selector.exclude) {
+    return m.call(element, selector.selector) && !m.call(element, selector.exclude);
   } else {
-    const createdScriptElement = document.createElement("script");
-    const cspNonce = getMetaContent("csp-nonce");
-    if (cspNonce) {
-      createdScriptElement.nonce = cspNonce;
-    }
-    createdScriptElement.textContent = element.textContent;
-    createdScriptElement.async = false;
-    copyElementAttributes(createdScriptElement, element);
-    return createdScriptElement;
-  }
-}
-function copyElementAttributes(destinationElement, sourceElement) {
-  for (const { name, value } of sourceElement.attributes) {
-    destinationElement.setAttribute(name, value);
-  }
-}
-function createDocumentFragment(html) {
-  const template = document.createElement("template");
-  template.innerHTML = html;
-  return template.content;
-}
-function dispatch(eventName, { target, cancelable, detail } = {}) {
-  const event = new CustomEvent(eventName, {
-    cancelable,
-    bubbles: true,
-    composed: true,
-    detail
-  });
-  if (target && target.isConnected) {
-    target.dispatchEvent(event);
-  } else {
-    document.documentElement.dispatchEvent(event);
-  }
-  return event;
-}
-function nextRepaint() {
-  if (document.visibilityState === "hidden") {
-    return nextEventLoopTick();
-  } else {
-    return nextAnimationFrame();
-  }
-}
-function nextAnimationFrame() {
-  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
-}
-function nextEventLoopTick() {
-  return new Promise((resolve) => setTimeout(() => resolve(), 0));
-}
-function nextMicrotask() {
-  return Promise.resolve();
-}
-function parseHTMLDocument(html = "") {
-  return new DOMParser().parseFromString(html, "text/html");
-}
-function unindent(strings, ...values) {
-  const lines = interpolate(strings, values).replace(/^\n/, "").split("\n");
-  const match = lines[0].match(/^\s+/);
-  const indent = match ? match[0].length : 0;
-  return lines.map((line) => line.slice(indent)).join("\n");
-}
-function interpolate(strings, values) {
-  return strings.reduce((result, string, i) => {
-    const value = values[i] == void 0 ? "" : values[i];
-    return result + string + value;
-  }, "");
-}
-function uuid() {
-  return Array.from({ length: 36 }).map((_, i) => {
-    if (i == 8 || i == 13 || i == 18 || i == 23) {
-      return "-";
-    } else if (i == 14) {
-      return "4";
-    } else if (i == 19) {
-      return (Math.floor(Math.random() * 4) + 8).toString(16);
-    } else {
-      return Math.floor(Math.random() * 15).toString(16);
-    }
-  }).join("");
-}
-function getAttribute(attributeName, ...elements) {
-  for (const value of elements.map((element) => element?.getAttribute(attributeName))) {
-    if (typeof value == "string") return value;
-  }
-  return null;
-}
-function hasAttribute(attributeName, ...elements) {
-  return elements.some((element) => element && element.hasAttribute(attributeName));
-}
-function markAsBusy(...elements) {
-  for (const element of elements) {
-    if (element.localName == "turbo-frame") {
-      element.setAttribute("busy", "");
-    }
-    element.setAttribute("aria-busy", "true");
-  }
-}
-function clearBusyState(...elements) {
-  for (const element of elements) {
-    if (element.localName == "turbo-frame") {
-      element.removeAttribute("busy");
-    }
-    element.removeAttribute("aria-busy");
-  }
-}
-function waitForLoad(element, timeoutInMilliseconds = 2e3) {
-  return new Promise((resolve) => {
-    const onComplete = () => {
-      element.removeEventListener("error", onComplete);
-      element.removeEventListener("load", onComplete);
-      resolve();
-    };
-    element.addEventListener("load", onComplete, { once: true });
-    element.addEventListener("error", onComplete, { once: true });
-    setTimeout(resolve, timeoutInMilliseconds);
-  });
-}
-function getHistoryMethodForAction(action) {
-  switch (action) {
-    case "replace":
-      return history.replaceState;
-    case "advance":
-    case "restore":
-      return history.pushState;
-  }
-}
-function isAction(action) {
-  return action == "advance" || action == "replace" || action == "restore";
-}
-function getVisitAction(...elements) {
-  const action = getAttribute("data-turbo-action", ...elements);
-  return isAction(action) ? action : null;
-}
-function getMetaElement(name) {
-  return document.querySelector(`meta[name="${name}"]`);
-}
-function getMetaContent(name) {
-  const element = getMetaElement(name);
-  return element && element.content;
-}
-function setMetaContent(name, content) {
-  let element = getMetaElement(name);
-  if (!element) {
-    element = document.createElement("meta");
-    element.setAttribute("name", name);
-    document.head.appendChild(element);
-  }
-  element.setAttribute("content", content);
-  return element;
-}
-function findClosestRecursively(element, selector) {
-  if (element instanceof Element) {
-    return element.closest(selector) || findClosestRecursively(element.assignedSlot || element.getRootNode()?.host, selector);
-  }
-}
-function elementIsFocusable(element) {
-  const inertDisabledOrHidden = "[inert], :disabled, [hidden], details:not([open]), dialog:not([open])";
-  return !!element && element.closest(inertDisabledOrHidden) == null && typeof element.focus == "function";
-}
-function queryAutofocusableElement(elementOrDocumentFragment) {
-  return Array.from(elementOrDocumentFragment.querySelectorAll("[autofocus]")).find(elementIsFocusable);
-}
-async function around(callback, reader) {
-  const before = reader();
-  callback();
-  await nextAnimationFrame();
-  const after = reader();
-  return [before, after];
-}
-function doesNotTargetIFrame(anchor) {
-  if (anchor.hasAttribute("target")) {
-    for (const element of document.getElementsByName(anchor.target)) {
-      if (element instanceof HTMLIFrameElement) return false;
-    }
-  }
-  return true;
-}
-function findLinkFromClickTarget(target) {
-  return findClosestRecursively(target, "a[href]:not([target^=_]):not([download])");
-}
-function getLocationForLink(link) {
-  return expandURL(link.getAttribute("href") || "");
-}
-function debounce(fn2, delay) {
-  let timeoutId = null;
-  return (...args) => {
-    const callback = () => fn2.apply(this, args);
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(callback, delay);
-  };
-}
-var LimitedSet = class extends Set {
-  constructor(maxSize) {
-    super();
-    this.maxSize = maxSize;
-  }
-  add(value) {
-    if (this.size >= this.maxSize) {
-      const iterator = this.values();
-      const oldestValue = iterator.next().value;
-      this.delete(oldestValue);
-    }
-    super.add(value);
+    return m.call(element, selector);
   }
 };
-var recentRequests = new LimitedSet(20);
-var nativeFetch = window.fetch;
-function fetchWithTurboHeaders(url, options = {}) {
-  const modifiedHeaders = new Headers(options.headers || {});
-  const requestUID = uuid();
-  recentRequests.add(requestUID);
-  modifiedHeaders.append("X-Turbo-Request-Id", requestUID);
-  return nativeFetch(url, {
-    ...options,
-    headers: modifiedHeaders
-  });
-}
-function fetchMethodFromString(method) {
-  switch (method.toLowerCase()) {
-    case "get":
-      return FetchMethod.get;
-    case "post":
-      return FetchMethod.post;
-    case "put":
-      return FetchMethod.put;
-    case "patch":
-      return FetchMethod.patch;
-    case "delete":
-      return FetchMethod.delete;
+var EXPANDO = "_ujsData";
+var getData = (element, key) => element[EXPANDO] ? element[EXPANDO][key] : void 0;
+var setData = function(element, key, value) {
+  if (!element[EXPANDO]) {
+    element[EXPANDO] = {};
   }
-}
-var FetchMethod = {
-  get: "get",
-  post: "post",
-  put: "put",
-  patch: "patch",
-  delete: "delete"
+  return element[EXPANDO][key] = value;
 };
-function fetchEnctypeFromString(encoding) {
-  switch (encoding.toLowerCase()) {
-    case FetchEnctype.multipart:
-      return FetchEnctype.multipart;
-    case FetchEnctype.plain:
-      return FetchEnctype.plain;
-    default:
-      return FetchEnctype.urlEncoded;
-  }
-}
-var FetchEnctype = {
-  urlEncoded: "application/x-www-form-urlencoded",
-  multipart: "multipart/form-data",
-  plain: "text/plain"
-};
-var FetchRequest = class {
-  abortController = new AbortController();
-  #resolveRequestPromise = (_value) => {
-  };
-  constructor(delegate, method, location2, requestBody = new URLSearchParams(), target = null, enctype = FetchEnctype.urlEncoded) {
-    const [url, body] = buildResourceAndBody(expandURL(location2), method, requestBody, enctype);
-    this.delegate = delegate;
-    this.url = url;
-    this.target = target;
-    this.fetchOptions = {
-      credentials: "same-origin",
-      redirect: "follow",
-      method,
-      headers: { ...this.defaultHeaders },
-      body,
-      signal: this.abortSignal,
-      referrer: this.delegate.referrer?.href
-    };
-    this.enctype = enctype;
-  }
-  get method() {
-    return this.fetchOptions.method;
-  }
-  set method(value) {
-    const fetchBody = this.isSafe ? this.url.searchParams : this.fetchOptions.body || new FormData();
-    const fetchMethod = fetchMethodFromString(value) || FetchMethod.get;
-    this.url.search = "";
-    const [url, body] = buildResourceAndBody(this.url, fetchMethod, fetchBody, this.enctype);
-    this.url = url;
-    this.fetchOptions.body = body;
-    this.fetchOptions.method = fetchMethod;
-  }
-  get headers() {
-    return this.fetchOptions.headers;
-  }
-  set headers(value) {
-    this.fetchOptions.headers = value;
-  }
-  get body() {
-    if (this.isSafe) {
-      return this.url.searchParams;
-    } else {
-      return this.fetchOptions.body;
-    }
-  }
-  set body(value) {
-    this.fetchOptions.body = value;
-  }
-  get location() {
-    return this.url;
-  }
-  get params() {
-    return this.url.searchParams;
-  }
-  get entries() {
-    return this.body ? Array.from(this.body.entries()) : [];
-  }
-  cancel() {
-    this.abortController.abort();
-  }
-  async perform() {
-    const { fetchOptions } = this;
-    this.delegate.prepareRequest(this);
-    const event = await this.#allowRequestToBeIntercepted(fetchOptions);
-    try {
-      this.delegate.requestStarted(this);
-      if (event.detail.fetchRequest) {
-        this.response = event.detail.fetchRequest.response;
-      } else {
-        this.response = fetchWithTurboHeaders(this.url.href, fetchOptions);
-      }
-      const response = await this.response;
-      return await this.receive(response);
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        if (this.#willDelegateErrorHandling(error)) {
-          this.delegate.requestErrored(this, error);
-        }
-        throw error;
-      }
-    } finally {
-      this.delegate.requestFinished(this);
-    }
-  }
-  async receive(response) {
-    const fetchResponse = new FetchResponse(response);
-    const event = dispatch("turbo:before-fetch-response", {
-      cancelable: true,
-      detail: { fetchResponse },
-      target: this.target
-    });
-    if (event.defaultPrevented) {
-      this.delegate.requestPreventedHandlingResponse(this, fetchResponse);
-    } else if (fetchResponse.succeeded) {
-      this.delegate.requestSucceededWithResponse(this, fetchResponse);
-    } else {
-      this.delegate.requestFailedWithResponse(this, fetchResponse);
-    }
-    return fetchResponse;
-  }
-  get defaultHeaders() {
-    return {
-      Accept: "text/html, application/xhtml+xml"
-    };
-  }
-  get isSafe() {
-    return isSafe(this.method);
-  }
-  get abortSignal() {
-    return this.abortController.signal;
-  }
-  acceptResponseType(mimeType) {
-    this.headers["Accept"] = [mimeType, this.headers["Accept"]].join(", ");
-  }
-  async #allowRequestToBeIntercepted(fetchOptions) {
-    const requestInterception = new Promise((resolve) => this.#resolveRequestPromise = resolve);
-    const event = dispatch("turbo:before-fetch-request", {
-      cancelable: true,
-      detail: {
-        fetchOptions,
-        url: this.url,
-        resume: this.#resolveRequestPromise
-      },
-      target: this.target
-    });
-    this.url = event.detail.url;
-    if (event.defaultPrevented) await requestInterception;
-    return event;
-  }
-  #willDelegateErrorHandling(error) {
-    const event = dispatch("turbo:fetch-request-error", {
-      target: this.target,
-      cancelable: true,
-      detail: { request: this, error }
-    });
-    return !event.defaultPrevented;
-  }
-};
-function isSafe(fetchMethod) {
-  return fetchMethodFromString(fetchMethod) == FetchMethod.get;
-}
-function buildResourceAndBody(resource, method, requestBody, enctype) {
-  const searchParams = Array.from(requestBody).length > 0 ? new URLSearchParams(entriesExcludingFiles(requestBody)) : resource.searchParams;
-  if (isSafe(method)) {
-    return [mergeIntoURLSearchParams(resource, searchParams), null];
-  } else if (enctype == FetchEnctype.urlEncoded) {
-    return [resource, searchParams];
-  } else {
-    return [resource, requestBody];
-  }
-}
-function entriesExcludingFiles(requestBody) {
-  const entries = [];
-  for (const [name, value] of requestBody) {
-    if (value instanceof File) continue;
-    else entries.push([name, value]);
-  }
-  return entries;
-}
-function mergeIntoURLSearchParams(url, requestBody) {
-  const searchParams = new URLSearchParams(entriesExcludingFiles(requestBody));
-  url.search = searchParams.toString();
-  return url;
-}
-var AppearanceObserver = class {
-  started = false;
-  constructor(delegate, element) {
-    this.delegate = delegate;
-    this.element = element;
-    this.intersectionObserver = new IntersectionObserver(this.intersect);
-  }
-  start() {
-    if (!this.started) {
-      this.started = true;
-      this.intersectionObserver.observe(this.element);
-    }
-  }
-  stop() {
-    if (this.started) {
-      this.started = false;
-      this.intersectionObserver.unobserve(this.element);
-    }
-  }
-  intersect = (entries) => {
-    const lastEntry = entries.slice(-1)[0];
-    if (lastEntry?.isIntersecting) {
-      this.delegate.elementAppearedInViewport(this.element);
-    }
-  };
-};
-var StreamMessage = class {
-  static contentType = "text/vnd.turbo-stream.html";
-  static wrap(message) {
-    if (typeof message == "string") {
-      return new this(createDocumentFragment(message));
-    } else {
-      return message;
-    }
-  }
-  constructor(fragment) {
-    this.fragment = importStreamElements(fragment);
-  }
-};
-function importStreamElements(fragment) {
-  for (const element of fragment.querySelectorAll("turbo-stream")) {
-    const streamElement = document.importNode(element, true);
-    for (const inertScriptElement of streamElement.templateElement.content.querySelectorAll("script")) {
-      inertScriptElement.replaceWith(activateScriptElement(inertScriptElement));
-    }
-    element.replaceWith(streamElement);
-  }
-  return fragment;
-}
-var PREFETCH_DELAY = 100;
-var PrefetchCache = class {
-  #prefetchTimeout = null;
-  #prefetched = null;
-  get(url) {
-    if (this.#prefetched && this.#prefetched.url === url && this.#prefetched.expire > Date.now()) {
-      return this.#prefetched.request;
-    }
-  }
-  setLater(url, request, ttl) {
-    this.clear();
-    this.#prefetchTimeout = setTimeout(() => {
-      request.perform();
-      this.set(url, request, ttl);
-      this.#prefetchTimeout = null;
-    }, PREFETCH_DELAY);
-  }
-  set(url, request, ttl) {
-    this.#prefetched = { url, request, expire: new Date((/* @__PURE__ */ new Date()).getTime() + ttl) };
-  }
-  clear() {
-    if (this.#prefetchTimeout) clearTimeout(this.#prefetchTimeout);
-    this.#prefetched = null;
-  }
-};
-var cacheTtl = 10 * 1e3;
-var prefetchCache = new PrefetchCache();
-var FormSubmissionState = {
-  initialized: "initialized",
-  requesting: "requesting",
-  waiting: "waiting",
-  receiving: "receiving",
-  stopping: "stopping",
-  stopped: "stopped"
-};
-var FormSubmission = class _FormSubmission {
-  state = FormSubmissionState.initialized;
-  static confirmMethod(message, _element, _submitter) {
-    return Promise.resolve(confirm(message));
-  }
-  constructor(delegate, formElement, submitter, mustRedirect = false) {
-    const method = getMethod(formElement, submitter);
-    const action = getAction(getFormAction(formElement, submitter), method);
-    const body = buildFormData(formElement, submitter);
-    const enctype = getEnctype(formElement, submitter);
-    this.delegate = delegate;
-    this.formElement = formElement;
-    this.submitter = submitter;
-    this.fetchRequest = new FetchRequest(this, method, action, body, formElement, enctype);
-    this.mustRedirect = mustRedirect;
-  }
-  get method() {
-    return this.fetchRequest.method;
-  }
-  set method(value) {
-    this.fetchRequest.method = value;
-  }
-  get action() {
-    return this.fetchRequest.url.toString();
-  }
-  set action(value) {
-    this.fetchRequest.url = expandURL(value);
-  }
-  get body() {
-    return this.fetchRequest.body;
-  }
-  get enctype() {
-    return this.fetchRequest.enctype;
-  }
-  get isSafe() {
-    return this.fetchRequest.isSafe;
-  }
-  get location() {
-    return this.fetchRequest.url;
-  }
-  // The submission process
-  async start() {
-    const { initialized, requesting } = FormSubmissionState;
-    const confirmationMessage = getAttribute("data-turbo-confirm", this.submitter, this.formElement);
-    if (typeof confirmationMessage === "string") {
-      const answer = await _FormSubmission.confirmMethod(confirmationMessage, this.formElement, this.submitter);
-      if (!answer) {
-        return;
-      }
-    }
-    if (this.state == initialized) {
-      this.state = requesting;
-      return this.fetchRequest.perform();
-    }
-  }
-  stop() {
-    const { stopping, stopped } = FormSubmissionState;
-    if (this.state != stopping && this.state != stopped) {
-      this.state = stopping;
-      this.fetchRequest.cancel();
-      return true;
-    }
-  }
-  // Fetch request delegate
-  prepareRequest(request) {
-    if (!request.isSafe) {
-      const token = getCookieValue(getMetaContent("csrf-param")) || getMetaContent("csrf-token");
-      if (token) {
-        request.headers["X-CSRF-Token"] = token;
-      }
-    }
-    if (this.requestAcceptsTurboStreamResponse(request)) {
-      request.acceptResponseType(StreamMessage.contentType);
-    }
-  }
-  requestStarted(_request) {
-    this.state = FormSubmissionState.waiting;
-    this.submitter?.setAttribute("disabled", "");
-    this.setSubmitsWith();
-    markAsBusy(this.formElement);
-    dispatch("turbo:submit-start", {
-      target: this.formElement,
-      detail: { formSubmission: this }
-    });
-    this.delegate.formSubmissionStarted(this);
-  }
-  requestPreventedHandlingResponse(request, response) {
-    prefetchCache.clear();
-    this.result = { success: response.succeeded, fetchResponse: response };
-  }
-  requestSucceededWithResponse(request, response) {
-    if (response.clientError || response.serverError) {
-      this.delegate.formSubmissionFailedWithResponse(this, response);
-      return;
-    }
-    prefetchCache.clear();
-    if (this.requestMustRedirect(request) && responseSucceededWithoutRedirect(response)) {
-      const error = new Error("Form responses must redirect to another location");
-      this.delegate.formSubmissionErrored(this, error);
-    } else {
-      this.state = FormSubmissionState.receiving;
-      this.result = { success: true, fetchResponse: response };
-      this.delegate.formSubmissionSucceededWithResponse(this, response);
-    }
-  }
-  requestFailedWithResponse(request, response) {
-    this.result = { success: false, fetchResponse: response };
-    this.delegate.formSubmissionFailedWithResponse(this, response);
-  }
-  requestErrored(request, error) {
-    this.result = { success: false, error };
-    this.delegate.formSubmissionErrored(this, error);
-  }
-  requestFinished(_request) {
-    this.state = FormSubmissionState.stopped;
-    this.submitter?.removeAttribute("disabled");
-    this.resetSubmitterText();
-    clearBusyState(this.formElement);
-    dispatch("turbo:submit-end", {
-      target: this.formElement,
-      detail: { formSubmission: this, ...this.result }
-    });
-    this.delegate.formSubmissionFinished(this);
-  }
-  // Private
-  setSubmitsWith() {
-    if (!this.submitter || !this.submitsWith) return;
-    if (this.submitter.matches("button")) {
-      this.originalSubmitText = this.submitter.innerHTML;
-      this.submitter.innerHTML = this.submitsWith;
-    } else if (this.submitter.matches("input")) {
-      const input = this.submitter;
-      this.originalSubmitText = input.value;
-      input.value = this.submitsWith;
-    }
-  }
-  resetSubmitterText() {
-    if (!this.submitter || !this.originalSubmitText) return;
-    if (this.submitter.matches("button")) {
-      this.submitter.innerHTML = this.originalSubmitText;
-    } else if (this.submitter.matches("input")) {
-      const input = this.submitter;
-      input.value = this.originalSubmitText;
-    }
-  }
-  requestMustRedirect(request) {
-    return !request.isSafe && this.mustRedirect;
-  }
-  requestAcceptsTurboStreamResponse(request) {
-    return !request.isSafe || hasAttribute("data-turbo-stream", this.submitter, this.formElement);
-  }
-  get submitsWith() {
-    return this.submitter?.getAttribute("data-turbo-submits-with");
-  }
-};
-function buildFormData(formElement, submitter) {
-  const formData = new FormData(formElement);
-  const name = submitter?.getAttribute("name");
-  const value = submitter?.getAttribute("value");
-  if (name) {
-    formData.append(name, value || "");
-  }
-  return formData;
-}
-function getCookieValue(cookieName) {
-  if (cookieName != null) {
-    const cookies = document.cookie ? document.cookie.split("; ") : [];
-    const cookie = cookies.find((cookie2) => cookie2.startsWith(cookieName));
-    if (cookie) {
-      const value = cookie.split("=").slice(1).join("=");
-      return value ? decodeURIComponent(value) : void 0;
-    }
-  }
-}
-function responseSucceededWithoutRedirect(response) {
-  return response.statusCode == 200 && !response.redirected;
-}
-function getFormAction(formElement, submitter) {
-  const formElementAction = typeof formElement.action === "string" ? formElement.action : null;
-  if (submitter?.hasAttribute("formaction")) {
-    return submitter.getAttribute("formaction") || "";
-  } else {
-    return formElement.getAttribute("action") || formElementAction || "";
-  }
-}
-function getAction(formAction, fetchMethod) {
-  const action = expandURL(formAction);
-  if (isSafe(fetchMethod)) {
-    action.search = "";
-  }
-  return action;
-}
-function getMethod(formElement, submitter) {
-  const method = submitter?.getAttribute("formmethod") || formElement.getAttribute("method") || "";
-  return fetchMethodFromString(method.toLowerCase()) || FetchMethod.get;
-}
-function getEnctype(formElement, submitter) {
-  return fetchEnctypeFromString(submitter?.getAttribute("formenctype") || formElement.enctype);
-}
-var Snapshot = class {
-  constructor(element) {
-    this.element = element;
-  }
-  get activeElement() {
-    return this.element.ownerDocument.activeElement;
-  }
-  get children() {
-    return [...this.element.children];
-  }
-  hasAnchor(anchor) {
-    return this.getElementForAnchor(anchor) != null;
-  }
-  getElementForAnchor(anchor) {
-    return anchor ? this.element.querySelector(`[id='${anchor}'], a[name='${anchor}']`) : null;
-  }
-  get isConnected() {
-    return this.element.isConnected;
-  }
-  get firstAutofocusableElement() {
-    return queryAutofocusableElement(this.element);
-  }
-  get permanentElements() {
-    return queryPermanentElementsAll(this.element);
-  }
-  getPermanentElementById(id) {
-    return getPermanentElementById(this.element, id);
-  }
-  getPermanentElementMapForSnapshot(snapshot) {
-    const permanentElementMap = {};
-    for (const currentPermanentElement of this.permanentElements) {
-      const { id } = currentPermanentElement;
-      const newPermanentElement = snapshot.getPermanentElementById(id);
-      if (newPermanentElement) {
-        permanentElementMap[id] = [currentPermanentElement, newPermanentElement];
-      }
-    }
-    return permanentElementMap;
-  }
-};
-function getPermanentElementById(node, id) {
-  return node.querySelector(`#${id}[data-turbo-permanent]`);
-}
-function queryPermanentElementsAll(node) {
-  return node.querySelectorAll("[id][data-turbo-permanent]");
-}
-var FormSubmitObserver = class {
-  started = false;
-  constructor(delegate, eventTarget) {
-    this.delegate = delegate;
-    this.eventTarget = eventTarget;
-  }
-  start() {
-    if (!this.started) {
-      this.eventTarget.addEventListener("submit", this.submitCaptured, true);
-      this.started = true;
-    }
-  }
-  stop() {
-    if (this.started) {
-      this.eventTarget.removeEventListener("submit", this.submitCaptured, true);
-      this.started = false;
-    }
-  }
-  submitCaptured = () => {
-    this.eventTarget.removeEventListener("submit", this.submitBubbled, false);
-    this.eventTarget.addEventListener("submit", this.submitBubbled, false);
-  };
-  submitBubbled = (event) => {
-    if (!event.defaultPrevented) {
-      const form = event.target instanceof HTMLFormElement ? event.target : void 0;
-      const submitter = event.submitter || void 0;
-      if (form && submissionDoesNotDismissDialog(form, submitter) && submissionDoesNotTargetIFrame(form, submitter) && this.delegate.willSubmitForm(form, submitter)) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        this.delegate.formSubmitted(form, submitter);
-      }
-    }
-  };
-};
-function submissionDoesNotDismissDialog(form, submitter) {
-  const method = submitter?.getAttribute("formmethod") || form.getAttribute("method");
-  return method != "dialog";
-}
-function submissionDoesNotTargetIFrame(form, submitter) {
-  if (submitter?.hasAttribute("formtarget") || form.hasAttribute("target")) {
-    const target = submitter?.getAttribute("formtarget") || form.target;
-    for (const element of document.getElementsByName(target)) {
-      if (element instanceof HTMLIFrameElement) return false;
-    }
-    return true;
-  } else {
-    return true;
-  }
-}
-var View = class {
-  #resolveRenderPromise = (_value) => {
-  };
-  #resolveInterceptionPromise = (_value) => {
-  };
-  constructor(delegate, element) {
-    this.delegate = delegate;
-    this.element = element;
-  }
-  // Scrolling
-  scrollToAnchor(anchor) {
-    const element = this.snapshot.getElementForAnchor(anchor);
-    if (element) {
-      this.scrollToElement(element);
-      this.focusElement(element);
-    } else {
-      this.scrollToPosition({ x: 0, y: 0 });
-    }
-  }
-  scrollToAnchorFromLocation(location2) {
-    this.scrollToAnchor(getAnchor(location2));
-  }
-  scrollToElement(element) {
-    element.scrollIntoView();
-  }
-  focusElement(element) {
-    if (element instanceof HTMLElement) {
-      if (element.hasAttribute("tabindex")) {
-        element.focus();
-      } else {
-        element.setAttribute("tabindex", "-1");
-        element.focus();
-        element.removeAttribute("tabindex");
-      }
-    }
-  }
-  scrollToPosition({ x, y }) {
-    this.scrollRoot.scrollTo(x, y);
-  }
-  scrollToTop() {
-    this.scrollToPosition({ x: 0, y: 0 });
-  }
-  get scrollRoot() {
-    return window;
-  }
-  // Rendering
-  async render(renderer) {
-    const { isPreview, shouldRender, willRender, newSnapshot: snapshot } = renderer;
-    const shouldInvalidate = willRender;
-    if (shouldRender) {
-      try {
-        this.renderPromise = new Promise((resolve) => this.#resolveRenderPromise = resolve);
-        this.renderer = renderer;
-        await this.prepareToRenderSnapshot(renderer);
-        const renderInterception = new Promise((resolve) => this.#resolveInterceptionPromise = resolve);
-        const options = { resume: this.#resolveInterceptionPromise, render: this.renderer.renderElement, renderMethod: this.renderer.renderMethod };
-        const immediateRender = this.delegate.allowsImmediateRender(snapshot, options);
-        if (!immediateRender) await renderInterception;
-        await this.renderSnapshot(renderer);
-        this.delegate.viewRenderedSnapshot(snapshot, isPreview, this.renderer.renderMethod);
-        this.delegate.preloadOnLoadLinksForView(this.element);
-        this.finishRenderingSnapshot(renderer);
-      } finally {
-        delete this.renderer;
-        this.#resolveRenderPromise(void 0);
-        delete this.renderPromise;
-      }
-    } else if (shouldInvalidate) {
-      this.invalidate(renderer.reloadReason);
-    }
-  }
-  invalidate(reason) {
-    this.delegate.viewInvalidated(reason);
-  }
-  async prepareToRenderSnapshot(renderer) {
-    this.markAsPreview(renderer.isPreview);
-    await renderer.prepareToRender();
-  }
-  markAsPreview(isPreview) {
-    if (isPreview) {
-      this.element.setAttribute("data-turbo-preview", "");
-    } else {
-      this.element.removeAttribute("data-turbo-preview");
-    }
-  }
-  markVisitDirection(direction) {
-    this.element.setAttribute("data-turbo-visit-direction", direction);
-  }
-  unmarkVisitDirection() {
-    this.element.removeAttribute("data-turbo-visit-direction");
-  }
-  async renderSnapshot(renderer) {
-    await renderer.render();
-  }
-  finishRenderingSnapshot(renderer) {
-    renderer.finishRendering();
-  }
-};
-var FrameView = class extends View {
-  missing() {
-    this.element.innerHTML = `<strong class="turbo-frame-error">Content missing</strong>`;
-  }
-  get snapshot() {
-    return new Snapshot(this.element);
-  }
-};
-var LinkInterceptor = class {
-  constructor(delegate, element) {
-    this.delegate = delegate;
-    this.element = element;
-  }
-  start() {
-    this.element.addEventListener("click", this.clickBubbled);
-    document.addEventListener("turbo:click", this.linkClicked);
-    document.addEventListener("turbo:before-visit", this.willVisit);
-  }
-  stop() {
-    this.element.removeEventListener("click", this.clickBubbled);
-    document.removeEventListener("turbo:click", this.linkClicked);
-    document.removeEventListener("turbo:before-visit", this.willVisit);
-  }
-  clickBubbled = (event) => {
-    if (this.respondsToEventTarget(event.target)) {
-      this.clickEvent = event;
-    } else {
-      delete this.clickEvent;
-    }
-  };
-  linkClicked = (event) => {
-    if (this.clickEvent && this.respondsToEventTarget(event.target) && event.target instanceof Element) {
-      if (this.delegate.shouldInterceptLinkClick(event.target, event.detail.url, event.detail.originalEvent)) {
-        this.clickEvent.preventDefault();
-        event.preventDefault();
-        this.delegate.linkClickIntercepted(event.target, event.detail.url, event.detail.originalEvent);
-      }
-    }
-    delete this.clickEvent;
-  };
-  willVisit = (_event) => {
-    delete this.clickEvent;
-  };
-  respondsToEventTarget(target) {
-    const element = target instanceof Element ? target : target instanceof Node ? target.parentElement : null;
-    return element && element.closest("turbo-frame, html") == this.element;
-  }
-};
-var LinkClickObserver = class {
-  started = false;
-  constructor(delegate, eventTarget) {
-    this.delegate = delegate;
-    this.eventTarget = eventTarget;
-  }
-  start() {
-    if (!this.started) {
-      this.eventTarget.addEventListener("click", this.clickCaptured, true);
-      this.started = true;
-    }
-  }
-  stop() {
-    if (this.started) {
-      this.eventTarget.removeEventListener("click", this.clickCaptured, true);
-      this.started = false;
-    }
-  }
-  clickCaptured = () => {
-    this.eventTarget.removeEventListener("click", this.clickBubbled, false);
-    this.eventTarget.addEventListener("click", this.clickBubbled, false);
-  };
-  clickBubbled = (event) => {
-    if (event instanceof MouseEvent && this.clickEventIsSignificant(event)) {
-      const target = event.composedPath && event.composedPath()[0] || event.target;
-      const link = findLinkFromClickTarget(target);
-      if (link && doesNotTargetIFrame(link)) {
-        const location2 = getLocationForLink(link);
-        if (this.delegate.willFollowLinkToLocation(link, location2, event)) {
-          event.preventDefault();
-          this.delegate.followedLinkToLocation(link, location2);
-        }
-      }
-    }
-  };
-  clickEventIsSignificant(event) {
-    return !(event.target && event.target.isContentEditable || event.defaultPrevented || event.which > 1 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey);
-  }
-};
-var FormLinkClickObserver = class {
-  constructor(delegate, element) {
-    this.delegate = delegate;
-    this.linkInterceptor = new LinkClickObserver(this, element);
-  }
-  start() {
-    this.linkInterceptor.start();
-  }
-  stop() {
-    this.linkInterceptor.stop();
-  }
-  // Link hover observer delegate
-  canPrefetchRequestToLocation(link, location2) {
-    return false;
-  }
-  prefetchAndCacheRequestToLocation(link, location2) {
-    return;
-  }
-  // Link click observer delegate
-  willFollowLinkToLocation(link, location2, originalEvent) {
-    return this.delegate.willSubmitFormLinkToLocation(link, location2, originalEvent) && (link.hasAttribute("data-turbo-method") || link.hasAttribute("data-turbo-stream"));
-  }
-  followedLinkToLocation(link, location2) {
-    const form = document.createElement("form");
-    const type = "hidden";
-    for (const [name, value] of location2.searchParams) {
-      form.append(Object.assign(document.createElement("input"), { type, name, value }));
-    }
-    const action = Object.assign(location2, { search: "" });
-    form.setAttribute("data-turbo", "true");
-    form.setAttribute("action", action.href);
-    form.setAttribute("hidden", "");
-    const method = link.getAttribute("data-turbo-method");
-    if (method) form.setAttribute("method", method);
-    const turboFrame = link.getAttribute("data-turbo-frame");
-    if (turboFrame) form.setAttribute("data-turbo-frame", turboFrame);
-    const turboAction = getVisitAction(link);
-    if (turboAction) form.setAttribute("data-turbo-action", turboAction);
-    const turboConfirm = link.getAttribute("data-turbo-confirm");
-    if (turboConfirm) form.setAttribute("data-turbo-confirm", turboConfirm);
-    const turboStream = link.hasAttribute("data-turbo-stream");
-    if (turboStream) form.setAttribute("data-turbo-stream", "");
-    this.delegate.submittedFormLinkToLocation(link, location2, form);
-    document.body.appendChild(form);
-    form.addEventListener("turbo:submit-end", () => form.remove(), { once: true });
-    requestAnimationFrame(() => form.requestSubmit());
-  }
-};
-var Bardo = class {
-  static async preservingPermanentElements(delegate, permanentElementMap, callback) {
-    const bardo = new this(delegate, permanentElementMap);
-    bardo.enter();
-    await callback();
-    bardo.leave();
-  }
-  constructor(delegate, permanentElementMap) {
-    this.delegate = delegate;
-    this.permanentElementMap = permanentElementMap;
-  }
-  enter() {
-    for (const id in this.permanentElementMap) {
-      const [currentPermanentElement, newPermanentElement] = this.permanentElementMap[id];
-      this.delegate.enteringBardo(currentPermanentElement, newPermanentElement);
-      this.replaceNewPermanentElementWithPlaceholder(newPermanentElement);
-    }
-  }
-  leave() {
-    for (const id in this.permanentElementMap) {
-      const [currentPermanentElement] = this.permanentElementMap[id];
-      this.replaceCurrentPermanentElementWithClone(currentPermanentElement);
-      this.replacePlaceholderWithPermanentElement(currentPermanentElement);
-      this.delegate.leavingBardo(currentPermanentElement);
-    }
-  }
-  replaceNewPermanentElementWithPlaceholder(permanentElement) {
-    const placeholder = createPlaceholderForPermanentElement(permanentElement);
-    permanentElement.replaceWith(placeholder);
-  }
-  replaceCurrentPermanentElementWithClone(permanentElement) {
-    const clone = permanentElement.cloneNode(true);
-    permanentElement.replaceWith(clone);
-  }
-  replacePlaceholderWithPermanentElement(permanentElement) {
-    const placeholder = this.getPlaceholderById(permanentElement.id);
-    placeholder?.replaceWith(permanentElement);
-  }
-  getPlaceholderById(id) {
-    return this.placeholders.find((element) => element.content == id);
-  }
-  get placeholders() {
-    return [...document.querySelectorAll("meta[name=turbo-permanent-placeholder][content]")];
-  }
-};
-function createPlaceholderForPermanentElement(permanentElement) {
-  const element = document.createElement("meta");
-  element.setAttribute("name", "turbo-permanent-placeholder");
-  element.setAttribute("content", permanentElement.id);
-  return element;
-}
-var Renderer = class {
-  #activeElement = null;
-  constructor(currentSnapshot, newSnapshot, renderElement, isPreview, willRender = true) {
-    this.currentSnapshot = currentSnapshot;
-    this.newSnapshot = newSnapshot;
-    this.isPreview = isPreview;
-    this.willRender = willRender;
-    this.renderElement = renderElement;
-    this.promise = new Promise((resolve, reject) => this.resolvingFunctions = { resolve, reject });
-  }
-  get shouldRender() {
-    return true;
-  }
-  get reloadReason() {
-    return;
-  }
-  prepareToRender() {
-    return;
-  }
-  render() {
-  }
-  finishRendering() {
-    if (this.resolvingFunctions) {
-      this.resolvingFunctions.resolve();
-      delete this.resolvingFunctions;
-    }
-  }
-  async preservingPermanentElements(callback) {
-    await Bardo.preservingPermanentElements(this, this.permanentElementMap, callback);
-  }
-  focusFirstAutofocusableElement() {
-    const element = this.connectedSnapshot.firstAutofocusableElement;
-    if (element) {
-      element.focus();
-    }
-  }
-  // Bardo delegate
-  enteringBardo(currentPermanentElement) {
-    if (this.#activeElement) return;
-    if (currentPermanentElement.contains(this.currentSnapshot.activeElement)) {
-      this.#activeElement = this.currentSnapshot.activeElement;
-    }
-  }
-  leavingBardo(currentPermanentElement) {
-    if (currentPermanentElement.contains(this.#activeElement) && this.#activeElement instanceof HTMLElement) {
-      this.#activeElement.focus();
-      this.#activeElement = null;
-    }
-  }
-  get connectedSnapshot() {
-    return this.newSnapshot.isConnected ? this.newSnapshot : this.currentSnapshot;
-  }
-  get currentElement() {
-    return this.currentSnapshot.element;
-  }
-  get newElement() {
-    return this.newSnapshot.element;
-  }
-  get permanentElementMap() {
-    return this.currentSnapshot.getPermanentElementMapForSnapshot(this.newSnapshot);
-  }
-  get renderMethod() {
-    return "replace";
-  }
-};
-var FrameRenderer = class extends Renderer {
-  static renderElement(currentElement, newElement) {
-    const destinationRange = document.createRange();
-    destinationRange.selectNodeContents(currentElement);
-    destinationRange.deleteContents();
-    const frameElement = newElement;
-    const sourceRange = frameElement.ownerDocument?.createRange();
-    if (sourceRange) {
-      sourceRange.selectNodeContents(frameElement);
-      currentElement.appendChild(sourceRange.extractContents());
-    }
-  }
-  constructor(delegate, currentSnapshot, newSnapshot, renderElement, isPreview, willRender = true) {
-    super(currentSnapshot, newSnapshot, renderElement, isPreview, willRender);
-    this.delegate = delegate;
-  }
-  get shouldRender() {
-    return true;
-  }
-  async render() {
-    await nextRepaint();
-    this.preservingPermanentElements(() => {
-      this.loadFrameElement();
-    });
-    this.scrollFrameIntoView();
-    await nextRepaint();
-    this.focusFirstAutofocusableElement();
-    await nextRepaint();
-    this.activateScriptElements();
-  }
-  loadFrameElement() {
-    this.delegate.willRenderFrame(this.currentElement, this.newElement);
-    this.renderElement(this.currentElement, this.newElement);
-  }
-  scrollFrameIntoView() {
-    if (this.currentElement.autoscroll || this.newElement.autoscroll) {
-      const element = this.currentElement.firstElementChild;
-      const block = readScrollLogicalPosition(this.currentElement.getAttribute("data-autoscroll-block"), "end");
-      const behavior = readScrollBehavior(this.currentElement.getAttribute("data-autoscroll-behavior"), "auto");
-      if (element) {
-        element.scrollIntoView({ block, behavior });
-        return true;
-      }
-    }
-    return false;
-  }
-  activateScriptElements() {
-    for (const inertScriptElement of this.newScriptElements) {
-      const activatedScriptElement = activateScriptElement(inertScriptElement);
-      inertScriptElement.replaceWith(activatedScriptElement);
-    }
-  }
-  get newScriptElements() {
-    return this.currentElement.querySelectorAll("script");
-  }
-};
-function readScrollLogicalPosition(value, defaultValue) {
-  if (value == "end" || value == "start" || value == "center" || value == "nearest") {
-    return value;
-  } else {
-    return defaultValue;
-  }
-}
-function readScrollBehavior(value, defaultValue) {
-  if (value == "auto" || value == "smooth") {
-    return value;
-  } else {
-    return defaultValue;
-  }
-}
-var ProgressBar = class _ProgressBar {
-  static animationDuration = 300;
-  /*ms*/
-  static get defaultCSS() {
-    return unindent`
-      .turbo-progress-bar {
-        position: fixed;
-        display: block;
-        top: 0;
-        left: 0;
-        height: 3px;
-        background: #0076ff;
-        z-index: 2147483647;
-        transition:
-          width ${_ProgressBar.animationDuration}ms ease-out,
-          opacity ${_ProgressBar.animationDuration / 2}ms ${_ProgressBar.animationDuration / 2}ms ease-in;
-        transform: translate3d(0, 0, 0);
-      }
-    `;
-  }
-  hiding = false;
-  value = 0;
-  visible = false;
-  constructor() {
-    this.stylesheetElement = this.createStylesheetElement();
-    this.progressElement = this.createProgressElement();
-    this.installStylesheetElement();
-    this.setValue(0);
-  }
-  show() {
-    if (!this.visible) {
-      this.visible = true;
-      this.installProgressElement();
-      this.startTrickling();
-    }
-  }
-  hide() {
-    if (this.visible && !this.hiding) {
-      this.hiding = true;
-      this.fadeProgressElement(() => {
-        this.uninstallProgressElement();
-        this.stopTrickling();
-        this.visible = false;
-        this.hiding = false;
-      });
-    }
-  }
-  setValue(value) {
-    this.value = value;
-    this.refresh();
-  }
-  // Private
-  installStylesheetElement() {
-    document.head.insertBefore(this.stylesheetElement, document.head.firstChild);
-  }
-  installProgressElement() {
-    this.progressElement.style.width = "0";
-    this.progressElement.style.opacity = "1";
-    document.documentElement.insertBefore(this.progressElement, document.body);
-    this.refresh();
-  }
-  fadeProgressElement(callback) {
-    this.progressElement.style.opacity = "0";
-    setTimeout(callback, _ProgressBar.animationDuration * 1.5);
-  }
-  uninstallProgressElement() {
-    if (this.progressElement.parentNode) {
-      document.documentElement.removeChild(this.progressElement);
-    }
-  }
-  startTrickling() {
-    if (!this.trickleInterval) {
-      this.trickleInterval = window.setInterval(this.trickle, _ProgressBar.animationDuration);
-    }
-  }
-  stopTrickling() {
-    window.clearInterval(this.trickleInterval);
-    delete this.trickleInterval;
-  }
-  trickle = () => {
-    this.setValue(this.value + Math.random() / 100);
-  };
-  refresh() {
-    requestAnimationFrame(() => {
-      this.progressElement.style.width = `${10 + this.value * 90}%`;
-    });
-  }
-  createStylesheetElement() {
-    const element = document.createElement("style");
-    element.type = "text/css";
-    element.textContent = _ProgressBar.defaultCSS;
-    if (this.cspNonce) {
-      element.nonce = this.cspNonce;
-    }
-    return element;
-  }
-  createProgressElement() {
-    const element = document.createElement("div");
-    element.className = "turbo-progress-bar";
-    return element;
-  }
-  get cspNonce() {
-    return getMetaContent("csp-nonce");
-  }
-};
-var HeadSnapshot = class extends Snapshot {
-  detailsByOuterHTML = this.children.filter((element) => !elementIsNoscript(element)).map((element) => elementWithoutNonce(element)).reduce((result, element) => {
-    const { outerHTML } = element;
-    const details = outerHTML in result ? result[outerHTML] : {
-      type: elementType(element),
-      tracked: elementIsTracked(element),
-      elements: []
-    };
-    return {
-      ...result,
-      [outerHTML]: {
-        ...details,
-        elements: [...details.elements, element]
-      }
-    };
-  }, {});
-  get trackedElementSignature() {
-    return Object.keys(this.detailsByOuterHTML).filter((outerHTML) => this.detailsByOuterHTML[outerHTML].tracked).join("");
-  }
-  getScriptElementsNotInSnapshot(snapshot) {
-    return this.getElementsMatchingTypeNotInSnapshot("script", snapshot);
-  }
-  getStylesheetElementsNotInSnapshot(snapshot) {
-    return this.getElementsMatchingTypeNotInSnapshot("stylesheet", snapshot);
-  }
-  getElementsMatchingTypeNotInSnapshot(matchedType, snapshot) {
-    return Object.keys(this.detailsByOuterHTML).filter((outerHTML) => !(outerHTML in snapshot.detailsByOuterHTML)).map((outerHTML) => this.detailsByOuterHTML[outerHTML]).filter(({ type }) => type == matchedType).map(({ elements: [element] }) => element);
-  }
-  get provisionalElements() {
-    return Object.keys(this.detailsByOuterHTML).reduce((result, outerHTML) => {
-      const { type, tracked, elements } = this.detailsByOuterHTML[outerHTML];
-      if (type == null && !tracked) {
-        return [...result, ...elements];
-      } else if (elements.length > 1) {
-        return [...result, ...elements.slice(1)];
-      } else {
-        return result;
-      }
-    }, []);
-  }
-  getMetaValue(name) {
-    const element = this.findMetaElementByName(name);
-    return element ? element.getAttribute("content") : null;
-  }
-  findMetaElementByName(name) {
-    return Object.keys(this.detailsByOuterHTML).reduce((result, outerHTML) => {
-      const {
-        elements: [element]
-      } = this.detailsByOuterHTML[outerHTML];
-      return elementIsMetaElementWithName(element, name) ? element : result;
-    }, void 0 | void 0);
-  }
-};
-function elementType(element) {
-  if (elementIsScript(element)) {
-    return "script";
-  } else if (elementIsStylesheet(element)) {
-    return "stylesheet";
-  }
-}
-function elementIsTracked(element) {
-  return element.getAttribute("data-turbo-track") == "reload";
-}
-function elementIsScript(element) {
-  const tagName = element.localName;
-  return tagName == "script";
-}
-function elementIsNoscript(element) {
-  const tagName = element.localName;
-  return tagName == "noscript";
-}
-function elementIsStylesheet(element) {
-  const tagName = element.localName;
-  return tagName == "style" || tagName == "link" && element.getAttribute("rel") == "stylesheet";
-}
-function elementIsMetaElementWithName(element, name) {
-  const tagName = element.localName;
-  return tagName == "meta" && element.getAttribute("name") == name;
-}
-function elementWithoutNonce(element) {
-  if (element.hasAttribute("nonce")) {
-    element.setAttribute("nonce", "");
-  }
-  return element;
-}
-var PageSnapshot = class _PageSnapshot extends Snapshot {
-  static fromHTMLString(html = "") {
-    return this.fromDocument(parseHTMLDocument(html));
-  }
-  static fromElement(element) {
-    return this.fromDocument(element.ownerDocument);
-  }
-  static fromDocument({ documentElement, body, head }) {
-    return new this(documentElement, body, new HeadSnapshot(head));
-  }
-  constructor(documentElement, body, headSnapshot) {
-    super(body);
-    this.documentElement = documentElement;
-    this.headSnapshot = headSnapshot;
-  }
-  clone() {
-    const clonedElement = this.element.cloneNode(true);
-    const selectElements = this.element.querySelectorAll("select");
-    const clonedSelectElements = clonedElement.querySelectorAll("select");
-    for (const [index, source] of selectElements.entries()) {
-      const clone = clonedSelectElements[index];
-      for (const option of clone.selectedOptions) option.selected = false;
-      for (const option of source.selectedOptions) clone.options[option.index].selected = true;
-    }
-    for (const clonedPasswordInput of clonedElement.querySelectorAll('input[type="password"]')) {
-      clonedPasswordInput.value = "";
-    }
-    return new _PageSnapshot(this.documentElement, clonedElement, this.headSnapshot);
-  }
-  get lang() {
-    return this.documentElement.getAttribute("lang");
-  }
-  get headElement() {
-    return this.headSnapshot.element;
-  }
-  get rootLocation() {
-    const root = this.getSetting("root") ?? "/";
-    return expandURL(root);
-  }
-  get cacheControlValue() {
-    return this.getSetting("cache-control");
-  }
-  get isPreviewable() {
-    return this.cacheControlValue != "no-preview";
-  }
-  get isCacheable() {
-    return this.cacheControlValue != "no-cache";
-  }
-  get isVisitable() {
-    return this.getSetting("visit-control") != "reload";
-  }
-  get prefersViewTransitions() {
-    return this.headSnapshot.getMetaValue("view-transition") === "same-origin";
-  }
-  get shouldMorphPage() {
-    return this.getSetting("refresh-method") === "morph";
-  }
-  get shouldPreserveScrollPosition() {
-    return this.getSetting("refresh-scroll") === "preserve";
-  }
-  // Private
-  getSetting(name) {
-    return this.headSnapshot.getMetaValue(`turbo-${name}`);
-  }
-};
-var ViewTransitioner = class {
-  #viewTransitionStarted = false;
-  #lastOperation = Promise.resolve();
-  renderChange(useViewTransition, render) {
-    if (useViewTransition && this.viewTransitionsAvailable && !this.#viewTransitionStarted) {
-      this.#viewTransitionStarted = true;
-      this.#lastOperation = this.#lastOperation.then(async () => {
-        await document.startViewTransition(render).finished;
-      });
-    } else {
-      this.#lastOperation = this.#lastOperation.then(render);
-    }
-    return this.#lastOperation;
-  }
-  get viewTransitionsAvailable() {
-    return document.startViewTransition;
-  }
-};
-var defaultOptions = {
-  action: "advance",
-  historyChanged: false,
-  visitCachedSnapshot: () => {
-  },
-  willRender: true,
-  updateHistory: true,
-  shouldCacheSnapshot: true,
-  acceptsStreamResponse: false
-};
-var TimingMetric = {
-  visitStart: "visitStart",
-  requestStart: "requestStart",
-  requestEnd: "requestEnd",
-  visitEnd: "visitEnd"
-};
-var VisitState = {
-  initialized: "initialized",
-  started: "started",
-  canceled: "canceled",
-  failed: "failed",
-  completed: "completed"
-};
-var SystemStatusCode = {
-  networkFailure: 0,
-  timeoutFailure: -1,
-  contentTypeMismatch: -2
-};
-var Direction = {
-  advance: "forward",
-  restore: "back",
-  replace: "none"
-};
-var Visit = class {
-  identifier = uuid();
-  // Required by turbo-ios
-  timingMetrics = {};
-  followedRedirect = false;
-  historyChanged = false;
-  scrolled = false;
-  shouldCacheSnapshot = true;
-  acceptsStreamResponse = false;
-  snapshotCached = false;
-  state = VisitState.initialized;
-  viewTransitioner = new ViewTransitioner();
-  constructor(delegate, location2, restorationIdentifier, options = {}) {
-    this.delegate = delegate;
-    this.location = location2;
-    this.restorationIdentifier = restorationIdentifier || uuid();
-    const {
-      action,
-      historyChanged,
-      referrer,
-      snapshot,
-      snapshotHTML,
-      response,
-      visitCachedSnapshot,
-      willRender,
-      updateHistory,
-      shouldCacheSnapshot,
-      acceptsStreamResponse,
-      direction
-    } = {
-      ...defaultOptions,
-      ...options
-    };
-    this.action = action;
-    this.historyChanged = historyChanged;
-    this.referrer = referrer;
-    this.snapshot = snapshot;
-    this.snapshotHTML = snapshotHTML;
-    this.response = response;
-    this.isSamePage = this.delegate.locationWithActionIsSamePage(this.location, this.action);
-    this.isPageRefresh = this.view.isPageRefresh(this);
-    this.visitCachedSnapshot = visitCachedSnapshot;
-    this.willRender = willRender;
-    this.updateHistory = updateHistory;
-    this.scrolled = !willRender;
-    this.shouldCacheSnapshot = shouldCacheSnapshot;
-    this.acceptsStreamResponse = acceptsStreamResponse;
-    this.direction = direction || Direction[action];
-  }
-  get adapter() {
-    return this.delegate.adapter;
-  }
-  get view() {
-    return this.delegate.view;
-  }
-  get history() {
-    return this.delegate.history;
-  }
-  get restorationData() {
-    return this.history.getRestorationDataForIdentifier(this.restorationIdentifier);
-  }
-  get silent() {
-    return this.isSamePage;
-  }
-  start() {
-    if (this.state == VisitState.initialized) {
-      this.recordTimingMetric(TimingMetric.visitStart);
-      this.state = VisitState.started;
-      this.adapter.visitStarted(this);
-      this.delegate.visitStarted(this);
-    }
-  }
-  cancel() {
-    if (this.state == VisitState.started) {
-      if (this.request) {
-        this.request.cancel();
-      }
-      this.cancelRender();
-      this.state = VisitState.canceled;
-    }
-  }
-  complete() {
-    if (this.state == VisitState.started) {
-      this.recordTimingMetric(TimingMetric.visitEnd);
-      this.adapter.visitCompleted(this);
-      this.state = VisitState.completed;
-      this.followRedirect();
-      if (!this.followedRedirect) {
-        this.delegate.visitCompleted(this);
-      }
-    }
-  }
-  fail() {
-    if (this.state == VisitState.started) {
-      this.state = VisitState.failed;
-      this.adapter.visitFailed(this);
-      this.delegate.visitCompleted(this);
-    }
-  }
-  changeHistory() {
-    if (!this.historyChanged && this.updateHistory) {
-      const actionForHistory = this.location.href === this.referrer?.href ? "replace" : this.action;
-      const method = getHistoryMethodForAction(actionForHistory);
-      this.history.update(method, this.location, this.restorationIdentifier);
-      this.historyChanged = true;
-    }
-  }
-  issueRequest() {
-    if (this.hasPreloadedResponse()) {
-      this.simulateRequest();
-    } else if (this.shouldIssueRequest() && !this.request) {
-      this.request = new FetchRequest(this, FetchMethod.get, this.location);
-      this.request.perform();
-    }
-  }
-  simulateRequest() {
-    if (this.response) {
-      this.startRequest();
-      this.recordResponse();
-      this.finishRequest();
-    }
-  }
-  startRequest() {
-    this.recordTimingMetric(TimingMetric.requestStart);
-    this.adapter.visitRequestStarted(this);
-  }
-  recordResponse(response = this.response) {
-    this.response = response;
-    if (response) {
-      const { statusCode } = response;
-      if (isSuccessful(statusCode)) {
-        this.adapter.visitRequestCompleted(this);
-      } else {
-        this.adapter.visitRequestFailedWithStatusCode(this, statusCode);
-      }
-    }
-  }
-  finishRequest() {
-    this.recordTimingMetric(TimingMetric.requestEnd);
-    this.adapter.visitRequestFinished(this);
-  }
-  loadResponse() {
-    if (this.response) {
-      const { statusCode, responseHTML } = this.response;
-      this.render(async () => {
-        if (this.shouldCacheSnapshot) this.cacheSnapshot();
-        if (this.view.renderPromise) await this.view.renderPromise;
-        if (isSuccessful(statusCode) && responseHTML != null) {
-          const snapshot = PageSnapshot.fromHTMLString(responseHTML);
-          await this.renderPageSnapshot(snapshot, false);
-          this.adapter.visitRendered(this);
-          this.complete();
-        } else {
-          await this.view.renderError(PageSnapshot.fromHTMLString(responseHTML), this);
-          this.adapter.visitRendered(this);
-          this.fail();
-        }
-      });
-    }
-  }
-  getCachedSnapshot() {
-    const snapshot = this.view.getCachedSnapshotForLocation(this.location) || this.getPreloadedSnapshot();
-    if (snapshot && (!getAnchor(this.location) || snapshot.hasAnchor(getAnchor(this.location)))) {
-      if (this.action == "restore" || snapshot.isPreviewable) {
-        return snapshot;
-      }
-    }
-  }
-  getPreloadedSnapshot() {
-    if (this.snapshotHTML) {
-      return PageSnapshot.fromHTMLString(this.snapshotHTML);
-    }
-  }
-  hasCachedSnapshot() {
-    return this.getCachedSnapshot() != null;
-  }
-  loadCachedSnapshot() {
-    const snapshot = this.getCachedSnapshot();
-    if (snapshot) {
-      const isPreview = this.shouldIssueRequest();
-      this.render(async () => {
-        this.cacheSnapshot();
-        if (this.isSamePage || this.isPageRefresh) {
-          this.adapter.visitRendered(this);
-        } else {
-          if (this.view.renderPromise) await this.view.renderPromise;
-          await this.renderPageSnapshot(snapshot, isPreview);
-          this.adapter.visitRendered(this);
-          if (!isPreview) {
-            this.complete();
-          }
-        }
-      });
-    }
-  }
-  followRedirect() {
-    if (this.redirectedToLocation && !this.followedRedirect && this.response?.redirected) {
-      this.adapter.visitProposedToLocation(this.redirectedToLocation, {
-        action: "replace",
-        response: this.response,
-        shouldCacheSnapshot: false,
-        willRender: false
-      });
-      this.followedRedirect = true;
-    }
-  }
-  goToSamePageAnchor() {
-    if (this.isSamePage) {
-      this.render(async () => {
-        this.cacheSnapshot();
-        this.performScroll();
-        this.changeHistory();
-        this.adapter.visitRendered(this);
-      });
-    }
-  }
-  // Fetch request delegate
-  prepareRequest(request) {
-    if (this.acceptsStreamResponse) {
-      request.acceptResponseType(StreamMessage.contentType);
-    }
-  }
-  requestStarted() {
-    this.startRequest();
-  }
-  requestPreventedHandlingResponse(_request, _response) {
-  }
-  async requestSucceededWithResponse(request, response) {
-    const responseHTML = await response.responseHTML;
-    const { redirected, statusCode } = response;
-    if (responseHTML == void 0) {
-      this.recordResponse({
-        statusCode: SystemStatusCode.contentTypeMismatch,
-        redirected
-      });
-    } else {
-      this.redirectedToLocation = response.redirected ? response.location : void 0;
-      this.recordResponse({ statusCode, responseHTML, redirected });
-    }
-  }
-  async requestFailedWithResponse(request, response) {
-    const responseHTML = await response.responseHTML;
-    const { redirected, statusCode } = response;
-    if (responseHTML == void 0) {
-      this.recordResponse({
-        statusCode: SystemStatusCode.contentTypeMismatch,
-        redirected
-      });
-    } else {
-      this.recordResponse({ statusCode, responseHTML, redirected });
-    }
-  }
-  requestErrored(_request, _error) {
-    this.recordResponse({
-      statusCode: SystemStatusCode.networkFailure,
-      redirected: false
-    });
-  }
-  requestFinished() {
-    this.finishRequest();
-  }
-  // Scrolling
-  performScroll() {
-    if (!this.scrolled && !this.view.forceReloaded && !this.view.shouldPreserveScrollPosition(this)) {
-      if (this.action == "restore") {
-        this.scrollToRestoredPosition() || this.scrollToAnchor() || this.view.scrollToTop();
-      } else {
-        this.scrollToAnchor() || this.view.scrollToTop();
-      }
-      if (this.isSamePage) {
-        this.delegate.visitScrolledToSamePageLocation(this.view.lastRenderedLocation, this.location);
-      }
-      this.scrolled = true;
-    }
-  }
-  scrollToRestoredPosition() {
-    const { scrollPosition } = this.restorationData;
-    if (scrollPosition) {
-      this.view.scrollToPosition(scrollPosition);
-      return true;
-    }
-  }
-  scrollToAnchor() {
-    const anchor = getAnchor(this.location);
-    if (anchor != null) {
-      this.view.scrollToAnchor(anchor);
-      return true;
-    }
-  }
-  // Instrumentation
-  recordTimingMetric(metric) {
-    this.timingMetrics[metric] = (/* @__PURE__ */ new Date()).getTime();
-  }
-  getTimingMetrics() {
-    return { ...this.timingMetrics };
-  }
-  // Private
-  getHistoryMethodForAction(action) {
-    switch (action) {
-      case "replace":
-        return history.replaceState;
-      case "advance":
-      case "restore":
-        return history.pushState;
-    }
-  }
-  hasPreloadedResponse() {
-    return typeof this.response == "object";
-  }
-  shouldIssueRequest() {
-    if (this.isSamePage) {
-      return false;
-    } else if (this.action == "restore") {
-      return !this.hasCachedSnapshot();
-    } else {
-      return this.willRender;
-    }
-  }
-  cacheSnapshot() {
-    if (!this.snapshotCached) {
-      this.view.cacheSnapshot(this.snapshot).then((snapshot) => snapshot && this.visitCachedSnapshot(snapshot));
-      this.snapshotCached = true;
-    }
-  }
-  async render(callback) {
-    this.cancelRender();
-    this.frame = await nextRepaint();
-    await callback();
-    delete this.frame;
-  }
-  async renderPageSnapshot(snapshot, isPreview) {
-    await this.viewTransitioner.renderChange(this.view.shouldTransitionTo(snapshot), async () => {
-      await this.view.renderPage(snapshot, isPreview, this.willRender, this);
-      this.performScroll();
-    });
-  }
-  cancelRender() {
-    if (this.frame) {
-      cancelAnimationFrame(this.frame);
-      delete this.frame;
-    }
-  }
-};
-function isSuccessful(statusCode) {
-  return statusCode >= 200 && statusCode < 300;
-}
-var BrowserAdapter = class {
-  progressBar = new ProgressBar();
-  constructor(session2) {
-    this.session = session2;
-  }
-  visitProposedToLocation(location2, options) {
-    if (locationIsVisitable(location2, this.navigator.rootLocation)) {
-      this.navigator.startVisit(location2, options?.restorationIdentifier || uuid(), options);
-    } else {
-      window.location.href = location2.toString();
-    }
-  }
-  visitStarted(visit2) {
-    this.location = visit2.location;
-    visit2.loadCachedSnapshot();
-    visit2.issueRequest();
-    visit2.goToSamePageAnchor();
-  }
-  visitRequestStarted(visit2) {
-    this.progressBar.setValue(0);
-    if (visit2.hasCachedSnapshot() || visit2.action != "restore") {
-      this.showVisitProgressBarAfterDelay();
-    } else {
-      this.showProgressBar();
-    }
-  }
-  visitRequestCompleted(visit2) {
-    visit2.loadResponse();
-  }
-  visitRequestFailedWithStatusCode(visit2, statusCode) {
-    switch (statusCode) {
-      case SystemStatusCode.networkFailure:
-      case SystemStatusCode.timeoutFailure:
-      case SystemStatusCode.contentTypeMismatch:
-        return this.reload({
-          reason: "request_failed",
-          context: {
-            statusCode
-          }
-        });
-      default:
-        return visit2.loadResponse();
-    }
-  }
-  visitRequestFinished(_visit) {
-  }
-  visitCompleted(_visit) {
-    this.progressBar.setValue(1);
-    this.hideVisitProgressBar();
-  }
-  pageInvalidated(reason) {
-    this.reload(reason);
-  }
-  visitFailed(_visit) {
-    this.progressBar.setValue(1);
-    this.hideVisitProgressBar();
-  }
-  visitRendered(_visit) {
-  }
-  // Form Submission Delegate
-  formSubmissionStarted(_formSubmission) {
-    this.progressBar.setValue(0);
-    this.showFormProgressBarAfterDelay();
-  }
-  formSubmissionFinished(_formSubmission) {
-    this.progressBar.setValue(1);
-    this.hideFormProgressBar();
-  }
-  // Private
-  showVisitProgressBarAfterDelay() {
-    this.visitProgressBarTimeout = window.setTimeout(this.showProgressBar, this.session.progressBarDelay);
-  }
-  hideVisitProgressBar() {
-    this.progressBar.hide();
-    if (this.visitProgressBarTimeout != null) {
-      window.clearTimeout(this.visitProgressBarTimeout);
-      delete this.visitProgressBarTimeout;
-    }
-  }
-  showFormProgressBarAfterDelay() {
-    if (this.formProgressBarTimeout == null) {
-      this.formProgressBarTimeout = window.setTimeout(this.showProgressBar, this.session.progressBarDelay);
-    }
-  }
-  hideFormProgressBar() {
-    this.progressBar.hide();
-    if (this.formProgressBarTimeout != null) {
-      window.clearTimeout(this.formProgressBarTimeout);
-      delete this.formProgressBarTimeout;
-    }
-  }
-  showProgressBar = () => {
-    this.progressBar.show();
-  };
-  reload(reason) {
-    dispatch("turbo:reload", { detail: reason });
-    window.location.href = this.location?.toString() || window.location.href;
-  }
-  get navigator() {
-    return this.session.navigator;
-  }
-};
-var CacheObserver = class {
-  selector = "[data-turbo-temporary]";
-  deprecatedSelector = "[data-turbo-cache=false]";
-  started = false;
-  start() {
-    if (!this.started) {
-      this.started = true;
-      addEventListener("turbo:before-cache", this.removeTemporaryElements, false);
-    }
-  }
-  stop() {
-    if (this.started) {
-      this.started = false;
-      removeEventListener("turbo:before-cache", this.removeTemporaryElements, false);
-    }
-  }
-  removeTemporaryElements = (_event) => {
-    for (const element of this.temporaryElements) {
-      element.remove();
-    }
-  };
-  get temporaryElements() {
-    return [...document.querySelectorAll(this.selector), ...this.temporaryElementsWithDeprecation];
-  }
-  get temporaryElementsWithDeprecation() {
-    const elements = document.querySelectorAll(this.deprecatedSelector);
-    if (elements.length) {
-      console.warn(
-        `The ${this.deprecatedSelector} selector is deprecated and will be removed in a future version. Use ${this.selector} instead.`
-      );
-    }
-    return [...elements];
-  }
-};
-var FrameRedirector = class {
-  constructor(session2, element) {
-    this.session = session2;
-    this.element = element;
-    this.linkInterceptor = new LinkInterceptor(this, element);
-    this.formSubmitObserver = new FormSubmitObserver(this, element);
-  }
-  start() {
-    this.linkInterceptor.start();
-    this.formSubmitObserver.start();
-  }
-  stop() {
-    this.linkInterceptor.stop();
-    this.formSubmitObserver.stop();
-  }
-  // Link interceptor delegate
-  shouldInterceptLinkClick(element, _location, _event) {
-    return this.#shouldRedirect(element);
-  }
-  linkClickIntercepted(element, url, event) {
-    const frame = this.#findFrameElement(element);
-    if (frame) {
-      frame.delegate.linkClickIntercepted(element, url, event);
-    }
-  }
-  // Form submit observer delegate
-  willSubmitForm(element, submitter) {
-    return element.closest("turbo-frame") == null && this.#shouldSubmit(element, submitter) && this.#shouldRedirect(element, submitter);
-  }
-  formSubmitted(element, submitter) {
-    const frame = this.#findFrameElement(element, submitter);
-    if (frame) {
-      frame.delegate.formSubmitted(element, submitter);
-    }
-  }
-  #shouldSubmit(form, submitter) {
-    const action = getAction$1(form, submitter);
-    const meta = this.element.ownerDocument.querySelector(`meta[name="turbo-root"]`);
-    const rootLocation = expandURL(meta?.content ?? "/");
-    return this.#shouldRedirect(form, submitter) && locationIsVisitable(action, rootLocation);
-  }
-  #shouldRedirect(element, submitter) {
-    const isNavigatable = element instanceof HTMLFormElement ? this.session.submissionIsNavigatable(element, submitter) : this.session.elementIsNavigatable(element);
-    if (isNavigatable) {
-      const frame = this.#findFrameElement(element, submitter);
-      return frame ? frame != element.closest("turbo-frame") : false;
-    } else {
-      return false;
-    }
-  }
-  #findFrameElement(element, submitter) {
-    const id = submitter?.getAttribute("data-turbo-frame") || element.getAttribute("data-turbo-frame");
-    if (id && id != "_top") {
-      const frame = this.element.querySelector(`#${id}:not([disabled])`);
-      if (frame instanceof FrameElement) {
-        return frame;
-      }
-    }
-  }
-};
-var History = class {
-  location;
-  restorationIdentifier = uuid();
-  restorationData = {};
-  started = false;
-  pageLoaded = false;
-  currentIndex = 0;
-  constructor(delegate) {
-    this.delegate = delegate;
-  }
-  start() {
-    if (!this.started) {
-      addEventListener("popstate", this.onPopState, false);
-      addEventListener("load", this.onPageLoad, false);
-      this.currentIndex = history.state?.turbo?.restorationIndex || 0;
-      this.started = true;
-      this.replace(new URL(window.location.href));
-    }
-  }
-  stop() {
-    if (this.started) {
-      removeEventListener("popstate", this.onPopState, false);
-      removeEventListener("load", this.onPageLoad, false);
-      this.started = false;
-    }
-  }
-  push(location2, restorationIdentifier) {
-    this.update(history.pushState, location2, restorationIdentifier);
-  }
-  replace(location2, restorationIdentifier) {
-    this.update(history.replaceState, location2, restorationIdentifier);
-  }
-  update(method, location2, restorationIdentifier = uuid()) {
-    if (method === history.pushState) ++this.currentIndex;
-    const state = { turbo: { restorationIdentifier, restorationIndex: this.currentIndex } };
-    method.call(history, state, "", location2.href);
-    this.location = location2;
-    this.restorationIdentifier = restorationIdentifier;
-  }
-  // Restoration data
-  getRestorationDataForIdentifier(restorationIdentifier) {
-    return this.restorationData[restorationIdentifier] || {};
-  }
-  updateRestorationData(additionalData) {
-    const { restorationIdentifier } = this;
-    const restorationData = this.restorationData[restorationIdentifier];
-    this.restorationData[restorationIdentifier] = {
-      ...restorationData,
-      ...additionalData
-    };
-  }
-  // Scroll restoration
-  assumeControlOfScrollRestoration() {
-    if (!this.previousScrollRestoration) {
-      this.previousScrollRestoration = history.scrollRestoration ?? "auto";
-      history.scrollRestoration = "manual";
-    }
-  }
-  relinquishControlOfScrollRestoration() {
-    if (this.previousScrollRestoration) {
-      history.scrollRestoration = this.previousScrollRestoration;
-      delete this.previousScrollRestoration;
-    }
-  }
-  // Event handlers
-  onPopState = (event) => {
-    if (this.shouldHandlePopState()) {
-      const { turbo } = event.state || {};
-      if (turbo) {
-        this.location = new URL(window.location.href);
-        const { restorationIdentifier, restorationIndex } = turbo;
-        this.restorationIdentifier = restorationIdentifier;
-        const direction = restorationIndex > this.currentIndex ? "forward" : "back";
-        this.delegate.historyPoppedToLocationWithRestorationIdentifierAndDirection(this.location, restorationIdentifier, direction);
-        this.currentIndex = restorationIndex;
-      }
-    }
-  };
-  onPageLoad = async (_event) => {
-    await nextMicrotask();
-    this.pageLoaded = true;
-  };
-  // Private
-  shouldHandlePopState() {
-    return this.pageIsLoaded();
-  }
-  pageIsLoaded() {
-    return this.pageLoaded || document.readyState == "complete";
-  }
-};
-var LinkPrefetchObserver = class {
-  started = false;
-  #prefetchedLink = null;
-  constructor(delegate, eventTarget) {
-    this.delegate = delegate;
-    this.eventTarget = eventTarget;
-  }
-  start() {
-    if (this.started) return;
-    if (this.eventTarget.readyState === "loading") {
-      this.eventTarget.addEventListener("DOMContentLoaded", this.#enable, { once: true });
-    } else {
-      this.#enable();
-    }
-  }
-  stop() {
-    if (!this.started) return;
-    this.eventTarget.removeEventListener("mouseenter", this.#tryToPrefetchRequest, {
-      capture: true,
-      passive: true
-    });
-    this.eventTarget.removeEventListener("mouseleave", this.#cancelRequestIfObsolete, {
-      capture: true,
-      passive: true
-    });
-    this.eventTarget.removeEventListener("turbo:before-fetch-request", this.#tryToUsePrefetchedRequest, true);
-    this.started = false;
-  }
-  #enable = () => {
-    this.eventTarget.addEventListener("mouseenter", this.#tryToPrefetchRequest, {
-      capture: true,
-      passive: true
-    });
-    this.eventTarget.addEventListener("mouseleave", this.#cancelRequestIfObsolete, {
-      capture: true,
-      passive: true
-    });
-    this.eventTarget.addEventListener("turbo:before-fetch-request", this.#tryToUsePrefetchedRequest, true);
-    this.started = true;
-  };
-  #tryToPrefetchRequest = (event) => {
-    if (getMetaContent("turbo-prefetch") === "false") return;
-    const target = event.target;
-    const isLink = target.matches && target.matches("a[href]:not([target^=_]):not([download])");
-    if (isLink && this.#isPrefetchable(target)) {
-      const link = target;
-      const location2 = getLocationForLink(link);
-      if (this.delegate.canPrefetchRequestToLocation(link, location2)) {
-        this.#prefetchedLink = link;
-        const fetchRequest = new FetchRequest(
-          this,
-          FetchMethod.get,
-          location2,
-          new URLSearchParams(),
-          target
-        );
-        prefetchCache.setLater(location2.toString(), fetchRequest, this.#cacheTtl);
-      }
-    }
-  };
-  #cancelRequestIfObsolete = (event) => {
-    if (event.target === this.#prefetchedLink) this.#cancelPrefetchRequest();
-  };
-  #cancelPrefetchRequest = () => {
-    prefetchCache.clear();
-    this.#prefetchedLink = null;
-  };
-  #tryToUsePrefetchedRequest = (event) => {
-    if (event.target.tagName !== "FORM" && event.detail.fetchOptions.method === "get") {
-      const cached = prefetchCache.get(event.detail.url.toString());
-      if (cached) {
-        event.detail.fetchRequest = cached;
-      }
-      prefetchCache.clear();
-    }
-  };
-  prepareRequest(request) {
-    const link = request.target;
-    request.headers["X-Sec-Purpose"] = "prefetch";
-    const turboFrame = link.closest("turbo-frame");
-    const turboFrameTarget = link.getAttribute("data-turbo-frame") || turboFrame?.getAttribute("target") || turboFrame?.id;
-    if (turboFrameTarget && turboFrameTarget !== "_top") {
-      request.headers["Turbo-Frame"] = turboFrameTarget;
-    }
-  }
-  // Fetch request interface
-  requestSucceededWithResponse() {
-  }
-  requestStarted(fetchRequest) {
-  }
-  requestErrored(fetchRequest) {
-  }
-  requestFinished(fetchRequest) {
-  }
-  requestPreventedHandlingResponse(fetchRequest, fetchResponse) {
-  }
-  requestFailedWithResponse(fetchRequest, fetchResponse) {
-  }
-  get #cacheTtl() {
-    return Number(getMetaContent("turbo-prefetch-cache-time")) || cacheTtl;
-  }
-  #isPrefetchable(link) {
-    const href = link.getAttribute("href");
-    if (!href) return false;
-    if (unfetchableLink(link)) return false;
-    if (linkToTheSamePage(link)) return false;
-    if (linkOptsOut(link)) return false;
-    if (nonSafeLink(link)) return false;
-    if (eventPrevented(link)) return false;
-    return true;
-  }
-};
-var unfetchableLink = (link) => {
-  return link.origin !== document.location.origin || !["http:", "https:"].includes(link.protocol) || link.hasAttribute("target");
-};
-var linkToTheSamePage = (link) => {
-  return link.pathname + link.search === document.location.pathname + document.location.search || link.href.startsWith("#");
-};
-var linkOptsOut = (link) => {
-  if (link.getAttribute("data-turbo-prefetch") === "false") return true;
-  if (link.getAttribute("data-turbo") === "false") return true;
-  const turboPrefetchParent = findClosestRecursively(link, "[data-turbo-prefetch]");
-  if (turboPrefetchParent && turboPrefetchParent.getAttribute("data-turbo-prefetch") === "false") return true;
-  return false;
-};
-var nonSafeLink = (link) => {
-  const turboMethod = link.getAttribute("data-turbo-method");
-  if (turboMethod && turboMethod.toLowerCase() !== "get") return true;
-  if (isUJS(link)) return true;
-  if (link.hasAttribute("data-turbo-confirm")) return true;
-  if (link.hasAttribute("data-turbo-stream")) return true;
-  return false;
-};
-var isUJS = (link) => {
-  return link.hasAttribute("data-remote") || link.hasAttribute("data-behavior") || link.hasAttribute("data-confirm") || link.hasAttribute("data-method");
-};
-var eventPrevented = (link) => {
-  const event = dispatch("turbo:before-prefetch", { target: link, cancelable: true });
-  return event.defaultPrevented;
-};
-var Navigator = class {
-  constructor(delegate) {
-    this.delegate = delegate;
-  }
-  proposeVisit(location2, options = {}) {
-    if (this.delegate.allowsVisitingLocationWithAction(location2, options.action)) {
-      this.delegate.visitProposedToLocation(location2, options);
-    }
-  }
-  startVisit(locatable, restorationIdentifier, options = {}) {
-    this.stop();
-    this.currentVisit = new Visit(this, expandURL(locatable), restorationIdentifier, {
-      referrer: this.location,
-      ...options
-    });
-    this.currentVisit.start();
-  }
-  submitForm(form, submitter) {
-    this.stop();
-    this.formSubmission = new FormSubmission(this, form, submitter, true);
-    this.formSubmission.start();
-  }
-  stop() {
-    if (this.formSubmission) {
-      this.formSubmission.stop();
-      delete this.formSubmission;
-    }
-    if (this.currentVisit) {
-      this.currentVisit.cancel();
-      delete this.currentVisit;
-    }
-  }
-  get adapter() {
-    return this.delegate.adapter;
-  }
-  get view() {
-    return this.delegate.view;
-  }
-  get rootLocation() {
-    return this.view.snapshot.rootLocation;
-  }
-  get history() {
-    return this.delegate.history;
-  }
-  // Form submission delegate
-  formSubmissionStarted(formSubmission) {
-    if (typeof this.adapter.formSubmissionStarted === "function") {
-      this.adapter.formSubmissionStarted(formSubmission);
-    }
-  }
-  async formSubmissionSucceededWithResponse(formSubmission, fetchResponse) {
-    if (formSubmission == this.formSubmission) {
-      const responseHTML = await fetchResponse.responseHTML;
-      if (responseHTML) {
-        const shouldCacheSnapshot = formSubmission.isSafe;
-        if (!shouldCacheSnapshot) {
-          this.view.clearSnapshotCache();
-        }
-        const { statusCode, redirected } = fetchResponse;
-        const action = this.#getActionForFormSubmission(formSubmission, fetchResponse);
-        const visitOptions = {
-          action,
-          shouldCacheSnapshot,
-          response: { statusCode, responseHTML, redirected }
-        };
-        this.proposeVisit(fetchResponse.location, visitOptions);
-      }
-    }
-  }
-  async formSubmissionFailedWithResponse(formSubmission, fetchResponse) {
-    const responseHTML = await fetchResponse.responseHTML;
-    if (responseHTML) {
-      const snapshot = PageSnapshot.fromHTMLString(responseHTML);
-      if (fetchResponse.serverError) {
-        await this.view.renderError(snapshot, this.currentVisit);
-      } else {
-        await this.view.renderPage(snapshot, false, true, this.currentVisit);
-      }
-      if (!snapshot.shouldPreserveScrollPosition) {
-        this.view.scrollToTop();
-      }
-      this.view.clearSnapshotCache();
-    }
-  }
-  formSubmissionErrored(formSubmission, error) {
-    console.error(error);
-  }
-  formSubmissionFinished(formSubmission) {
-    if (typeof this.adapter.formSubmissionFinished === "function") {
-      this.adapter.formSubmissionFinished(formSubmission);
-    }
-  }
-  // Visit delegate
-  visitStarted(visit2) {
-    this.delegate.visitStarted(visit2);
-  }
-  visitCompleted(visit2) {
-    this.delegate.visitCompleted(visit2);
-  }
-  locationWithActionIsSamePage(location2, action) {
-    const anchor = getAnchor(location2);
-    const currentAnchor = getAnchor(this.view.lastRenderedLocation);
-    const isRestorationToTop = action === "restore" && typeof anchor === "undefined";
-    return action !== "replace" && getRequestURL(location2) === getRequestURL(this.view.lastRenderedLocation) && (isRestorationToTop || anchor != null && anchor !== currentAnchor);
-  }
-  visitScrolledToSamePageLocation(oldURL, newURL) {
-    this.delegate.visitScrolledToSamePageLocation(oldURL, newURL);
-  }
-  // Visits
-  get location() {
-    return this.history.location;
-  }
-  get restorationIdentifier() {
-    return this.history.restorationIdentifier;
-  }
-  #getActionForFormSubmission(formSubmission, fetchResponse) {
-    const { submitter, formElement } = formSubmission;
-    return getVisitAction(submitter, formElement) || this.#getDefaultAction(fetchResponse);
-  }
-  #getDefaultAction(fetchResponse) {
-    const sameLocationRedirect = fetchResponse.redirected && fetchResponse.location.href === this.location?.href;
-    return sameLocationRedirect ? "replace" : "advance";
-  }
-};
-var PageStage = {
-  initial: 0,
-  loading: 1,
-  interactive: 2,
-  complete: 3
-};
-var PageObserver = class {
-  stage = PageStage.initial;
-  started = false;
-  constructor(delegate) {
-    this.delegate = delegate;
-  }
-  start() {
-    if (!this.started) {
-      if (this.stage == PageStage.initial) {
-        this.stage = PageStage.loading;
-      }
-      document.addEventListener("readystatechange", this.interpretReadyState, false);
-      addEventListener("pagehide", this.pageWillUnload, false);
-      this.started = true;
-    }
-  }
-  stop() {
-    if (this.started) {
-      document.removeEventListener("readystatechange", this.interpretReadyState, false);
-      removeEventListener("pagehide", this.pageWillUnload, false);
-      this.started = false;
-    }
-  }
-  interpretReadyState = () => {
-    const { readyState } = this;
-    if (readyState == "interactive") {
-      this.pageIsInteractive();
-    } else if (readyState == "complete") {
-      this.pageIsComplete();
-    }
-  };
-  pageIsInteractive() {
-    if (this.stage == PageStage.loading) {
-      this.stage = PageStage.interactive;
-      this.delegate.pageBecameInteractive();
-    }
-  }
-  pageIsComplete() {
-    this.pageIsInteractive();
-    if (this.stage == PageStage.interactive) {
-      this.stage = PageStage.complete;
-      this.delegate.pageLoaded();
-    }
-  }
-  pageWillUnload = () => {
-    this.delegate.pageWillUnload();
-  };
-  get readyState() {
-    return document.readyState;
-  }
-};
-var ScrollObserver = class {
-  started = false;
-  constructor(delegate) {
-    this.delegate = delegate;
-  }
-  start() {
-    if (!this.started) {
-      addEventListener("scroll", this.onScroll, false);
-      this.onScroll();
-      this.started = true;
-    }
-  }
-  stop() {
-    if (this.started) {
-      removeEventListener("scroll", this.onScroll, false);
-      this.started = false;
-    }
-  }
-  onScroll = () => {
-    this.updatePosition({ x: window.pageXOffset, y: window.pageYOffset });
-  };
-  // Private
-  updatePosition(position) {
-    this.delegate.scrollPositionChanged(position);
-  }
-};
-var StreamMessageRenderer = class {
-  render({ fragment }) {
-    Bardo.preservingPermanentElements(this, getPermanentElementMapForFragment(fragment), () => {
-      withAutofocusFromFragment(fragment, () => {
-        withPreservedFocus(() => {
-          document.documentElement.appendChild(fragment);
-        });
-      });
-    });
-  }
-  // Bardo delegate
-  enteringBardo(currentPermanentElement, newPermanentElement) {
-    newPermanentElement.replaceWith(currentPermanentElement.cloneNode(true));
-  }
-  leavingBardo() {
-  }
-};
-function getPermanentElementMapForFragment(fragment) {
-  const permanentElementsInDocument = queryPermanentElementsAll(document.documentElement);
-  const permanentElementMap = {};
-  for (const permanentElementInDocument of permanentElementsInDocument) {
-    const { id } = permanentElementInDocument;
-    for (const streamElement of fragment.querySelectorAll("turbo-stream")) {
-      const elementInStream = getPermanentElementById(streamElement.templateElement.content, id);
-      if (elementInStream) {
-        permanentElementMap[id] = [permanentElementInDocument, elementInStream];
-      }
-    }
-  }
-  return permanentElementMap;
-}
-async function withAutofocusFromFragment(fragment, callback) {
-  const generatedID = `turbo-stream-autofocus-${uuid()}`;
-  const turboStreams = fragment.querySelectorAll("turbo-stream");
-  const elementWithAutofocus = firstAutofocusableElementInStreams(turboStreams);
-  let willAutofocusId = null;
-  if (elementWithAutofocus) {
-    if (elementWithAutofocus.id) {
-      willAutofocusId = elementWithAutofocus.id;
-    } else {
-      willAutofocusId = generatedID;
-    }
-    elementWithAutofocus.id = willAutofocusId;
-  }
-  callback();
-  await nextRepaint();
-  const hasNoActiveElement = document.activeElement == null || document.activeElement == document.body;
-  if (hasNoActiveElement && willAutofocusId) {
-    const elementToAutofocus = document.getElementById(willAutofocusId);
-    if (elementIsFocusable(elementToAutofocus)) {
-      elementToAutofocus.focus();
-    }
-    if (elementToAutofocus && elementToAutofocus.id == generatedID) {
-      elementToAutofocus.removeAttribute("id");
-    }
-  }
-}
-async function withPreservedFocus(callback) {
-  const [activeElementBeforeRender, activeElementAfterRender] = await around(callback, () => document.activeElement);
-  const restoreFocusTo = activeElementBeforeRender && activeElementBeforeRender.id;
-  if (restoreFocusTo) {
-    const elementToFocus = document.getElementById(restoreFocusTo);
-    if (elementIsFocusable(elementToFocus) && elementToFocus != activeElementAfterRender) {
-      elementToFocus.focus();
-    }
-  }
-}
-function firstAutofocusableElementInStreams(nodeListOfStreamElements) {
-  for (const streamElement of nodeListOfStreamElements) {
-    const elementWithAutofocus = queryAutofocusableElement(streamElement.templateElement.content);
-    if (elementWithAutofocus) return elementWithAutofocus;
-  }
-  return null;
-}
-var StreamObserver = class {
-  sources = /* @__PURE__ */ new Set();
-  #started = false;
-  constructor(delegate) {
-    this.delegate = delegate;
-  }
-  start() {
-    if (!this.#started) {
-      this.#started = true;
-      addEventListener("turbo:before-fetch-response", this.inspectFetchResponse, false);
-    }
-  }
-  stop() {
-    if (this.#started) {
-      this.#started = false;
-      removeEventListener("turbo:before-fetch-response", this.inspectFetchResponse, false);
-    }
-  }
-  connectStreamSource(source) {
-    if (!this.streamSourceIsConnected(source)) {
-      this.sources.add(source);
-      source.addEventListener("message", this.receiveMessageEvent, false);
-    }
-  }
-  disconnectStreamSource(source) {
-    if (this.streamSourceIsConnected(source)) {
-      this.sources.delete(source);
-      source.removeEventListener("message", this.receiveMessageEvent, false);
-    }
-  }
-  streamSourceIsConnected(source) {
-    return this.sources.has(source);
-  }
-  inspectFetchResponse = (event) => {
-    const response = fetchResponseFromEvent(event);
-    if (response && fetchResponseIsStream(response)) {
-      event.preventDefault();
-      this.receiveMessageResponse(response);
-    }
-  };
-  receiveMessageEvent = (event) => {
-    if (this.#started && typeof event.data == "string") {
-      this.receiveMessageHTML(event.data);
-    }
-  };
-  async receiveMessageResponse(response) {
-    const html = await response.responseHTML;
-    if (html) {
-      this.receiveMessageHTML(html);
-    }
-  }
-  receiveMessageHTML(html) {
-    this.delegate.receivedMessageFromStream(StreamMessage.wrap(html));
-  }
-};
-function fetchResponseFromEvent(event) {
-  const fetchResponse = event.detail?.fetchResponse;
-  if (fetchResponse instanceof FetchResponse) {
-    return fetchResponse;
-  }
-}
-function fetchResponseIsStream(response) {
-  const contentType = response.contentType ?? "";
-  return contentType.startsWith(StreamMessage.contentType);
-}
-var ErrorRenderer = class extends Renderer {
-  static renderElement(currentElement, newElement) {
-    const { documentElement, body } = document;
-    documentElement.replaceChild(newElement, body);
-  }
-  async render() {
-    this.replaceHeadAndBody();
-    this.activateScriptElements();
-  }
-  replaceHeadAndBody() {
-    const { documentElement, head } = document;
-    documentElement.replaceChild(this.newHead, head);
-    this.renderElement(this.currentElement, this.newElement);
-  }
-  activateScriptElements() {
-    for (const replaceableElement of this.scriptElements) {
-      const parentNode = replaceableElement.parentNode;
-      if (parentNode) {
-        const element = activateScriptElement(replaceableElement);
-        parentNode.replaceChild(element, replaceableElement);
-      }
-    }
-  }
-  get newHead() {
-    return this.newSnapshot.headSnapshot.element;
-  }
-  get scriptElements() {
-    return document.documentElement.querySelectorAll("script");
-  }
-};
-var Idiomorph = /* @__PURE__ */ function() {
-  let EMPTY_SET = /* @__PURE__ */ new Set();
-  let defaults = {
-    morphStyle: "outerHTML",
-    callbacks: {
-      beforeNodeAdded: noOp,
-      afterNodeAdded: noOp,
-      beforeNodeMorphed: noOp,
-      afterNodeMorphed: noOp,
-      beforeNodeRemoved: noOp,
-      afterNodeRemoved: noOp,
-      beforeAttributeUpdated: noOp
-    },
-    head: {
-      style: "merge",
-      shouldPreserve: function(elt) {
-        return elt.getAttribute("im-preserve") === "true";
-      },
-      shouldReAppend: function(elt) {
-        return elt.getAttribute("im-re-append") === "true";
-      },
-      shouldRemove: noOp,
-      afterHeadMorphed: noOp
-    }
-  };
-  function morph(oldNode, newContent, config = {}) {
-    if (oldNode instanceof Document) {
-      oldNode = oldNode.documentElement;
-    }
-    if (typeof newContent === "string") {
-      newContent = parseContent(newContent);
-    }
-    let normalizedContent = normalizeContent(newContent);
-    let ctx = createMorphContext(oldNode, normalizedContent, config);
-    return morphNormalizedContent(oldNode, normalizedContent, ctx);
-  }
-  function morphNormalizedContent(oldNode, normalizedNewContent, ctx) {
-    if (ctx.head.block) {
-      let oldHead = oldNode.querySelector("head");
-      let newHead = normalizedNewContent.querySelector("head");
-      if (oldHead && newHead) {
-        let promises = handleHeadElement(newHead, oldHead, ctx);
-        Promise.all(promises).then(function() {
-          morphNormalizedContent(oldNode, normalizedNewContent, Object.assign(ctx, {
-            head: {
-              block: false,
-              ignore: true
-            }
-          }));
-        });
-        return;
-      }
-    }
-    if (ctx.morphStyle === "innerHTML") {
-      morphChildren(normalizedNewContent, oldNode, ctx);
-      return oldNode.children;
-    } else if (ctx.morphStyle === "outerHTML" || ctx.morphStyle == null) {
-      let bestMatch = findBestNodeMatch(normalizedNewContent, oldNode, ctx);
-      let previousSibling = bestMatch?.previousSibling;
-      let nextSibling = bestMatch?.nextSibling;
-      let morphedNode = morphOldNodeTo(oldNode, bestMatch, ctx);
-      if (bestMatch) {
-        return insertSiblings(previousSibling, morphedNode, nextSibling);
-      } else {
-        return [];
-      }
-    } else {
-      throw "Do not understand how to morph style " + ctx.morphStyle;
-    }
-  }
-  function ignoreValueOfActiveElement(possibleActiveElement, ctx) {
-    return ctx.ignoreActiveValue && possibleActiveElement === document.activeElement && possibleActiveElement !== document.body;
-  }
-  function morphOldNodeTo(oldNode, newContent, ctx) {
-    if (ctx.ignoreActive && oldNode === document.activeElement) ;
-    else if (newContent == null) {
-      if (ctx.callbacks.beforeNodeRemoved(oldNode) === false) return oldNode;
-      oldNode.remove();
-      ctx.callbacks.afterNodeRemoved(oldNode);
-      return null;
-    } else if (!isSoftMatch(oldNode, newContent)) {
-      if (ctx.callbacks.beforeNodeRemoved(oldNode) === false) return oldNode;
-      if (ctx.callbacks.beforeNodeAdded(newContent) === false) return oldNode;
-      oldNode.parentElement.replaceChild(newContent, oldNode);
-      ctx.callbacks.afterNodeAdded(newContent);
-      ctx.callbacks.afterNodeRemoved(oldNode);
-      return newContent;
-    } else {
-      if (ctx.callbacks.beforeNodeMorphed(oldNode, newContent) === false) return oldNode;
-      if (oldNode instanceof HTMLHeadElement && ctx.head.ignore) ;
-      else if (oldNode instanceof HTMLHeadElement && ctx.head.style !== "morph") {
-        handleHeadElement(newContent, oldNode, ctx);
-      } else {
-        syncNodeFrom(newContent, oldNode, ctx);
-        if (!ignoreValueOfActiveElement(oldNode, ctx)) {
-          morphChildren(newContent, oldNode, ctx);
-        }
-      }
-      ctx.callbacks.afterNodeMorphed(oldNode, newContent);
-      return oldNode;
-    }
-  }
-  function morphChildren(newParent, oldParent, ctx) {
-    let nextNewChild = newParent.firstChild;
-    let insertionPoint = oldParent.firstChild;
-    let newChild;
-    while (nextNewChild) {
-      newChild = nextNewChild;
-      nextNewChild = newChild.nextSibling;
-      if (insertionPoint == null) {
-        if (ctx.callbacks.beforeNodeAdded(newChild) === false) return;
-        oldParent.appendChild(newChild);
-        ctx.callbacks.afterNodeAdded(newChild);
-        removeIdsFromConsideration(ctx, newChild);
-        continue;
-      }
-      if (isIdSetMatch(newChild, insertionPoint, ctx)) {
-        morphOldNodeTo(insertionPoint, newChild, ctx);
-        insertionPoint = insertionPoint.nextSibling;
-        removeIdsFromConsideration(ctx, newChild);
-        continue;
-      }
-      let idSetMatch = findIdSetMatch(newParent, oldParent, newChild, insertionPoint, ctx);
-      if (idSetMatch) {
-        insertionPoint = removeNodesBetween(insertionPoint, idSetMatch, ctx);
-        morphOldNodeTo(idSetMatch, newChild, ctx);
-        removeIdsFromConsideration(ctx, newChild);
-        continue;
-      }
-      let softMatch = findSoftMatch(newParent, oldParent, newChild, insertionPoint, ctx);
-      if (softMatch) {
-        insertionPoint = removeNodesBetween(insertionPoint, softMatch, ctx);
-        morphOldNodeTo(softMatch, newChild, ctx);
-        removeIdsFromConsideration(ctx, newChild);
-        continue;
-      }
-      if (ctx.callbacks.beforeNodeAdded(newChild) === false) return;
-      oldParent.insertBefore(newChild, insertionPoint);
-      ctx.callbacks.afterNodeAdded(newChild);
-      removeIdsFromConsideration(ctx, newChild);
-    }
-    while (insertionPoint !== null) {
-      let tempNode = insertionPoint;
-      insertionPoint = insertionPoint.nextSibling;
-      removeNode(tempNode, ctx);
-    }
-  }
-  function ignoreAttribute(attr, to, updateType, ctx) {
-    if (attr === "value" && ctx.ignoreActiveValue && to === document.activeElement) {
-      return true;
-    }
-    return ctx.callbacks.beforeAttributeUpdated(attr, to, updateType) === false;
-  }
-  function syncNodeFrom(from, to, ctx) {
-    let type = from.nodeType;
-    if (type === 1) {
-      const fromAttributes = from.attributes;
-      const toAttributes = to.attributes;
-      for (const fromAttribute of fromAttributes) {
-        if (ignoreAttribute(fromAttribute.name, to, "update", ctx)) {
-          continue;
-        }
-        if (to.getAttribute(fromAttribute.name) !== fromAttribute.value) {
-          to.setAttribute(fromAttribute.name, fromAttribute.value);
-        }
-      }
-      for (let i = toAttributes.length - 1; 0 <= i; i--) {
-        const toAttribute = toAttributes[i];
-        if (ignoreAttribute(toAttribute.name, to, "remove", ctx)) {
-          continue;
-        }
-        if (!from.hasAttribute(toAttribute.name)) {
-          to.removeAttribute(toAttribute.name);
-        }
-      }
-    }
-    if (type === 8 || type === 3) {
-      if (to.nodeValue !== from.nodeValue) {
-        to.nodeValue = from.nodeValue;
-      }
-    }
-    if (!ignoreValueOfActiveElement(to, ctx)) {
-      syncInputValue(from, to, ctx);
-    }
-  }
-  function syncBooleanAttribute(from, to, attributeName, ctx) {
-    if (from[attributeName] !== to[attributeName]) {
-      let ignoreUpdate = ignoreAttribute(attributeName, to, "update", ctx);
-      if (!ignoreUpdate) {
-        to[attributeName] = from[attributeName];
-      }
-      if (from[attributeName]) {
-        if (!ignoreUpdate) {
-          to.setAttribute(attributeName, from[attributeName]);
-        }
-      } else {
-        if (!ignoreAttribute(attributeName, to, "remove", ctx)) {
-          to.removeAttribute(attributeName);
-        }
-      }
-    }
-  }
-  function syncInputValue(from, to, ctx) {
-    if (from instanceof HTMLInputElement && to instanceof HTMLInputElement && from.type !== "file") {
-      let fromValue = from.value;
-      let toValue = to.value;
-      syncBooleanAttribute(from, to, "checked", ctx);
-      syncBooleanAttribute(from, to, "disabled", ctx);
-      if (!from.hasAttribute("value")) {
-        if (!ignoreAttribute("value", to, "remove", ctx)) {
-          to.value = "";
-          to.removeAttribute("value");
-        }
-      } else if (fromValue !== toValue) {
-        if (!ignoreAttribute("value", to, "update", ctx)) {
-          to.setAttribute("value", fromValue);
-          to.value = fromValue;
-        }
-      }
-    } else if (from instanceof HTMLOptionElement) {
-      syncBooleanAttribute(from, to, "selected", ctx);
-    } else if (from instanceof HTMLTextAreaElement && to instanceof HTMLTextAreaElement) {
-      let fromValue = from.value;
-      let toValue = to.value;
-      if (ignoreAttribute("value", to, "update", ctx)) {
-        return;
-      }
-      if (fromValue !== toValue) {
-        to.value = fromValue;
-      }
-      if (to.firstChild && to.firstChild.nodeValue !== fromValue) {
-        to.firstChild.nodeValue = fromValue;
-      }
-    }
-  }
-  function handleHeadElement(newHeadTag, currentHead, ctx) {
-    let added = [];
-    let removed = [];
-    let preserved = [];
-    let nodesToAppend = [];
-    let headMergeStyle = ctx.head.style;
-    let srcToNewHeadNodes = /* @__PURE__ */ new Map();
-    for (const newHeadChild of newHeadTag.children) {
-      srcToNewHeadNodes.set(newHeadChild.outerHTML, newHeadChild);
-    }
-    for (const currentHeadElt of currentHead.children) {
-      let inNewContent = srcToNewHeadNodes.has(currentHeadElt.outerHTML);
-      let isReAppended = ctx.head.shouldReAppend(currentHeadElt);
-      let isPreserved = ctx.head.shouldPreserve(currentHeadElt);
-      if (inNewContent || isPreserved) {
-        if (isReAppended) {
-          removed.push(currentHeadElt);
-        } else {
-          srcToNewHeadNodes.delete(currentHeadElt.outerHTML);
-          preserved.push(currentHeadElt);
-        }
-      } else {
-        if (headMergeStyle === "append") {
-          if (isReAppended) {
-            removed.push(currentHeadElt);
-            nodesToAppend.push(currentHeadElt);
-          }
-        } else {
-          if (ctx.head.shouldRemove(currentHeadElt) !== false) {
-            removed.push(currentHeadElt);
-          }
-        }
-      }
-    }
-    nodesToAppend.push(...srcToNewHeadNodes.values());
-    let promises = [];
-    for (const newNode of nodesToAppend) {
-      let newElt = document.createRange().createContextualFragment(newNode.outerHTML).firstChild;
-      if (ctx.callbacks.beforeNodeAdded(newElt) !== false) {
-        if (newElt.href || newElt.src) {
-          let resolve = null;
-          let promise = new Promise(function(_resolve) {
-            resolve = _resolve;
-          });
-          newElt.addEventListener("load", function() {
-            resolve();
-          });
-          promises.push(promise);
-        }
-        currentHead.appendChild(newElt);
-        ctx.callbacks.afterNodeAdded(newElt);
-        added.push(newElt);
-      }
-    }
-    for (const removedElement of removed) {
-      if (ctx.callbacks.beforeNodeRemoved(removedElement) !== false) {
-        currentHead.removeChild(removedElement);
-        ctx.callbacks.afterNodeRemoved(removedElement);
-      }
-    }
-    ctx.head.afterHeadMorphed(currentHead, { added, kept: preserved, removed });
-    return promises;
-  }
-  function noOp() {
-  }
-  function mergeDefaults(config) {
-    let finalConfig = {};
-    Object.assign(finalConfig, defaults);
-    Object.assign(finalConfig, config);
-    finalConfig.callbacks = {};
-    Object.assign(finalConfig.callbacks, defaults.callbacks);
-    Object.assign(finalConfig.callbacks, config.callbacks);
-    finalConfig.head = {};
-    Object.assign(finalConfig.head, defaults.head);
-    Object.assign(finalConfig.head, config.head);
-    return finalConfig;
-  }
-  function createMorphContext(oldNode, newContent, config) {
-    config = mergeDefaults(config);
-    return {
-      target: oldNode,
-      newContent,
-      config,
-      morphStyle: config.morphStyle,
-      ignoreActive: config.ignoreActive,
-      ignoreActiveValue: config.ignoreActiveValue,
-      idMap: createIdMap(oldNode, newContent),
-      deadIds: /* @__PURE__ */ new Set(),
-      callbacks: config.callbacks,
-      head: config.head
-    };
-  }
-  function isIdSetMatch(node1, node2, ctx) {
-    if (node1 == null || node2 == null) {
-      return false;
-    }
-    if (node1.nodeType === node2.nodeType && node1.tagName === node2.tagName) {
-      if (node1.id !== "" && node1.id === node2.id) {
-        return true;
-      } else {
-        return getIdIntersectionCount(ctx, node1, node2) > 0;
-      }
-    }
-    return false;
-  }
-  function isSoftMatch(node1, node2) {
-    if (node1 == null || node2 == null) {
-      return false;
-    }
-    return node1.nodeType === node2.nodeType && node1.tagName === node2.tagName;
-  }
-  function removeNodesBetween(startInclusive, endExclusive, ctx) {
-    while (startInclusive !== endExclusive) {
-      let tempNode = startInclusive;
-      startInclusive = startInclusive.nextSibling;
-      removeNode(tempNode, ctx);
-    }
-    removeIdsFromConsideration(ctx, endExclusive);
-    return endExclusive.nextSibling;
-  }
-  function findIdSetMatch(newContent, oldParent, newChild, insertionPoint, ctx) {
-    let newChildPotentialIdCount = getIdIntersectionCount(ctx, newChild, oldParent);
-    let potentialMatch = null;
-    if (newChildPotentialIdCount > 0) {
-      let potentialMatch2 = insertionPoint;
-      let otherMatchCount = 0;
-      while (potentialMatch2 != null) {
-        if (isIdSetMatch(newChild, potentialMatch2, ctx)) {
-          return potentialMatch2;
-        }
-        otherMatchCount += getIdIntersectionCount(ctx, potentialMatch2, newContent);
-        if (otherMatchCount > newChildPotentialIdCount) {
-          return null;
-        }
-        potentialMatch2 = potentialMatch2.nextSibling;
-      }
-    }
-    return potentialMatch;
-  }
-  function findSoftMatch(newContent, oldParent, newChild, insertionPoint, ctx) {
-    let potentialSoftMatch = insertionPoint;
-    let nextSibling = newChild.nextSibling;
-    let siblingSoftMatchCount = 0;
-    while (potentialSoftMatch != null) {
-      if (getIdIntersectionCount(ctx, potentialSoftMatch, newContent) > 0) {
-        return null;
-      }
-      if (isSoftMatch(newChild, potentialSoftMatch)) {
-        return potentialSoftMatch;
-      }
-      if (isSoftMatch(nextSibling, potentialSoftMatch)) {
-        siblingSoftMatchCount++;
-        nextSibling = nextSibling.nextSibling;
-        if (siblingSoftMatchCount >= 2) {
-          return null;
-        }
-      }
-      potentialSoftMatch = potentialSoftMatch.nextSibling;
-    }
-    return potentialSoftMatch;
-  }
-  function parseContent(newContent) {
-    let parser = new DOMParser();
-    let contentWithSvgsRemoved = newContent.replace(/<svg(\s[^>]*>|>)([\s\S]*?)<\/svg>/gim, "");
-    if (contentWithSvgsRemoved.match(/<\/html>/) || contentWithSvgsRemoved.match(/<\/head>/) || contentWithSvgsRemoved.match(/<\/body>/)) {
-      let content = parser.parseFromString(newContent, "text/html");
-      if (contentWithSvgsRemoved.match(/<\/html>/)) {
-        content.generatedByIdiomorph = true;
-        return content;
-      } else {
-        let htmlElement = content.firstChild;
-        if (htmlElement) {
-          htmlElement.generatedByIdiomorph = true;
-          return htmlElement;
-        } else {
-          return null;
-        }
-      }
-    } else {
-      let responseDoc = parser.parseFromString("<body><template>" + newContent + "</template></body>", "text/html");
-      let content = responseDoc.body.querySelector("template").content;
-      content.generatedByIdiomorph = true;
-      return content;
-    }
-  }
-  function normalizeContent(newContent) {
-    if (newContent == null) {
-      const dummyParent = document.createElement("div");
-      return dummyParent;
-    } else if (newContent.generatedByIdiomorph) {
-      return newContent;
-    } else if (newContent instanceof Node) {
-      const dummyParent = document.createElement("div");
-      dummyParent.append(newContent);
-      return dummyParent;
-    } else {
-      const dummyParent = document.createElement("div");
-      for (const elt of [...newContent]) {
-        dummyParent.append(elt);
-      }
-      return dummyParent;
-    }
-  }
-  function insertSiblings(previousSibling, morphedNode, nextSibling) {
-    let stack = [];
-    let added = [];
-    while (previousSibling != null) {
-      stack.push(previousSibling);
-      previousSibling = previousSibling.previousSibling;
-    }
-    while (stack.length > 0) {
-      let node = stack.pop();
-      added.push(node);
-      morphedNode.parentElement.insertBefore(node, morphedNode);
-    }
-    added.push(morphedNode);
-    while (nextSibling != null) {
-      stack.push(nextSibling);
-      added.push(nextSibling);
-      nextSibling = nextSibling.nextSibling;
-    }
-    while (stack.length > 0) {
-      morphedNode.parentElement.insertBefore(stack.pop(), morphedNode.nextSibling);
-    }
-    return added;
-  }
-  function findBestNodeMatch(newContent, oldNode, ctx) {
-    let currentElement;
-    currentElement = newContent.firstChild;
-    let bestElement = currentElement;
-    let score = 0;
-    while (currentElement) {
-      let newScore = scoreElement(currentElement, oldNode, ctx);
-      if (newScore > score) {
-        bestElement = currentElement;
-        score = newScore;
-      }
-      currentElement = currentElement.nextSibling;
-    }
-    return bestElement;
-  }
-  function scoreElement(node1, node2, ctx) {
-    if (isSoftMatch(node1, node2)) {
-      return 0.5 + getIdIntersectionCount(ctx, node1, node2);
-    }
-    return 0;
-  }
-  function removeNode(tempNode, ctx) {
-    removeIdsFromConsideration(ctx, tempNode);
-    if (ctx.callbacks.beforeNodeRemoved(tempNode) === false) return;
-    tempNode.remove();
-    ctx.callbacks.afterNodeRemoved(tempNode);
-  }
-  function isIdInConsideration(ctx, id) {
-    return !ctx.deadIds.has(id);
-  }
-  function idIsWithinNode(ctx, id, targetNode) {
-    let idSet = ctx.idMap.get(targetNode) || EMPTY_SET;
-    return idSet.has(id);
-  }
-  function removeIdsFromConsideration(ctx, node) {
-    let idSet = ctx.idMap.get(node) || EMPTY_SET;
-    for (const id of idSet) {
-      ctx.deadIds.add(id);
-    }
-  }
-  function getIdIntersectionCount(ctx, node1, node2) {
-    let sourceSet = ctx.idMap.get(node1) || EMPTY_SET;
-    let matchCount = 0;
-    for (const id of sourceSet) {
-      if (isIdInConsideration(ctx, id) && idIsWithinNode(ctx, id, node2)) {
-        ++matchCount;
-      }
-    }
-    return matchCount;
-  }
-  function populateIdMapForNode(node, idMap) {
-    let nodeParent = node.parentElement;
-    let idElements = node.querySelectorAll("[id]");
-    for (const elt of idElements) {
-      let current = elt;
-      while (current !== nodeParent && current != null) {
-        let idSet = idMap.get(current);
-        if (idSet == null) {
-          idSet = /* @__PURE__ */ new Set();
-          idMap.set(current, idSet);
-        }
-        idSet.add(elt.id);
-        current = current.parentElement;
-      }
-    }
-  }
-  function createIdMap(oldContent, newContent) {
-    let idMap = /* @__PURE__ */ new Map();
-    populateIdMapForNode(oldContent, idMap);
-    populateIdMapForNode(newContent, idMap);
-    return idMap;
-  }
-  return {
-    morph,
-    defaults
-  };
-}();
-var PageRenderer = class extends Renderer {
-  static renderElement(currentElement, newElement) {
-    if (document.body && newElement instanceof HTMLBodyElement) {
-      document.body.replaceWith(newElement);
-    } else {
-      document.documentElement.appendChild(newElement);
-    }
-  }
-  get shouldRender() {
-    return this.newSnapshot.isVisitable && this.trackedElementsAreIdentical;
-  }
-  get reloadReason() {
-    if (!this.newSnapshot.isVisitable) {
-      return {
-        reason: "turbo_visit_control_is_reload"
-      };
-    }
-    if (!this.trackedElementsAreIdentical) {
-      return {
-        reason: "tracked_element_mismatch"
-      };
-    }
-  }
-  async prepareToRender() {
-    this.#setLanguage();
-    await this.mergeHead();
-  }
-  async render() {
-    if (this.willRender) {
-      await this.replaceBody();
-    }
-  }
-  finishRendering() {
-    super.finishRendering();
-    if (!this.isPreview) {
-      this.focusFirstAutofocusableElement();
-    }
-  }
-  get currentHeadSnapshot() {
-    return this.currentSnapshot.headSnapshot;
-  }
-  get newHeadSnapshot() {
-    return this.newSnapshot.headSnapshot;
-  }
-  get newElement() {
-    return this.newSnapshot.element;
-  }
-  #setLanguage() {
-    const { documentElement } = this.currentSnapshot;
-    const { lang } = this.newSnapshot;
-    if (lang) {
-      documentElement.setAttribute("lang", lang);
-    } else {
-      documentElement.removeAttribute("lang");
-    }
-  }
-  async mergeHead() {
-    const mergedHeadElements = this.mergeProvisionalElements();
-    const newStylesheetElements = this.copyNewHeadStylesheetElements();
-    this.copyNewHeadScriptElements();
-    await mergedHeadElements;
-    await newStylesheetElements;
-    if (this.willRender) {
-      this.removeUnusedDynamicStylesheetElements();
-    }
-  }
-  async replaceBody() {
-    await this.preservingPermanentElements(async () => {
-      this.activateNewBody();
-      await this.assignNewBody();
-    });
-  }
-  get trackedElementsAreIdentical() {
-    return this.currentHeadSnapshot.trackedElementSignature == this.newHeadSnapshot.trackedElementSignature;
-  }
-  async copyNewHeadStylesheetElements() {
-    const loadingElements = [];
-    for (const element of this.newHeadStylesheetElements) {
-      loadingElements.push(waitForLoad(element));
-      document.head.appendChild(element);
-    }
-    await Promise.all(loadingElements);
-  }
-  copyNewHeadScriptElements() {
-    for (const element of this.newHeadScriptElements) {
-      document.head.appendChild(activateScriptElement(element));
-    }
-  }
-  removeUnusedDynamicStylesheetElements() {
-    for (const element of this.unusedDynamicStylesheetElements) {
-      document.head.removeChild(element);
-    }
-  }
-  async mergeProvisionalElements() {
-    const newHeadElements = [...this.newHeadProvisionalElements];
-    for (const element of this.currentHeadProvisionalElements) {
-      if (!this.isCurrentElementInElementList(element, newHeadElements)) {
-        document.head.removeChild(element);
-      }
-    }
-    for (const element of newHeadElements) {
-      document.head.appendChild(element);
-    }
-  }
-  isCurrentElementInElementList(element, elementList) {
-    for (const [index, newElement] of elementList.entries()) {
-      if (element.tagName == "TITLE") {
-        if (newElement.tagName != "TITLE") {
-          continue;
-        }
-        if (element.innerHTML == newElement.innerHTML) {
-          elementList.splice(index, 1);
-          return true;
-        }
-      }
-      if (newElement.isEqualNode(element)) {
-        elementList.splice(index, 1);
-        return true;
-      }
-    }
-    return false;
-  }
-  removeCurrentHeadProvisionalElements() {
-    for (const element of this.currentHeadProvisionalElements) {
-      document.head.removeChild(element);
-    }
-  }
-  copyNewHeadProvisionalElements() {
-    for (const element of this.newHeadProvisionalElements) {
-      document.head.appendChild(element);
-    }
-  }
-  activateNewBody() {
-    document.adoptNode(this.newElement);
-    this.activateNewBodyScriptElements();
-  }
-  activateNewBodyScriptElements() {
-    for (const inertScriptElement of this.newBodyScriptElements) {
-      const activatedScriptElement = activateScriptElement(inertScriptElement);
-      inertScriptElement.replaceWith(activatedScriptElement);
-    }
-  }
-  async assignNewBody() {
-    await this.renderElement(this.currentElement, this.newElement);
-  }
-  get unusedDynamicStylesheetElements() {
-    return this.oldHeadStylesheetElements.filter((element) => {
-      return element.getAttribute("data-turbo-track") === "dynamic";
-    });
-  }
-  get oldHeadStylesheetElements() {
-    return this.currentHeadSnapshot.getStylesheetElementsNotInSnapshot(this.newHeadSnapshot);
-  }
-  get newHeadStylesheetElements() {
-    return this.newHeadSnapshot.getStylesheetElementsNotInSnapshot(this.currentHeadSnapshot);
-  }
-  get newHeadScriptElements() {
-    return this.newHeadSnapshot.getScriptElementsNotInSnapshot(this.currentHeadSnapshot);
-  }
-  get currentHeadProvisionalElements() {
-    return this.currentHeadSnapshot.provisionalElements;
-  }
-  get newHeadProvisionalElements() {
-    return this.newHeadSnapshot.provisionalElements;
-  }
-  get newBodyScriptElements() {
-    return this.newElement.querySelectorAll("script");
-  }
-};
-var MorphRenderer = class extends PageRenderer {
-  async render() {
-    if (this.willRender) await this.#morphBody();
-  }
-  get renderMethod() {
-    return "morph";
-  }
-  // Private
-  async #morphBody() {
-    this.#morphElements(this.currentElement, this.newElement);
-    this.#reloadRemoteFrames();
-    dispatch("turbo:morph", {
-      detail: {
-        currentElement: this.currentElement,
-        newElement: this.newElement
-      }
-    });
-  }
-  #morphElements(currentElement, newElement, morphStyle = "outerHTML") {
-    this.isMorphingTurboFrame = this.#isFrameReloadedWithMorph(currentElement);
-    Idiomorph.morph(currentElement, newElement, {
-      morphStyle,
-      callbacks: {
-        beforeNodeAdded: this.#shouldAddElement,
-        beforeNodeMorphed: this.#shouldMorphElement,
-        beforeAttributeUpdated: this.#shouldUpdateAttribute,
-        beforeNodeRemoved: this.#shouldRemoveElement,
-        afterNodeMorphed: this.#didMorphElement
-      }
-    });
-  }
-  #shouldAddElement = (node) => {
-    return !(node.id && node.hasAttribute("data-turbo-permanent") && document.getElementById(node.id));
-  };
-  #shouldMorphElement = (oldNode, newNode) => {
-    if (oldNode instanceof HTMLElement) {
-      if (!oldNode.hasAttribute("data-turbo-permanent") && (this.isMorphingTurboFrame || !this.#isFrameReloadedWithMorph(oldNode))) {
-        const event = dispatch("turbo:before-morph-element", {
-          cancelable: true,
-          target: oldNode,
-          detail: {
-            newElement: newNode
-          }
-        });
-        return !event.defaultPrevented;
-      } else {
-        return false;
-      }
-    }
-  };
-  #shouldUpdateAttribute = (attributeName, target, mutationType) => {
-    const event = dispatch("turbo:before-morph-attribute", { cancelable: true, target, detail: { attributeName, mutationType } });
-    return !event.defaultPrevented;
-  };
-  #didMorphElement = (oldNode, newNode) => {
-    if (newNode instanceof HTMLElement) {
-      dispatch("turbo:morph-element", {
-        target: oldNode,
-        detail: {
-          newElement: newNode
-        }
-      });
-    }
-  };
-  #shouldRemoveElement = (node) => {
-    return this.#shouldMorphElement(node);
-  };
-  #reloadRemoteFrames() {
-    this.#remoteFrames().forEach((frame) => {
-      if (this.#isFrameReloadedWithMorph(frame)) {
-        this.#renderFrameWithMorph(frame);
-        frame.reload();
-      }
-    });
-  }
-  #renderFrameWithMorph(frame) {
-    frame.addEventListener("turbo:before-frame-render", (event) => {
-      event.detail.render = this.#morphFrameUpdate;
-    }, { once: true });
-  }
-  #morphFrameUpdate = (currentElement, newElement) => {
-    dispatch("turbo:before-frame-morph", {
-      target: currentElement,
-      detail: { currentElement, newElement }
-    });
-    this.#morphElements(currentElement, newElement.children, "innerHTML");
-  };
-  #isFrameReloadedWithMorph(element) {
-    return element.src && element.refresh === "morph";
-  }
-  #remoteFrames() {
-    return Array.from(document.querySelectorAll("turbo-frame[src]")).filter((frame) => {
-      return !frame.closest("[data-turbo-permanent]");
-    });
-  }
-};
-var SnapshotCache = class {
-  keys = [];
-  snapshots = {};
-  constructor(size) {
-    this.size = size;
-  }
-  has(location2) {
-    return toCacheKey(location2) in this.snapshots;
-  }
-  get(location2) {
-    if (this.has(location2)) {
-      const snapshot = this.read(location2);
-      this.touch(location2);
-      return snapshot;
-    }
-  }
-  put(location2, snapshot) {
-    this.write(location2, snapshot);
-    this.touch(location2);
-    return snapshot;
-  }
-  clear() {
-    this.snapshots = {};
-  }
-  // Private
-  read(location2) {
-    return this.snapshots[toCacheKey(location2)];
-  }
-  write(location2, snapshot) {
-    this.snapshots[toCacheKey(location2)] = snapshot;
-  }
-  touch(location2) {
-    const key = toCacheKey(location2);
-    const index = this.keys.indexOf(key);
-    if (index > -1) this.keys.splice(index, 1);
-    this.keys.unshift(key);
-    this.trim();
-  }
-  trim() {
-    for (const key of this.keys.splice(this.size)) {
-      delete this.snapshots[key];
-    }
-  }
-};
-var PageView = class extends View {
-  snapshotCache = new SnapshotCache(10);
-  lastRenderedLocation = new URL(location.href);
-  forceReloaded = false;
-  shouldTransitionTo(newSnapshot) {
-    return this.snapshot.prefersViewTransitions && newSnapshot.prefersViewTransitions;
-  }
-  renderPage(snapshot, isPreview = false, willRender = true, visit2) {
-    const shouldMorphPage = this.isPageRefresh(visit2) && this.snapshot.shouldMorphPage;
-    const rendererClass = shouldMorphPage ? MorphRenderer : PageRenderer;
-    const renderer = new rendererClass(this.snapshot, snapshot, PageRenderer.renderElement, isPreview, willRender);
-    if (!renderer.shouldRender) {
-      this.forceReloaded = true;
-    } else {
-      visit2?.changeHistory();
-    }
-    return this.render(renderer);
-  }
-  renderError(snapshot, visit2) {
-    visit2?.changeHistory();
-    const renderer = new ErrorRenderer(this.snapshot, snapshot, ErrorRenderer.renderElement, false);
-    return this.render(renderer);
-  }
-  clearSnapshotCache() {
-    this.snapshotCache.clear();
-  }
-  async cacheSnapshot(snapshot = this.snapshot) {
-    if (snapshot.isCacheable) {
-      this.delegate.viewWillCacheSnapshot();
-      const { lastRenderedLocation: location2 } = this;
-      await nextEventLoopTick();
-      const cachedSnapshot = snapshot.clone();
-      this.snapshotCache.put(location2, cachedSnapshot);
-      return cachedSnapshot;
-    }
-  }
-  getCachedSnapshotForLocation(location2) {
-    return this.snapshotCache.get(location2);
-  }
-  isPageRefresh(visit2) {
-    return !visit2 || this.lastRenderedLocation.pathname === visit2.location.pathname && visit2.action === "replace";
-  }
-  shouldPreserveScrollPosition(visit2) {
-    return this.isPageRefresh(visit2) && this.snapshot.shouldPreserveScrollPosition;
-  }
-  get snapshot() {
-    return PageSnapshot.fromElement(this.element);
-  }
-};
-var Preloader = class {
-  selector = "a[data-turbo-preload]";
-  constructor(delegate, snapshotCache) {
-    this.delegate = delegate;
-    this.snapshotCache = snapshotCache;
-  }
-  start() {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", this.#preloadAll);
-    } else {
-      this.preloadOnLoadLinksForView(document.body);
-    }
-  }
-  stop() {
-    document.removeEventListener("DOMContentLoaded", this.#preloadAll);
-  }
-  preloadOnLoadLinksForView(element) {
-    for (const link of element.querySelectorAll(this.selector)) {
-      if (this.delegate.shouldPreloadLink(link)) {
-        this.preloadURL(link);
-      }
-    }
-  }
-  async preloadURL(link) {
-    const location2 = new URL(link.href);
-    if (this.snapshotCache.has(location2)) {
-      return;
-    }
-    const fetchRequest = new FetchRequest(this, FetchMethod.get, location2, new URLSearchParams(), link);
-    await fetchRequest.perform();
-  }
-  // Fetch request delegate
-  prepareRequest(fetchRequest) {
-    fetchRequest.headers["X-Sec-Purpose"] = "prefetch";
-  }
-  async requestSucceededWithResponse(fetchRequest, fetchResponse) {
-    try {
-      const responseHTML = await fetchResponse.responseHTML;
-      const snapshot = PageSnapshot.fromHTMLString(responseHTML);
-      this.snapshotCache.put(fetchRequest.url, snapshot);
-    } catch (_) {
-    }
-  }
-  requestStarted(fetchRequest) {
-  }
-  requestErrored(fetchRequest) {
-  }
-  requestFinished(fetchRequest) {
-  }
-  requestPreventedHandlingResponse(fetchRequest, fetchResponse) {
-  }
-  requestFailedWithResponse(fetchRequest, fetchResponse) {
-  }
-  #preloadAll = () => {
-    this.preloadOnLoadLinksForView(document.body);
-  };
-};
-var Cache = class {
-  constructor(session2) {
-    this.session = session2;
-  }
-  clear() {
-    this.session.clearCache();
-  }
-  resetCacheControl() {
-    this.#setCacheControl("");
-  }
-  exemptPageFromCache() {
-    this.#setCacheControl("no-cache");
-  }
-  exemptPageFromPreview() {
-    this.#setCacheControl("no-preview");
-  }
-  #setCacheControl(value) {
-    setMetaContent("turbo-cache-control", value);
-  }
-};
-var Session = class {
-  navigator = new Navigator(this);
-  history = new History(this);
-  view = new PageView(this, document.documentElement);
-  adapter = new BrowserAdapter(this);
-  pageObserver = new PageObserver(this);
-  cacheObserver = new CacheObserver();
-  linkPrefetchObserver = new LinkPrefetchObserver(this, document);
-  linkClickObserver = new LinkClickObserver(this, window);
-  formSubmitObserver = new FormSubmitObserver(this, document);
-  scrollObserver = new ScrollObserver(this);
-  streamObserver = new StreamObserver(this);
-  formLinkClickObserver = new FormLinkClickObserver(this, document.documentElement);
-  frameRedirector = new FrameRedirector(this, document.documentElement);
-  streamMessageRenderer = new StreamMessageRenderer();
-  cache = new Cache(this);
-  drive = true;
-  enabled = true;
-  progressBarDelay = 500;
-  started = false;
-  formMode = "on";
-  #pageRefreshDebouncePeriod = 150;
-  constructor(recentRequests2) {
-    this.recentRequests = recentRequests2;
-    this.preloader = new Preloader(this, this.view.snapshotCache);
-    this.debouncedRefresh = this.refresh;
-    this.pageRefreshDebouncePeriod = this.pageRefreshDebouncePeriod;
-  }
-  start() {
-    if (!this.started) {
-      this.pageObserver.start();
-      this.cacheObserver.start();
-      this.linkPrefetchObserver.start();
-      this.formLinkClickObserver.start();
-      this.linkClickObserver.start();
-      this.formSubmitObserver.start();
-      this.scrollObserver.start();
-      this.streamObserver.start();
-      this.frameRedirector.start();
-      this.history.start();
-      this.preloader.start();
-      this.started = true;
-      this.enabled = true;
-    }
-  }
-  disable() {
-    this.enabled = false;
-  }
-  stop() {
-    if (this.started) {
-      this.pageObserver.stop();
-      this.cacheObserver.stop();
-      this.linkPrefetchObserver.stop();
-      this.formLinkClickObserver.stop();
-      this.linkClickObserver.stop();
-      this.formSubmitObserver.stop();
-      this.scrollObserver.stop();
-      this.streamObserver.stop();
-      this.frameRedirector.stop();
-      this.history.stop();
-      this.preloader.stop();
-      this.started = false;
-    }
-  }
-  registerAdapter(adapter) {
-    this.adapter = adapter;
-  }
-  visit(location2, options = {}) {
-    const frameElement = options.frame ? document.getElementById(options.frame) : null;
-    if (frameElement instanceof FrameElement) {
-      const action = options.action || getVisitAction(frameElement);
-      frameElement.delegate.proposeVisitIfNavigatedWithAction(frameElement, action);
-      frameElement.src = location2.toString();
-    } else {
-      this.navigator.proposeVisit(expandURL(location2), options);
-    }
-  }
-  refresh(url, requestId) {
-    const isRecentRequest = requestId && this.recentRequests.has(requestId);
-    if (!isRecentRequest) {
-      this.visit(url, { action: "replace", shouldCacheSnapshot: false });
-    }
-  }
-  connectStreamSource(source) {
-    this.streamObserver.connectStreamSource(source);
-  }
-  disconnectStreamSource(source) {
-    this.streamObserver.disconnectStreamSource(source);
-  }
-  renderStreamMessage(message) {
-    this.streamMessageRenderer.render(StreamMessage.wrap(message));
-  }
-  clearCache() {
-    this.view.clearSnapshotCache();
-  }
-  setProgressBarDelay(delay) {
-    this.progressBarDelay = delay;
-  }
-  setFormMode(mode) {
-    this.formMode = mode;
-  }
-  get location() {
-    return this.history.location;
-  }
-  get restorationIdentifier() {
-    return this.history.restorationIdentifier;
-  }
-  get pageRefreshDebouncePeriod() {
-    return this.#pageRefreshDebouncePeriod;
-  }
-  set pageRefreshDebouncePeriod(value) {
-    this.refresh = debounce(this.debouncedRefresh.bind(this), value);
-    this.#pageRefreshDebouncePeriod = value;
-  }
-  // Preloader delegate
-  shouldPreloadLink(element) {
-    const isUnsafe = element.hasAttribute("data-turbo-method");
-    const isStream = element.hasAttribute("data-turbo-stream");
-    const frameTarget = element.getAttribute("data-turbo-frame");
-    const frame = frameTarget == "_top" ? null : document.getElementById(frameTarget) || findClosestRecursively(element, "turbo-frame:not([disabled])");
-    if (isUnsafe || isStream || frame instanceof FrameElement) {
-      return false;
-    } else {
-      const location2 = new URL(element.href);
-      return this.elementIsNavigatable(element) && locationIsVisitable(location2, this.snapshot.rootLocation);
-    }
-  }
-  // History delegate
-  historyPoppedToLocationWithRestorationIdentifierAndDirection(location2, restorationIdentifier, direction) {
-    if (this.enabled) {
-      this.navigator.startVisit(location2, restorationIdentifier, {
-        action: "restore",
-        historyChanged: true,
-        direction
-      });
-    } else {
-      this.adapter.pageInvalidated({
-        reason: "turbo_disabled"
-      });
-    }
-  }
-  // Scroll observer delegate
-  scrollPositionChanged(position) {
-    this.history.updateRestorationData({ scrollPosition: position });
-  }
-  // Form click observer delegate
-  willSubmitFormLinkToLocation(link, location2) {
-    return this.elementIsNavigatable(link) && locationIsVisitable(location2, this.snapshot.rootLocation);
-  }
-  submittedFormLinkToLocation() {
-  }
-  // Link hover observer delegate
-  canPrefetchRequestToLocation(link, location2) {
-    return this.elementIsNavigatable(link) && locationIsVisitable(location2, this.snapshot.rootLocation);
-  }
-  // Link click observer delegate
-  willFollowLinkToLocation(link, location2, event) {
-    return this.elementIsNavigatable(link) && locationIsVisitable(location2, this.snapshot.rootLocation) && this.applicationAllowsFollowingLinkToLocation(link, location2, event);
-  }
-  followedLinkToLocation(link, location2) {
-    const action = this.getActionForLink(link);
-    const acceptsStreamResponse = link.hasAttribute("data-turbo-stream");
-    this.visit(location2.href, { action, acceptsStreamResponse });
-  }
-  // Navigator delegate
-  allowsVisitingLocationWithAction(location2, action) {
-    return this.locationWithActionIsSamePage(location2, action) || this.applicationAllowsVisitingLocation(location2);
-  }
-  visitProposedToLocation(location2, options) {
-    extendURLWithDeprecatedProperties(location2);
-    this.adapter.visitProposedToLocation(location2, options);
-  }
-  // Visit delegate
-  visitStarted(visit2) {
-    if (!visit2.acceptsStreamResponse) {
-      markAsBusy(document.documentElement);
-      this.view.markVisitDirection(visit2.direction);
-    }
-    extendURLWithDeprecatedProperties(visit2.location);
-    if (!visit2.silent) {
-      this.notifyApplicationAfterVisitingLocation(visit2.location, visit2.action);
-    }
-  }
-  visitCompleted(visit2) {
-    this.view.unmarkVisitDirection();
-    clearBusyState(document.documentElement);
-    this.notifyApplicationAfterPageLoad(visit2.getTimingMetrics());
-  }
-  locationWithActionIsSamePage(location2, action) {
-    return this.navigator.locationWithActionIsSamePage(location2, action);
-  }
-  visitScrolledToSamePageLocation(oldURL, newURL) {
-    this.notifyApplicationAfterVisitingSamePageLocation(oldURL, newURL);
-  }
-  // Form submit observer delegate
-  willSubmitForm(form, submitter) {
-    const action = getAction$1(form, submitter);
-    return this.submissionIsNavigatable(form, submitter) && locationIsVisitable(expandURL(action), this.snapshot.rootLocation);
-  }
-  formSubmitted(form, submitter) {
-    this.navigator.submitForm(form, submitter);
-  }
-  // Page observer delegate
-  pageBecameInteractive() {
-    this.view.lastRenderedLocation = this.location;
-    this.notifyApplicationAfterPageLoad();
-  }
-  pageLoaded() {
-    this.history.assumeControlOfScrollRestoration();
-  }
-  pageWillUnload() {
-    this.history.relinquishControlOfScrollRestoration();
-  }
-  // Stream observer delegate
-  receivedMessageFromStream(message) {
-    this.renderStreamMessage(message);
-  }
-  // Page view delegate
-  viewWillCacheSnapshot() {
-    if (!this.navigator.currentVisit?.silent) {
-      this.notifyApplicationBeforeCachingSnapshot();
-    }
-  }
-  allowsImmediateRender({ element }, options) {
-    const event = this.notifyApplicationBeforeRender(element, options);
-    const {
-      defaultPrevented,
-      detail: { render }
-    } = event;
-    if (this.view.renderer && render) {
-      this.view.renderer.renderElement = render;
-    }
-    return !defaultPrevented;
-  }
-  viewRenderedSnapshot(_snapshot, _isPreview, renderMethod) {
-    this.view.lastRenderedLocation = this.history.location;
-    this.notifyApplicationAfterRender(renderMethod);
-  }
-  preloadOnLoadLinksForView(element) {
-    this.preloader.preloadOnLoadLinksForView(element);
-  }
-  viewInvalidated(reason) {
-    this.adapter.pageInvalidated(reason);
-  }
-  // Frame element
-  frameLoaded(frame) {
-    this.notifyApplicationAfterFrameLoad(frame);
-  }
-  frameRendered(fetchResponse, frame) {
-    this.notifyApplicationAfterFrameRender(fetchResponse, frame);
-  }
-  // Application events
-  applicationAllowsFollowingLinkToLocation(link, location2, ev) {
-    const event = this.notifyApplicationAfterClickingLinkToLocation(link, location2, ev);
-    return !event.defaultPrevented;
-  }
-  applicationAllowsVisitingLocation(location2) {
-    const event = this.notifyApplicationBeforeVisitingLocation(location2);
-    return !event.defaultPrevented;
-  }
-  notifyApplicationAfterClickingLinkToLocation(link, location2, event) {
-    return dispatch("turbo:click", {
-      target: link,
-      detail: { url: location2.href, originalEvent: event },
-      cancelable: true
-    });
-  }
-  notifyApplicationBeforeVisitingLocation(location2) {
-    return dispatch("turbo:before-visit", {
-      detail: { url: location2.href },
-      cancelable: true
-    });
-  }
-  notifyApplicationAfterVisitingLocation(location2, action) {
-    return dispatch("turbo:visit", { detail: { url: location2.href, action } });
-  }
-  notifyApplicationBeforeCachingSnapshot() {
-    return dispatch("turbo:before-cache");
-  }
-  notifyApplicationBeforeRender(newBody, options) {
-    return dispatch("turbo:before-render", {
-      detail: { newBody, ...options },
-      cancelable: true
-    });
-  }
-  notifyApplicationAfterRender(renderMethod) {
-    return dispatch("turbo:render", { detail: { renderMethod } });
-  }
-  notifyApplicationAfterPageLoad(timing = {}) {
-    return dispatch("turbo:load", {
-      detail: { url: this.location.href, timing }
-    });
-  }
-  notifyApplicationAfterVisitingSamePageLocation(oldURL, newURL) {
-    dispatchEvent(
-      new HashChangeEvent("hashchange", {
-        oldURL: oldURL.toString(),
-        newURL: newURL.toString()
-      })
-    );
-  }
-  notifyApplicationAfterFrameLoad(frame) {
-    return dispatch("turbo:frame-load", { target: frame });
-  }
-  notifyApplicationAfterFrameRender(fetchResponse, frame) {
-    return dispatch("turbo:frame-render", {
-      detail: { fetchResponse },
-      target: frame,
-      cancelable: true
-    });
-  }
-  // Helpers
-  submissionIsNavigatable(form, submitter) {
-    if (this.formMode == "off") {
-      return false;
-    } else {
-      const submitterIsNavigatable = submitter ? this.elementIsNavigatable(submitter) : true;
-      if (this.formMode == "optin") {
-        return submitterIsNavigatable && form.closest('[data-turbo="true"]') != null;
-      } else {
-        return submitterIsNavigatable && this.elementIsNavigatable(form);
-      }
-    }
-  }
-  elementIsNavigatable(element) {
-    const container = findClosestRecursively(element, "[data-turbo]");
-    const withinFrame = findClosestRecursively(element, "turbo-frame");
-    if (this.drive || withinFrame) {
-      if (container) {
-        return container.getAttribute("data-turbo") != "false";
-      } else {
-        return true;
-      }
-    } else {
-      if (container) {
-        return container.getAttribute("data-turbo") == "true";
-      } else {
-        return false;
-      }
-    }
-  }
-  // Private
-  getActionForLink(link) {
-    return getVisitAction(link) || "advance";
-  }
-  get snapshot() {
-    return this.view.snapshot;
-  }
-};
-function extendURLWithDeprecatedProperties(url) {
-  Object.defineProperties(url, deprecatedLocationPropertyDescriptors);
-}
-var deprecatedLocationPropertyDescriptors = {
-  absoluteURL: {
-    get() {
-      return this.toString();
-    }
-  }
-};
-var session = new Session(recentRequests);
-var { cache, navigator: navigator$1 } = session;
-function start() {
-  session.start();
-}
-function registerAdapter(adapter) {
-  session.registerAdapter(adapter);
-}
-function visit(location2, options) {
-  session.visit(location2, options);
-}
-function connectStreamSource(source) {
-  session.connectStreamSource(source);
-}
-function disconnectStreamSource(source) {
-  session.disconnectStreamSource(source);
-}
-function renderStreamMessage(message) {
-  session.renderStreamMessage(message);
-}
-function clearCache() {
-  console.warn(
-    "Please replace `Turbo.clearCache()` with `Turbo.cache.clear()`. The top-level function is deprecated and will be removed in a future version of Turbo.`"
-  );
-  session.clearCache();
-}
-function setProgressBarDelay(delay) {
-  session.setProgressBarDelay(delay);
-}
-function setConfirmMethod(confirmMethod) {
-  FormSubmission.confirmMethod = confirmMethod;
-}
-function setFormMode(mode) {
-  session.setFormMode(mode);
-}
-var Turbo = /* @__PURE__ */ Object.freeze({
-  __proto__: null,
-  navigator: navigator$1,
-  session,
-  cache,
-  PageRenderer,
-  PageSnapshot,
-  FrameRenderer,
-  fetch: fetchWithTurboHeaders,
-  start,
-  registerAdapter,
-  visit,
-  connectStreamSource,
-  disconnectStreamSource,
-  renderStreamMessage,
-  clearCache,
-  setProgressBarDelay,
-  setConfirmMethod,
-  setFormMode
-});
-var TurboFrameMissingError = class extends Error {
-};
-var FrameController = class {
-  fetchResponseLoaded = (_fetchResponse) => Promise.resolve();
-  #currentFetchRequest = null;
-  #resolveVisitPromise = () => {
-  };
-  #connected = false;
-  #hasBeenLoaded = false;
-  #ignoredAttributes = /* @__PURE__ */ new Set();
-  action = null;
-  constructor(element) {
-    this.element = element;
-    this.view = new FrameView(this, this.element);
-    this.appearanceObserver = new AppearanceObserver(this, this.element);
-    this.formLinkClickObserver = new FormLinkClickObserver(this, this.element);
-    this.linkInterceptor = new LinkInterceptor(this, this.element);
-    this.restorationIdentifier = uuid();
-    this.formSubmitObserver = new FormSubmitObserver(this, this.element);
-  }
-  // Frame delegate
-  connect() {
-    if (!this.#connected) {
-      this.#connected = true;
-      if (this.loadingStyle == FrameLoadingStyle.lazy) {
-        this.appearanceObserver.start();
-      } else {
-        this.#loadSourceURL();
-      }
-      this.formLinkClickObserver.start();
-      this.linkInterceptor.start();
-      this.formSubmitObserver.start();
-    }
-  }
-  disconnect() {
-    if (this.#connected) {
-      this.#connected = false;
-      this.appearanceObserver.stop();
-      this.formLinkClickObserver.stop();
-      this.linkInterceptor.stop();
-      this.formSubmitObserver.stop();
-    }
-  }
-  disabledChanged() {
-    if (this.loadingStyle == FrameLoadingStyle.eager) {
-      this.#loadSourceURL();
-    }
-  }
-  sourceURLChanged() {
-    if (this.#isIgnoringChangesTo("src")) return;
-    if (this.element.isConnected) {
-      this.complete = false;
-    }
-    if (this.loadingStyle == FrameLoadingStyle.eager || this.#hasBeenLoaded) {
-      this.#loadSourceURL();
-    }
-  }
-  sourceURLReloaded() {
-    const { src } = this.element;
-    this.element.removeAttribute("complete");
-    this.element.src = null;
-    this.element.src = src;
-    return this.element.loaded;
-  }
-  loadingStyleChanged() {
-    if (this.loadingStyle == FrameLoadingStyle.lazy) {
-      this.appearanceObserver.start();
-    } else {
-      this.appearanceObserver.stop();
-      this.#loadSourceURL();
-    }
-  }
-  async #loadSourceURL() {
-    if (this.enabled && this.isActive && !this.complete && this.sourceURL) {
-      this.element.loaded = this.#visit(expandURL(this.sourceURL));
-      this.appearanceObserver.stop();
-      await this.element.loaded;
-      this.#hasBeenLoaded = true;
-    }
-  }
-  async loadResponse(fetchResponse) {
-    if (fetchResponse.redirected || fetchResponse.succeeded && fetchResponse.isHTML) {
-      this.sourceURL = fetchResponse.response.url;
-    }
-    try {
-      const html = await fetchResponse.responseHTML;
-      if (html) {
-        const document2 = parseHTMLDocument(html);
-        const pageSnapshot = PageSnapshot.fromDocument(document2);
-        if (pageSnapshot.isVisitable) {
-          await this.#loadFrameResponse(fetchResponse, document2);
-        } else {
-          await this.#handleUnvisitableFrameResponse(fetchResponse);
-        }
-      }
-    } finally {
-      this.fetchResponseLoaded = () => Promise.resolve();
-    }
-  }
-  // Appearance observer delegate
-  elementAppearedInViewport(element) {
-    this.proposeVisitIfNavigatedWithAction(element, getVisitAction(element));
-    this.#loadSourceURL();
-  }
-  // Form link click observer delegate
-  willSubmitFormLinkToLocation(link) {
-    return this.#shouldInterceptNavigation(link);
-  }
-  submittedFormLinkToLocation(link, _location, form) {
-    const frame = this.#findFrameElement(link);
-    if (frame) form.setAttribute("data-turbo-frame", frame.id);
-  }
-  // Link interceptor delegate
-  shouldInterceptLinkClick(element, _location, _event) {
-    return this.#shouldInterceptNavigation(element);
-  }
-  linkClickIntercepted(element, location2) {
-    this.#navigateFrame(element, location2);
-  }
-  // Form submit observer delegate
-  willSubmitForm(element, submitter) {
-    return element.closest("turbo-frame") == this.element && this.#shouldInterceptNavigation(element, submitter);
-  }
-  formSubmitted(element, submitter) {
-    if (this.formSubmission) {
-      this.formSubmission.stop();
-    }
-    this.formSubmission = new FormSubmission(this, element, submitter);
-    const { fetchRequest } = this.formSubmission;
-    this.prepareRequest(fetchRequest);
-    this.formSubmission.start();
-  }
-  // Fetch request delegate
-  prepareRequest(request) {
-    request.headers["Turbo-Frame"] = this.id;
-    if (this.currentNavigationElement?.hasAttribute("data-turbo-stream")) {
-      request.acceptResponseType(StreamMessage.contentType);
-    }
-  }
-  requestStarted(_request) {
-    markAsBusy(this.element);
-  }
-  requestPreventedHandlingResponse(_request, _response) {
-    this.#resolveVisitPromise();
-  }
-  async requestSucceededWithResponse(request, response) {
-    await this.loadResponse(response);
-    this.#resolveVisitPromise();
-  }
-  async requestFailedWithResponse(request, response) {
-    await this.loadResponse(response);
-    this.#resolveVisitPromise();
-  }
-  requestErrored(request, error) {
-    console.error(error);
-    this.#resolveVisitPromise();
-  }
-  requestFinished(_request) {
-    clearBusyState(this.element);
-  }
-  // Form submission delegate
-  formSubmissionStarted({ formElement }) {
-    markAsBusy(formElement, this.#findFrameElement(formElement));
-  }
-  formSubmissionSucceededWithResponse(formSubmission, response) {
-    const frame = this.#findFrameElement(formSubmission.formElement, formSubmission.submitter);
-    frame.delegate.proposeVisitIfNavigatedWithAction(frame, getVisitAction(formSubmission.submitter, formSubmission.formElement, frame));
-    frame.delegate.loadResponse(response);
-    if (!formSubmission.isSafe) {
-      session.clearCache();
-    }
-  }
-  formSubmissionFailedWithResponse(formSubmission, fetchResponse) {
-    this.element.delegate.loadResponse(fetchResponse);
-    session.clearCache();
-  }
-  formSubmissionErrored(formSubmission, error) {
-    console.error(error);
-  }
-  formSubmissionFinished({ formElement }) {
-    clearBusyState(formElement, this.#findFrameElement(formElement));
-  }
-  // View delegate
-  allowsImmediateRender({ element: newFrame }, options) {
-    const event = dispatch("turbo:before-frame-render", {
-      target: this.element,
-      detail: { newFrame, ...options },
-      cancelable: true
-    });
-    const {
-      defaultPrevented,
-      detail: { render }
-    } = event;
-    if (this.view.renderer && render) {
-      this.view.renderer.renderElement = render;
-    }
-    return !defaultPrevented;
-  }
-  viewRenderedSnapshot(_snapshot, _isPreview, _renderMethod) {
-  }
-  preloadOnLoadLinksForView(element) {
-    session.preloadOnLoadLinksForView(element);
-  }
-  viewInvalidated() {
-  }
-  // Frame renderer delegate
-  willRenderFrame(currentElement, _newElement) {
-    this.previousFrameElement = currentElement.cloneNode(true);
-  }
-  visitCachedSnapshot = ({ element }) => {
-    const frame = element.querySelector("#" + this.element.id);
-    if (frame && this.previousFrameElement) {
-      frame.replaceChildren(...this.previousFrameElement.children);
-    }
-    delete this.previousFrameElement;
-  };
-  // Private
-  async #loadFrameResponse(fetchResponse, document2) {
-    const newFrameElement = await this.extractForeignFrameElement(document2.body);
-    if (newFrameElement) {
-      const snapshot = new Snapshot(newFrameElement);
-      const renderer = new FrameRenderer(this, this.view.snapshot, snapshot, FrameRenderer.renderElement, false, false);
-      if (this.view.renderPromise) await this.view.renderPromise;
-      this.changeHistory();
-      await this.view.render(renderer);
-      this.complete = true;
-      session.frameRendered(fetchResponse, this.element);
-      session.frameLoaded(this.element);
-      await this.fetchResponseLoaded(fetchResponse);
-    } else if (this.#willHandleFrameMissingFromResponse(fetchResponse)) {
-      this.#handleFrameMissingFromResponse(fetchResponse);
-    }
-  }
-  async #visit(url) {
-    const request = new FetchRequest(this, FetchMethod.get, url, new URLSearchParams(), this.element);
-    this.#currentFetchRequest?.cancel();
-    this.#currentFetchRequest = request;
-    return new Promise((resolve) => {
-      this.#resolveVisitPromise = () => {
-        this.#resolveVisitPromise = () => {
-        };
-        this.#currentFetchRequest = null;
-        resolve();
-      };
-      request.perform();
-    });
-  }
-  #navigateFrame(element, url, submitter) {
-    const frame = this.#findFrameElement(element, submitter);
-    frame.delegate.proposeVisitIfNavigatedWithAction(frame, getVisitAction(submitter, element, frame));
-    this.#withCurrentNavigationElement(element, () => {
-      frame.src = url;
-    });
-  }
-  proposeVisitIfNavigatedWithAction(frame, action = null) {
-    this.action = action;
-    if (this.action) {
-      const pageSnapshot = PageSnapshot.fromElement(frame).clone();
-      const { visitCachedSnapshot } = frame.delegate;
-      frame.delegate.fetchResponseLoaded = async (fetchResponse) => {
-        if (frame.src) {
-          const { statusCode, redirected } = fetchResponse;
-          const responseHTML = await fetchResponse.responseHTML;
-          const response = { statusCode, redirected, responseHTML };
-          const options = {
-            response,
-            visitCachedSnapshot,
-            willRender: false,
-            updateHistory: false,
-            restorationIdentifier: this.restorationIdentifier,
-            snapshot: pageSnapshot
-          };
-          if (this.action) options.action = this.action;
-          session.visit(frame.src, options);
-        }
-      };
-    }
-  }
-  changeHistory() {
-    if (this.action) {
-      const method = getHistoryMethodForAction(this.action);
-      session.history.update(method, expandURL(this.element.src || ""), this.restorationIdentifier);
-    }
-  }
-  async #handleUnvisitableFrameResponse(fetchResponse) {
-    console.warn(
-      `The response (${fetchResponse.statusCode}) from <turbo-frame id="${this.element.id}"> is performing a full page visit due to turbo-visit-control.`
-    );
-    await this.#visitResponse(fetchResponse.response);
-  }
-  #willHandleFrameMissingFromResponse(fetchResponse) {
-    this.element.setAttribute("complete", "");
-    const response = fetchResponse.response;
-    const visit2 = async (url, options) => {
-      if (url instanceof Response) {
-        this.#visitResponse(url);
-      } else {
-        session.visit(url, options);
-      }
-    };
-    const event = dispatch("turbo:frame-missing", {
-      target: this.element,
-      detail: { response, visit: visit2 },
-      cancelable: true
-    });
-    return !event.defaultPrevented;
-  }
-  #handleFrameMissingFromResponse(fetchResponse) {
-    this.view.missing();
-    this.#throwFrameMissingError(fetchResponse);
-  }
-  #throwFrameMissingError(fetchResponse) {
-    const message = `The response (${fetchResponse.statusCode}) did not contain the expected <turbo-frame id="${this.element.id}"> and will be ignored. To perform a full page visit instead, set turbo-visit-control to reload.`;
-    throw new TurboFrameMissingError(message);
-  }
-  async #visitResponse(response) {
-    const wrapped = new FetchResponse(response);
-    const responseHTML = await wrapped.responseHTML;
-    const { location: location2, redirected, statusCode } = wrapped;
-    return session.visit(location2, { response: { redirected, statusCode, responseHTML } });
-  }
-  #findFrameElement(element, submitter) {
-    const id = getAttribute("data-turbo-frame", submitter, element) || this.element.getAttribute("target");
-    return getFrameElementById(id) ?? this.element;
-  }
-  async extractForeignFrameElement(container) {
-    let element;
-    const id = CSS.escape(this.id);
-    try {
-      element = activateElement(container.querySelector(`turbo-frame#${id}`), this.sourceURL);
-      if (element) {
-        return element;
-      }
-      element = activateElement(container.querySelector(`turbo-frame[src][recurse~=${id}]`), this.sourceURL);
-      if (element) {
-        await element.loaded;
-        return await this.extractForeignFrameElement(element);
-      }
-    } catch (error) {
-      console.error(error);
-      return new FrameElement();
-    }
-    return null;
-  }
-  #formActionIsVisitable(form, submitter) {
-    const action = getAction$1(form, submitter);
-    return locationIsVisitable(expandURL(action), this.rootLocation);
-  }
-  #shouldInterceptNavigation(element, submitter) {
-    const id = getAttribute("data-turbo-frame", submitter, element) || this.element.getAttribute("target");
-    if (element instanceof HTMLFormElement && !this.#formActionIsVisitable(element, submitter)) {
-      return false;
-    }
-    if (!this.enabled || id == "_top") {
-      return false;
-    }
-    if (id) {
-      const frameElement = getFrameElementById(id);
-      if (frameElement) {
-        return !frameElement.disabled;
-      }
-    }
-    if (!session.elementIsNavigatable(element)) {
-      return false;
-    }
-    if (submitter && !session.elementIsNavigatable(submitter)) {
-      return false;
-    }
-    return true;
-  }
-  // Computed properties
-  get id() {
-    return this.element.id;
-  }
-  get enabled() {
-    return !this.element.disabled;
-  }
-  get sourceURL() {
-    if (this.element.src) {
-      return this.element.src;
-    }
-  }
-  set sourceURL(sourceURL) {
-    this.#ignoringChangesToAttribute("src", () => {
-      this.element.src = sourceURL ?? null;
-    });
-  }
-  get loadingStyle() {
-    return this.element.loading;
-  }
-  get isLoading() {
-    return this.formSubmission !== void 0 || this.#resolveVisitPromise() !== void 0;
-  }
-  get complete() {
-    return this.element.hasAttribute("complete");
-  }
-  set complete(value) {
-    if (value) {
-      this.element.setAttribute("complete", "");
-    } else {
-      this.element.removeAttribute("complete");
-    }
-  }
-  get isActive() {
-    return this.element.isActive && this.#connected;
-  }
-  get rootLocation() {
-    const meta = this.element.ownerDocument.querySelector(`meta[name="turbo-root"]`);
-    const root = meta?.content ?? "/";
-    return expandURL(root);
-  }
-  #isIgnoringChangesTo(attributeName) {
-    return this.#ignoredAttributes.has(attributeName);
-  }
-  #ignoringChangesToAttribute(attributeName, callback) {
-    this.#ignoredAttributes.add(attributeName);
-    callback();
-    this.#ignoredAttributes.delete(attributeName);
-  }
-  #withCurrentNavigationElement(element, callback) {
-    this.currentNavigationElement = element;
-    callback();
-    delete this.currentNavigationElement;
-  }
-};
-function getFrameElementById(id) {
-  if (id != null) {
-    const element = document.getElementById(id);
-    if (element instanceof FrameElement) {
-      return element;
-    }
-  }
-}
-function activateElement(element, currentURL) {
-  if (element) {
-    const src = element.getAttribute("src");
-    if (src != null && currentURL != null && urlsAreEqual(src, currentURL)) {
-      throw new Error(`Matching <turbo-frame id="${element.id}"> element has a source URL which references itself`);
-    }
-    if (element.ownerDocument !== document) {
-      element = document.importNode(element, true);
-    }
-    if (element instanceof FrameElement) {
-      element.connectedCallback();
-      element.disconnectedCallback();
-      return element;
-    }
-  }
-}
-var StreamActions = {
-  after() {
-    this.targetElements.forEach((e) => e.parentElement?.insertBefore(this.templateContent, e.nextSibling));
-  },
-  append() {
-    this.removeDuplicateTargetChildren();
-    this.targetElements.forEach((e) => e.append(this.templateContent));
-  },
-  before() {
-    this.targetElements.forEach((e) => e.parentElement?.insertBefore(this.templateContent, e));
-  },
-  prepend() {
-    this.removeDuplicateTargetChildren();
-    this.targetElements.forEach((e) => e.prepend(this.templateContent));
-  },
-  remove() {
-    this.targetElements.forEach((e) => e.remove());
-  },
-  replace() {
-    this.targetElements.forEach((e) => e.replaceWith(this.templateContent));
-  },
-  update() {
-    this.targetElements.forEach((targetElement) => {
-      targetElement.innerHTML = "";
-      targetElement.append(this.templateContent);
-    });
-  },
-  refresh() {
-    session.refresh(this.baseURI, this.requestId);
-  }
-};
-var StreamElement = class _StreamElement extends HTMLElement {
-  static async renderElement(newElement) {
-    await newElement.performAction();
-  }
-  async connectedCallback() {
-    try {
-      await this.render();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      this.disconnect();
-    }
-  }
-  async render() {
-    return this.renderPromise ??= (async () => {
-      const event = this.beforeRenderEvent;
-      if (this.dispatchEvent(event)) {
-        await nextRepaint();
-        await event.detail.render(this);
-      }
-    })();
-  }
-  disconnect() {
-    try {
-      this.remove();
-    } catch {
-    }
-  }
-  /**
-   * Removes duplicate children (by ID)
-   */
-  removeDuplicateTargetChildren() {
-    this.duplicateChildren.forEach((c) => c.remove());
-  }
-  /**
-   * Gets the list of duplicate children (i.e. those with the same ID)
-   */
-  get duplicateChildren() {
-    const existingChildren = this.targetElements.flatMap((e) => [...e.children]).filter((c) => !!c.id);
-    const newChildrenIds = [...this.templateContent?.children || []].filter((c) => !!c.id).map((c) => c.id);
-    return existingChildren.filter((c) => newChildrenIds.includes(c.id));
-  }
-  /**
-   * Gets the action function to be performed.
-   */
-  get performAction() {
-    if (this.action) {
-      const actionFunction = StreamActions[this.action];
-      if (actionFunction) {
-        return actionFunction;
-      }
-      this.#raise("unknown action");
-    }
-    this.#raise("action attribute is missing");
-  }
-  /**
-   * Gets the target elements which the template will be rendered to.
-   */
-  get targetElements() {
-    if (this.target) {
-      return this.targetElementsById;
-    } else if (this.targets) {
-      return this.targetElementsByQuery;
-    } else {
-      this.#raise("target or targets attribute is missing");
-    }
-  }
-  /**
-   * Gets the contents of the main `<template>`.
-   */
-  get templateContent() {
-    return this.templateElement.content.cloneNode(true);
-  }
-  /**
-   * Gets the main `<template>` used for rendering
-   */
-  get templateElement() {
-    if (this.firstElementChild === null) {
-      const template = this.ownerDocument.createElement("template");
-      this.appendChild(template);
-      return template;
-    } else if (this.firstElementChild instanceof HTMLTemplateElement) {
-      return this.firstElementChild;
-    }
-    this.#raise("first child element must be a <template> element");
-  }
-  /**
-   * Gets the current action.
-   */
-  get action() {
-    return this.getAttribute("action");
-  }
-  /**
-   * Gets the current target (an element ID) to which the result will
-   * be rendered.
-   */
-  get target() {
-    return this.getAttribute("target");
-  }
-  /**
-   * Gets the current "targets" selector (a CSS selector)
-   */
-  get targets() {
-    return this.getAttribute("targets");
-  }
-  /**
-   * Reads the request-id attribute
-   */
-  get requestId() {
-    return this.getAttribute("request-id");
-  }
-  #raise(message) {
-    throw new Error(`${this.description}: ${message}`);
-  }
-  get description() {
-    return (this.outerHTML.match(/<[^>]+>/) ?? [])[0] ?? "<turbo-stream>";
-  }
-  get beforeRenderEvent() {
-    return new CustomEvent("turbo:before-stream-render", {
-      bubbles: true,
-      cancelable: true,
-      detail: { newStream: this, render: _StreamElement.renderElement }
-    });
-  }
-  get targetElementsById() {
-    const element = this.ownerDocument?.getElementById(this.target);
-    if (element !== null) {
-      return [element];
-    } else {
-      return [];
-    }
-  }
-  get targetElementsByQuery() {
-    const elements = this.ownerDocument?.querySelectorAll(this.targets);
-    if (elements.length !== 0) {
-      return Array.prototype.slice.call(elements);
-    } else {
-      return [];
-    }
-  }
-};
-var StreamSourceElement = class extends HTMLElement {
-  streamSource = null;
-  connectedCallback() {
-    this.streamSource = this.src.match(/^ws{1,2}:/) ? new WebSocket(this.src) : new EventSource(this.src);
-    connectStreamSource(this.streamSource);
-  }
-  disconnectedCallback() {
-    if (this.streamSource) {
-      this.streamSource.close();
-      disconnectStreamSource(this.streamSource);
-    }
-  }
-  get src() {
-    return this.getAttribute("src") || "";
-  }
-};
-FrameElement.delegateConstructor = FrameController;
-if (customElements.get("turbo-frame") === void 0) {
-  customElements.define("turbo-frame", FrameElement);
-}
-if (customElements.get("turbo-stream") === void 0) {
-  customElements.define("turbo-stream", StreamElement);
-}
-if (customElements.get("turbo-stream-source") === void 0) {
-  customElements.define("turbo-stream-source", StreamSourceElement);
-}
-(() => {
-  let element = document.currentScript;
-  if (!element) return;
-  if (element.hasAttribute("data-turbo-suppress-warning")) return;
-  element = element.parentElement;
-  while (element) {
-    if (element == document.body) {
-      return console.warn(
-        unindent`
-        You are loading Turbo from a <script> element inside the <body> element. This is probably not what you meant to do!
-
-        Load your application’s JavaScript bundle inside the <head> element instead. <script> elements in <body> are evaluated with each page change.
-
-        For more information, see: https://turbo.hotwired.dev/handbook/building#working-with-script-elements
-
-        ——
-        Suppress this warning by adding a "data-turbo-suppress-warning" attribute to: %s
-      `,
-        element.outerHTML
-      );
+var $2 = (selector) => Array.prototype.slice.call(document.querySelectorAll(selector));
+var isContentEditable = function(element) {
+  var isEditable = false;
+  do {
+    if (element.isContentEditable) {
+      isEditable = true;
+      break;
     }
     element = element.parentElement;
-  }
-})();
-window.Turbo = { ...Turbo, StreamActions };
-start();
-
-// node_modules/@hotwired/turbo-rails/app/javascript/turbo/cable.js
-var consumer;
-async function getConsumer() {
-  return consumer || setConsumer(createConsumer2().then(setConsumer));
-}
-function setConsumer(newConsumer) {
-  return consumer = newConsumer;
-}
-async function createConsumer2() {
-  const { createConsumer: createConsumer3 } = await Promise.resolve().then(() => (init_src(), src_exports));
-  return createConsumer3();
-}
-async function subscribeTo(channel, mixin) {
-  const { subscriptions } = await getConsumer();
-  return subscriptions.create(channel, mixin);
-}
-
-// node_modules/@hotwired/turbo-rails/app/javascript/turbo/snakeize.js
-function walk(obj) {
-  if (!obj || typeof obj !== "object") return obj;
-  if (obj instanceof Date || obj instanceof RegExp) return obj;
-  if (Array.isArray(obj)) return obj.map(walk);
-  return Object.keys(obj).reduce(function(acc, key) {
-    var camel = key[0].toLowerCase() + key.slice(1).replace(/([A-Z]+)/g, function(m, x) {
-      return "_" + x.toLowerCase();
-    });
-    acc[camel] = walk(obj[key]);
-    return acc;
-  }, {});
-}
-
-// node_modules/@hotwired/turbo-rails/app/javascript/turbo/cable_stream_source_element.js
-var TurboCableStreamSourceElement = class extends HTMLElement {
-  async connectedCallback() {
-    connectStreamSource(this);
-    this.subscription = await subscribeTo(this.channel, {
-      received: this.dispatchMessageEvent.bind(this),
-      connected: this.subscriptionConnected.bind(this),
-      disconnected: this.subscriptionDisconnected.bind(this)
-    });
-  }
-  disconnectedCallback() {
-    disconnectStreamSource(this);
-    if (this.subscription) this.subscription.unsubscribe();
-  }
-  dispatchMessageEvent(data) {
-    const event = new MessageEvent("message", { data });
-    return this.dispatchEvent(event);
-  }
-  subscriptionConnected() {
-    this.setAttribute("connected", "");
-  }
-  subscriptionDisconnected() {
-    this.removeAttribute("connected");
-  }
-  get channel() {
-    const channel = this.getAttribute("channel");
-    const signed_stream_name = this.getAttribute("signed-stream-name");
-    return { channel, signed_stream_name, ...walk({ ...this.dataset }) };
+  } while (element);
+  return isEditable;
+};
+var csrfToken = () => {
+  const meta = document.querySelector("meta[name=csrf-token]");
+  return meta && meta.content;
+};
+var csrfParam = () => {
+  const meta = document.querySelector("meta[name=csrf-param]");
+  return meta && meta.content;
+};
+var CSRFProtection = (xhr) => {
+  const token = csrfToken();
+  if (token) {
+    return xhr.setRequestHeader("X-CSRF-Token", token);
   }
 };
-if (customElements.get("turbo-cable-stream-source") === void 0) {
-  customElements.define("turbo-cable-stream-source", TurboCableStreamSourceElement);
-}
-
-// node_modules/@hotwired/turbo-rails/app/javascript/turbo/fetch_requests.js
-function encodeMethodIntoRequestBody(event) {
-  if (event.target instanceof HTMLFormElement) {
-    const { target: form, detail: { fetchOptions } } = event;
-    form.addEventListener("turbo:submit-start", ({ detail: { formSubmission: { submitter } } }) => {
-      const body = isBodyInit(fetchOptions.body) ? fetchOptions.body : new URLSearchParams();
-      const method = determineFetchMethod(submitter, body, form);
-      if (!/get/i.test(method)) {
-        if (/post/i.test(method)) {
-          body.delete("_method");
-        } else {
-          body.set("_method", method);
-        }
-        fetchOptions.method = "post";
+var refreshCSRFTokens = () => {
+  const token = csrfToken();
+  const param = csrfParam();
+  if (token && param) {
+    return $2('form input[name="' + param + '"]').forEach((input2) => input2.value = token);
+  }
+};
+var AcceptHeaders = {
+  "*": "*/*",
+  text: "text/plain",
+  html: "text/html",
+  xml: "application/xml, text/xml",
+  json: "application/json, text/javascript",
+  script: "text/javascript, application/javascript, application/ecmascript, application/x-ecmascript"
+};
+var ajax = (options) => {
+  options = prepareOptions(options);
+  var xhr = createXHR(options, function() {
+    const response = processResponse(xhr.response != null ? xhr.response : xhr.responseText, xhr.getResponseHeader("Content-Type"));
+    if (Math.floor(xhr.status / 100) === 2) {
+      if (typeof options.success === "function") {
+        options.success(response, xhr.statusText, xhr);
       }
-    }, { once: true });
-  }
-}
-function determineFetchMethod(submitter, body, form) {
-  const formMethod = determineFormMethod(submitter);
-  const overrideMethod = body.get("_method");
-  const method = form.getAttribute("method") || "get";
-  if (typeof formMethod == "string") {
-    return formMethod;
-  } else if (typeof overrideMethod == "string") {
-    return overrideMethod;
-  } else {
-    return method;
-  }
-}
-function determineFormMethod(submitter) {
-  if (submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement) {
-    if (submitter.name === "_method") {
-      return submitter.value;
-    } else if (submitter.hasAttribute("formmethod")) {
-      return submitter.formMethod;
     } else {
-      return null;
+      if (typeof options.error === "function") {
+        options.error(response, xhr.statusText, xhr);
+      }
     }
-  } else {
-    return null;
+    return typeof options.complete === "function" ? options.complete(xhr, xhr.statusText) : void 0;
+  });
+  if (options.beforeSend && !options.beforeSend(xhr, options)) {
+    return false;
   }
+  if (xhr.readyState === XMLHttpRequest.OPENED) {
+    return xhr.send(options.data);
+  }
+};
+var prepareOptions = function(options) {
+  options.url = options.url || location.href;
+  options.type = options.type.toUpperCase();
+  if (options.type === "GET" && options.data) {
+    if (options.url.indexOf("?") < 0) {
+      options.url += "?" + options.data;
+    } else {
+      options.url += "&" + options.data;
+    }
+  }
+  if (!(options.dataType in AcceptHeaders)) {
+    options.dataType = "*";
+  }
+  options.accept = AcceptHeaders[options.dataType];
+  if (options.dataType !== "*") {
+    options.accept += ", */*; q=0.01";
+  }
+  return options;
+};
+var createXHR = function(options, done) {
+  const xhr = new XMLHttpRequest();
+  xhr.open(options.type, options.url, true);
+  xhr.setRequestHeader("Accept", options.accept);
+  if (typeof options.data === "string") {
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+  }
+  if (!options.crossDomain) {
+    xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+    CSRFProtection(xhr);
+  }
+  xhr.withCredentials = !!options.withCredentials;
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === XMLHttpRequest.DONE) {
+      return done(xhr);
+    }
+  };
+  return xhr;
+};
+var processResponse = function(response, type) {
+  if (typeof response === "string" && typeof type === "string") {
+    if (type.match(/\bjson\b/)) {
+      try {
+        response = JSON.parse(response);
+      } catch (error) {
+      }
+    } else if (type.match(/\b(?:java|ecma)script\b/)) {
+      const script = document.createElement("script");
+      script.setAttribute("nonce", cspNonce());
+      script.text = response;
+      document.head.appendChild(script).parentNode.removeChild(script);
+    } else if (type.match(/\b(xml|html|svg)\b/)) {
+      const parser = new DOMParser();
+      type = type.replace(/;.+/, "");
+      try {
+        response = parser.parseFromString(response, type);
+      } catch (error1) {
+      }
+    }
+  }
+  return response;
+};
+var href = (element) => element.href;
+var isCrossDomain = function(url) {
+  const originAnchor = document.createElement("a");
+  originAnchor.href = location.href;
+  const urlAnchor = document.createElement("a");
+  try {
+    urlAnchor.href = url;
+    return !((!urlAnchor.protocol || urlAnchor.protocol === ":") && !urlAnchor.host || originAnchor.protocol + "//" + originAnchor.host === urlAnchor.protocol + "//" + urlAnchor.host);
+  } catch (e) {
+    return true;
+  }
+};
+var preventDefault;
+var { CustomEvent } = window;
+if (typeof CustomEvent !== "function") {
+  CustomEvent = function(event, params) {
+    const evt = document.createEvent("CustomEvent");
+    evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
+    return evt;
+  };
+  CustomEvent.prototype = window.Event.prototype;
+  ({ preventDefault } = CustomEvent.prototype);
+  CustomEvent.prototype.preventDefault = function() {
+    const result = preventDefault.call(this);
+    if (this.cancelable && !this.defaultPrevented) {
+      Object.defineProperty(this, "defaultPrevented", {
+        get() {
+          return true;
+        }
+      });
+    }
+    return result;
+  };
 }
-function isBodyInit(body) {
-  return body instanceof FormData || body instanceof URLSearchParams;
+var fire = (obj, name, data) => {
+  const event = new CustomEvent(name, {
+    bubbles: true,
+    cancelable: true,
+    detail: data
+  });
+  obj.dispatchEvent(event);
+  return !event.defaultPrevented;
+};
+var stopEverything = (e) => {
+  fire(e.target, "ujs:everythingStopped");
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+};
+var delegate = (element, selector, eventType, handler) => element.addEventListener(eventType, function(e) {
+  let { target } = e;
+  while (!!(target instanceof Element) && !matches(target, selector)) {
+    target = target.parentNode;
+  }
+  if (target instanceof Element && handler.call(target, e) === false) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+});
+var toArray = (e) => Array.prototype.slice.call(e);
+var serializeElement = (element, additionalParam) => {
+  let inputs = [element];
+  if (matches(element, "form")) {
+    inputs = toArray(element.elements);
+  }
+  const params = [];
+  inputs.forEach(function(input2) {
+    if (!input2.name || input2.disabled) {
+      return;
+    }
+    if (matches(input2, "fieldset[disabled] *")) {
+      return;
+    }
+    if (matches(input2, "select")) {
+      toArray(input2.options).forEach(function(option) {
+        if (option.selected) {
+          params.push({
+            name: input2.name,
+            value: option.value
+          });
+        }
+      });
+    } else if (input2.checked || ["radio", "checkbox", "submit"].indexOf(input2.type) === -1) {
+      params.push({
+        name: input2.name,
+        value: input2.value
+      });
+    }
+  });
+  if (additionalParam) {
+    params.push(additionalParam);
+  }
+  return params.map(function(param) {
+    if (param.name) {
+      return `${encodeURIComponent(param.name)}=${encodeURIComponent(param.value)}`;
+    } else {
+      return param;
+    }
+  }).join("&");
+};
+var formElements = (form, selector) => {
+  if (matches(form, "form")) {
+    return toArray(form.elements).filter((el) => matches(el, selector));
+  } else {
+    return toArray(form.querySelectorAll(selector));
+  }
+};
+var handleConfirmWithRails = (rails) => function(e) {
+  if (!allowAction(this, rails)) {
+    stopEverything(e);
+  }
+};
+var confirm = (message, element) => window.confirm(message);
+var allowAction = function(element, rails) {
+  let callback;
+  const message = element.getAttribute("data-confirm");
+  if (!message) {
+    return true;
+  }
+  let answer = false;
+  if (fire(element, "confirm")) {
+    try {
+      answer = rails.confirm(message, element);
+    } catch (error) {
+    }
+    callback = fire(element, "confirm:complete", [answer]);
+  }
+  return answer && callback;
+};
+var handleDisabledElement = function(e) {
+  const element = this;
+  if (element.disabled) {
+    stopEverything(e);
+  }
+};
+var enableElement = (e) => {
+  let element;
+  if (e instanceof Event) {
+    if (isXhrRedirect(e)) {
+      return;
+    }
+    element = e.target;
+  } else {
+    element = e;
+  }
+  if (isContentEditable(element)) {
+    return;
+  }
+  if (matches(element, linkDisableSelector)) {
+    return enableLinkElement(element);
+  } else if (matches(element, buttonDisableSelector) || matches(element, formEnableSelector)) {
+    return enableFormElement(element);
+  } else if (matches(element, formSubmitSelector)) {
+    return enableFormElements(element);
+  }
+};
+var disableElement = (e) => {
+  const element = e instanceof Event ? e.target : e;
+  if (isContentEditable(element)) {
+    return;
+  }
+  if (matches(element, linkDisableSelector)) {
+    return disableLinkElement(element);
+  } else if (matches(element, buttonDisableSelector) || matches(element, formDisableSelector)) {
+    return disableFormElement(element);
+  } else if (matches(element, formSubmitSelector)) {
+    return disableFormElements(element);
+  }
+};
+var disableLinkElement = function(element) {
+  if (getData(element, "ujs:disabled")) {
+    return;
+  }
+  const replacement = element.getAttribute("data-disable-with");
+  if (replacement != null) {
+    setData(element, "ujs:enable-with", element.innerHTML);
+    element.innerHTML = replacement;
+  }
+  element.addEventListener("click", stopEverything);
+  return setData(element, "ujs:disabled", true);
+};
+var enableLinkElement = function(element) {
+  const originalText = getData(element, "ujs:enable-with");
+  if (originalText != null) {
+    element.innerHTML = originalText;
+    setData(element, "ujs:enable-with", null);
+  }
+  element.removeEventListener("click", stopEverything);
+  return setData(element, "ujs:disabled", null);
+};
+var disableFormElements = (form) => formElements(form, formDisableSelector).forEach(disableFormElement);
+var disableFormElement = function(element) {
+  if (getData(element, "ujs:disabled")) {
+    return;
+  }
+  const replacement = element.getAttribute("data-disable-with");
+  if (replacement != null) {
+    if (matches(element, "button")) {
+      setData(element, "ujs:enable-with", element.innerHTML);
+      element.innerHTML = replacement;
+    } else {
+      setData(element, "ujs:enable-with", element.value);
+      element.value = replacement;
+    }
+  }
+  element.disabled = true;
+  return setData(element, "ujs:disabled", true);
+};
+var enableFormElements = (form) => formElements(form, formEnableSelector).forEach((element) => enableFormElement(element));
+var enableFormElement = function(element) {
+  const originalText = getData(element, "ujs:enable-with");
+  if (originalText != null) {
+    if (matches(element, "button")) {
+      element.innerHTML = originalText;
+    } else {
+      element.value = originalText;
+    }
+    setData(element, "ujs:enable-with", null);
+  }
+  element.disabled = false;
+  return setData(element, "ujs:disabled", null);
+};
+var isXhrRedirect = function(event) {
+  const xhr = event.detail ? event.detail[0] : void 0;
+  return xhr && xhr.getResponseHeader("X-Xhr-Redirect");
+};
+var handleMethodWithRails = (rails) => function(e) {
+  const link = this;
+  const method = link.getAttribute("data-method");
+  if (!method) {
+    return;
+  }
+  if (isContentEditable(this)) {
+    return;
+  }
+  const href2 = rails.href(link);
+  const csrfToken$1 = csrfToken();
+  const csrfParam$1 = csrfParam();
+  const form = document.createElement("form");
+  let formContent = `<input name='_method' value='${method}' type='hidden' />`;
+  if (csrfParam$1 && csrfToken$1 && !isCrossDomain(href2)) {
+    formContent += `<input name='${csrfParam$1}' value='${csrfToken$1}' type='hidden' />`;
+  }
+  formContent += '<input type="submit" />';
+  form.method = "post";
+  form.action = href2;
+  form.target = link.target;
+  form.innerHTML = formContent;
+  form.style.display = "none";
+  document.body.appendChild(form);
+  form.querySelector('[type="submit"]').click();
+  stopEverything(e);
+};
+var isRemote = function(element) {
+  const value = element.getAttribute("data-remote");
+  return value != null && value !== "false";
+};
+var handleRemoteWithRails = (rails) => function(e) {
+  let data, method, url;
+  const element = this;
+  if (!isRemote(element)) {
+    return true;
+  }
+  if (!fire(element, "ajax:before")) {
+    fire(element, "ajax:stopped");
+    return false;
+  }
+  if (isContentEditable(element)) {
+    fire(element, "ajax:stopped");
+    return false;
+  }
+  const withCredentials = element.getAttribute("data-with-credentials");
+  const dataType = element.getAttribute("data-type") || "script";
+  if (matches(element, formSubmitSelector)) {
+    const button = getData(element, "ujs:submit-button");
+    method = getData(element, "ujs:submit-button-formmethod") || element.getAttribute("method") || "get";
+    url = getData(element, "ujs:submit-button-formaction") || element.getAttribute("action") || location.href;
+    if (method.toUpperCase() === "GET") {
+      url = url.replace(/\?.*$/, "");
+    }
+    if (element.enctype === "multipart/form-data") {
+      data = new FormData(element);
+      if (button != null) {
+        data.append(button.name, button.value);
+      }
+    } else {
+      data = serializeElement(element, button);
+    }
+    setData(element, "ujs:submit-button", null);
+    setData(element, "ujs:submit-button-formmethod", null);
+    setData(element, "ujs:submit-button-formaction", null);
+  } else if (matches(element, buttonClickSelector) || matches(element, inputChangeSelector)) {
+    method = element.getAttribute("data-method");
+    url = element.getAttribute("data-url");
+    data = serializeElement(element, element.getAttribute("data-params"));
+  } else {
+    method = element.getAttribute("data-method");
+    url = rails.href(element);
+    data = element.getAttribute("data-params");
+  }
+  ajax({
+    type: method || "GET",
+    url,
+    data,
+    dataType,
+    beforeSend(xhr, options) {
+      if (fire(element, "ajax:beforeSend", [xhr, options])) {
+        return fire(element, "ajax:send", [xhr]);
+      } else {
+        fire(element, "ajax:stopped");
+        return false;
+      }
+    },
+    success(...args) {
+      return fire(element, "ajax:success", args);
+    },
+    error(...args) {
+      return fire(element, "ajax:error", args);
+    },
+    complete(...args) {
+      return fire(element, "ajax:complete", args);
+    },
+    crossDomain: isCrossDomain(url),
+    withCredentials: withCredentials != null && withCredentials !== "false"
+  });
+  stopEverything(e);
+};
+var formSubmitButtonClick = function(e) {
+  const button = this;
+  const { form } = button;
+  if (!form) {
+    return;
+  }
+  if (button.name) {
+    setData(form, "ujs:submit-button", {
+      name: button.name,
+      value: button.value
+    });
+  }
+  setData(form, "ujs:formnovalidate-button", button.formNoValidate);
+  setData(form, "ujs:submit-button-formaction", button.getAttribute("formaction"));
+  return setData(form, "ujs:submit-button-formmethod", button.getAttribute("formmethod"));
+};
+var preventInsignificantClick = function(e) {
+  const link = this;
+  const method = (link.getAttribute("data-method") || "GET").toUpperCase();
+  const data = link.getAttribute("data-params");
+  const metaClick = e.metaKey || e.ctrlKey;
+  const insignificantMetaClick = metaClick && method === "GET" && !data;
+  const nonPrimaryMouseClick = e.button != null && e.button !== 0;
+  if (nonPrimaryMouseClick || insignificantMetaClick) {
+    e.stopImmediatePropagation();
+  }
+};
+var Rails2 = {
+  $: $2,
+  ajax,
+  buttonClickSelector,
+  buttonDisableSelector,
+  confirm,
+  cspNonce,
+  csrfToken,
+  csrfParam,
+  CSRFProtection,
+  delegate,
+  disableElement,
+  enableElement,
+  fileInputSelector,
+  fire,
+  formElements,
+  formEnableSelector,
+  formDisableSelector,
+  formInputClickSelector,
+  formSubmitButtonClick,
+  formSubmitSelector,
+  getData,
+  handleDisabledElement,
+  href,
+  inputChangeSelector,
+  isCrossDomain,
+  linkClickSelector,
+  linkDisableSelector,
+  loadCSPNonce,
+  matches,
+  preventInsignificantClick,
+  refreshCSRFTokens,
+  serializeElement,
+  setData,
+  stopEverything
+};
+var handleConfirm = handleConfirmWithRails(Rails2);
+Rails2.handleConfirm = handleConfirm;
+var handleMethod = handleMethodWithRails(Rails2);
+Rails2.handleMethod = handleMethod;
+var handleRemote = handleRemoteWithRails(Rails2);
+Rails2.handleRemote = handleRemote;
+var start = function() {
+  if (window._rails_loaded) {
+    throw new Error("rails-ujs has already been loaded!");
+  }
+  window.addEventListener("pageshow", function() {
+    $2(formEnableSelector).forEach(function(el) {
+      if (getData(el, "ujs:disabled")) {
+        enableElement(el);
+      }
+    });
+    $2(linkDisableSelector).forEach(function(el) {
+      if (getData(el, "ujs:disabled")) {
+        enableElement(el);
+      }
+    });
+  });
+  delegate(document, linkDisableSelector, "ajax:complete", enableElement);
+  delegate(document, linkDisableSelector, "ajax:stopped", enableElement);
+  delegate(document, buttonDisableSelector, "ajax:complete", enableElement);
+  delegate(document, buttonDisableSelector, "ajax:stopped", enableElement);
+  delegate(document, linkClickSelector, "click", preventInsignificantClick);
+  delegate(document, linkClickSelector, "click", handleDisabledElement);
+  delegate(document, linkClickSelector, "click", handleConfirm);
+  delegate(document, linkClickSelector, "click", disableElement);
+  delegate(document, linkClickSelector, "click", handleRemote);
+  delegate(document, linkClickSelector, "click", handleMethod);
+  delegate(document, buttonClickSelector, "click", preventInsignificantClick);
+  delegate(document, buttonClickSelector, "click", handleDisabledElement);
+  delegate(document, buttonClickSelector, "click", handleConfirm);
+  delegate(document, buttonClickSelector, "click", disableElement);
+  delegate(document, buttonClickSelector, "click", handleRemote);
+  delegate(document, inputChangeSelector, "change", handleDisabledElement);
+  delegate(document, inputChangeSelector, "change", handleConfirm);
+  delegate(document, inputChangeSelector, "change", handleRemote);
+  delegate(document, formSubmitSelector, "submit", handleDisabledElement);
+  delegate(document, formSubmitSelector, "submit", handleConfirm);
+  delegate(document, formSubmitSelector, "submit", handleRemote);
+  delegate(document, formSubmitSelector, "submit", (e) => setTimeout(() => disableElement(e), 13));
+  delegate(document, formSubmitSelector, "ajax:send", disableElement);
+  delegate(document, formSubmitSelector, "ajax:complete", enableElement);
+  delegate(document, formInputClickSelector, "click", preventInsignificantClick);
+  delegate(document, formInputClickSelector, "click", handleDisabledElement);
+  delegate(document, formInputClickSelector, "click", handleConfirm);
+  delegate(document, formInputClickSelector, "click", formSubmitButtonClick);
+  document.addEventListener("DOMContentLoaded", refreshCSRFTokens);
+  document.addEventListener("DOMContentLoaded", loadCSPNonce);
+  return window._rails_loaded = true;
+};
+Rails2.start = start;
+if (typeof jQuery !== "undefined" && jQuery && jQuery.ajax) {
+  if (jQuery.rails) {
+    throw new Error("If you load both jquery_ujs and rails-ujs, use rails-ujs only.");
+  }
+  jQuery.rails = Rails2;
+  jQuery.ajaxPrefilter(function(options, originalOptions, xhr) {
+    if (!options.crossDomain) {
+      return CSRFProtection(xhr);
+    }
+  });
 }
-
-// node_modules/@hotwired/turbo-rails/app/javascript/turbo/index.js
-window.Turbo = turbo_es2017_esm_exports;
-addEventListener("turbo:before-fetch-request", encodeMethodIntoRequestBody);
 
 // node_modules/@popperjs/core/lib/index.js
 var lib_exports = {};
@@ -12187,19 +7032,19 @@ __export(lib_exports, {
   reference: () => reference,
   right: () => right,
   start: () => start2,
-  top: () => top2,
+  top: () => top,
   variationPlacements: () => variationPlacements,
   viewport: () => viewport,
   write: () => write
 });
 
 // node_modules/@popperjs/core/lib/enums.js
-var top2 = "top";
+var top = "top";
 var bottom = "bottom";
 var right = "right";
 var left = "left";
 var auto = "auto";
-var basePlacements = [top2, bottom, right, left];
+var basePlacements = [top, bottom, right, left];
 var start2 = "start";
 var end = "end";
 var clippingParents = "clippingParents";
@@ -12556,7 +7401,7 @@ function arrow(_ref) {
   }
   var paddingObject = toPaddingObject(options.padding, state);
   var arrowRect = getLayoutRect(arrowElement);
-  var minProp = axis === "y" ? top2 : left;
+  var minProp = axis === "y" ? top : left;
   var maxProp = axis === "y" ? bottom : right;
   var endDiff = state.rects.reference[len] + state.rects.reference[axis] - popperOffsets2[axis] - state.rects.popper[len];
   var startDiff = popperOffsets2[axis] - state.rects.reference[axis];
@@ -12633,7 +7478,7 @@ function mapToStyles(_ref2) {
   var hasX = offsets.hasOwnProperty("x");
   var hasY = offsets.hasOwnProperty("y");
   var sideX = left;
-  var sideY = top2;
+  var sideY = top;
   var win = window;
   if (adaptive) {
     var offsetParent = getOffsetParent(popper2);
@@ -12647,7 +7492,7 @@ function mapToStyles(_ref2) {
       }
     }
     offsetParent = offsetParent;
-    if (placement === top2 || (placement === left || placement === right) && variation === end) {
+    if (placement === top || (placement === left || placement === right) && variation === end) {
       sideY = bottom;
       var offsetY = isFixed && offsetParent === win && win.visualViewport ? win.visualViewport.height : (
         // $FlowFixMe[prop-missing]
@@ -12656,7 +7501,7 @@ function mapToStyles(_ref2) {
       y -= offsetY - popperRect.height;
       y *= gpuAcceleration ? 1 : -1;
     }
-    if (placement === left || (placement === top2 || placement === bottom) && variation === end) {
+    if (placement === left || (placement === top || placement === bottom) && variation === end) {
       sideX = right;
       var offsetX = isFixed && offsetParent === win && win.visualViewport ? win.visualViewport.width : (
         // $FlowFixMe[prop-missing]
@@ -12947,7 +7792,7 @@ function computeOffsets(_ref) {
   var commonY = reference2.y + reference2.height / 2 - element.height / 2;
   var offsets;
   switch (basePlacement) {
-    case top2:
+    case top:
       offsets = {
         x: commonX,
         y: reference2.y - element.height
@@ -13024,7 +7869,7 @@ function detectOverflow(state, options) {
     var offset2 = offsetData[placement];
     Object.keys(overflowOffsets).forEach(function(key) {
       var multiply = [right, bottom].indexOf(key) >= 0 ? 1 : -1;
-      var axis = [top2, bottom].indexOf(key) >= 0 ? "y" : "x";
+      var axis = [top, bottom].indexOf(key) >= 0 ? "y" : "x";
       overflowOffsets[key] += offset2[axis] * multiply;
     });
   }
@@ -13098,7 +7943,7 @@ function flip(_ref) {
     var placement = placements2[i];
     var _basePlacement = getBasePlacement(placement);
     var isStartVariation = getVariation(placement) === start2;
-    var isVertical = [top2, bottom].indexOf(_basePlacement) >= 0;
+    var isVertical = [top, bottom].indexOf(_basePlacement) >= 0;
     var len = isVertical ? "width" : "height";
     var overflow = detectOverflow(state, {
       placement,
@@ -13107,7 +7952,7 @@ function flip(_ref) {
       altBoundary,
       padding
     });
-    var mainVariationSide = isVertical ? isStartVariation ? right : left : isStartVariation ? bottom : top2;
+    var mainVariationSide = isVertical ? isStartVariation ? right : left : isStartVariation ? bottom : top;
     if (referenceRect[len] > popperRect[len]) {
       mainVariationSide = getOppositePlacement(mainVariationSide);
     }
@@ -13182,7 +8027,7 @@ function getSideOffsets(overflow, rect, preventedOffsets) {
   };
 }
 function isAnySideFullyClipped(overflow) {
-  return [top2, right, bottom, left].some(function(side) {
+  return [top, right, bottom, left].some(function(side) {
     return overflow[side] >= 0;
   });
 }
@@ -13223,7 +8068,7 @@ var hide_default = {
 // node_modules/@popperjs/core/lib/modifiers/offset.js
 function distanceAndSkiddingToXY(placement, rects, offset2) {
   var basePlacement = getBasePlacement(placement);
-  var invertDistance = [left, top2].indexOf(basePlacement) >= 0 ? -1 : 1;
+  var invertDistance = [left, top].indexOf(basePlacement) >= 0 ? -1 : 1;
   var _ref = typeof offset2 === "function" ? offset2(Object.assign({}, rects, {
     placement
   })) : offset2, skidding = _ref[0], distance = _ref[1];
@@ -13320,7 +8165,7 @@ function preventOverflow(_ref) {
   }
   if (checkMainAxis) {
     var _offsetModifierState$;
-    var mainSide = mainAxis === "y" ? top2 : left;
+    var mainSide = mainAxis === "y" ? top : left;
     var altSide = mainAxis === "y" ? bottom : right;
     var len = mainAxis === "y" ? "height" : "width";
     var offset2 = popperOffsets2[mainAxis];
@@ -13351,13 +8196,13 @@ function preventOverflow(_ref) {
   }
   if (checkAltAxis) {
     var _offsetModifierState$2;
-    var _mainSide = mainAxis === "x" ? top2 : left;
+    var _mainSide = mainAxis === "x" ? top : left;
     var _altSide = mainAxis === "x" ? bottom : right;
     var _offset = popperOffsets2[altAxis];
     var _len = altAxis === "y" ? "height" : "width";
     var _min = _offset + overflow[_mainSide];
     var _max = _offset - overflow[_altSide];
-    var isOriginSide = [top2, left].indexOf(basePlacement) !== -1;
+    var isOriginSide = [top, left].indexOf(basePlacement) !== -1;
     var _offsetModifierValue = (_offsetModifierState$2 = offsetModifierState == null ? void 0 : offsetModifierState[altAxis]) != null ? _offsetModifierState$2 : 0;
     var _tetherMin = isOriginSide ? _min : _offset - referenceRect[_len] - popperRect[_len] - _offsetModifierValue + normalizedTetherOffsetValue.altAxis;
     var _tetherMax = isOriginSide ? _offset + referenceRect[_len] + popperRect[_len] - _offsetModifierValue - normalizedTetherOffsetValue.altAxis : _max;
@@ -13474,7 +8319,7 @@ function orderModifiers(modifiers) {
 }
 
 // node_modules/@popperjs/core/lib/utils/debounce.js
-function debounce2(fn2) {
+function debounce(fn2) {
   var pending;
   return function() {
     if (!pending) {
@@ -13522,15 +8367,15 @@ function popperGenerator(generatorOptions) {
   if (generatorOptions === void 0) {
     generatorOptions = {};
   }
-  var _generatorOptions = generatorOptions, _generatorOptions$def = _generatorOptions.defaultModifiers, defaultModifiers3 = _generatorOptions$def === void 0 ? [] : _generatorOptions$def, _generatorOptions$def2 = _generatorOptions.defaultOptions, defaultOptions2 = _generatorOptions$def2 === void 0 ? DEFAULT_OPTIONS : _generatorOptions$def2;
+  var _generatorOptions = generatorOptions, _generatorOptions$def = _generatorOptions.defaultModifiers, defaultModifiers3 = _generatorOptions$def === void 0 ? [] : _generatorOptions$def, _generatorOptions$def2 = _generatorOptions.defaultOptions, defaultOptions = _generatorOptions$def2 === void 0 ? DEFAULT_OPTIONS : _generatorOptions$def2;
   return function createPopper4(reference2, popper2, options) {
     if (options === void 0) {
-      options = defaultOptions2;
+      options = defaultOptions;
     }
     var state = {
       placement: "bottom",
       orderedModifiers: [],
-      options: Object.assign({}, DEFAULT_OPTIONS, defaultOptions2),
+      options: Object.assign({}, DEFAULT_OPTIONS, defaultOptions),
       modifiersData: {},
       elements: {
         reference: reference2,
@@ -13546,14 +8391,14 @@ function popperGenerator(generatorOptions) {
       setOptions: function setOptions(setOptionsAction) {
         var options2 = typeof setOptionsAction === "function" ? setOptionsAction(state.options) : setOptionsAction;
         cleanupModifierEffects();
-        state.options = Object.assign({}, defaultOptions2, state.options, options2);
+        state.options = Object.assign({}, defaultOptions, state.options, options2);
         state.scrollParents = {
           reference: isElement(reference2) ? listScrollParents(reference2) : reference2.contextElement ? listScrollParents(reference2.contextElement) : [],
           popper: listScrollParents(popper2)
         };
         var orderedModifiers = orderModifiers(mergeByName([].concat(defaultModifiers3, state.options.modifiers)));
-        state.orderedModifiers = orderedModifiers.filter(function(m) {
-          return m.enabled;
+        state.orderedModifiers = orderedModifiers.filter(function(m2) {
+          return m2.enabled;
         });
         runModifierEffects();
         return instance.update();
@@ -13599,7 +8444,7 @@ function popperGenerator(generatorOptions) {
       },
       // Async and optimistically optimized update – it will not be executed if
       // not necessary (debounced to run at most once-per-tick)
-      update: debounce2(function() {
+      update: debounce(function() {
         return new Promise(function(resolve) {
           instance.forceUpdate();
           resolve(state);
@@ -13824,14 +8669,14 @@ var onDOMContentLoaded = (callback) => {
 var isRTL = () => document.documentElement.dir === "rtl";
 var defineJQueryPlugin = (plugin) => {
   onDOMContentLoaded(() => {
-    const $2 = getjQuery();
-    if ($2) {
+    const $3 = getjQuery();
+    if ($3) {
       const name = plugin.NAME;
-      const JQUERY_NO_CONFLICT = $2.fn[name];
-      $2.fn[name] = plugin.jQueryInterface;
-      $2.fn[name].Constructor = plugin;
-      $2.fn[name].noConflict = () => {
-        $2.fn[name] = JQUERY_NO_CONFLICT;
+      const JQUERY_NO_CONFLICT = $3.fn[name];
+      $3.fn[name] = plugin.jQueryInterface;
+      $3.fn[name].Constructor = plugin;
+      $3.fn[name].noConflict = () => {
+        $3.fn[name] = JQUERY_NO_CONFLICT;
         return plugin.jQueryInterface;
       };
     }
@@ -14030,16 +8875,16 @@ var EventHandler = {
     if (typeof event !== "string" || !element) {
       return null;
     }
-    const $2 = getjQuery();
+    const $3 = getjQuery();
     const typeEvent = getTypeEvent(event);
     const inNamespace = event !== typeEvent;
     let jQueryEvent = null;
     let bubbles = true;
     let nativeDispatch = true;
     let defaultPrevented = false;
-    if (inNamespace && $2) {
-      jQueryEvent = $2.Event(event, args);
-      $2(element).trigger(jQueryEvent);
+    if (inNamespace && $3) {
+      jQueryEvent = $3.Event(event, args);
+      $3(element).trigger(jQueryEvent);
       bubbles = !jQueryEvent.isPropagationStopped();
       nativeDispatch = !jQueryEvent.isImmediatePropagationStopped();
       defaultPrevented = jQueryEvent.isDefaultPrevented();
@@ -17313,5755 +12158,3408 @@ var import_jquery = __toESM(require_jquery());
 window.jQuery = import_jquery.default;
 window.$ = import_jquery.default;
 
-// node_modules/@fancyapps/fancybox/dist/jquery.fancybox.js
-(function(window2, document2, $2, undefined2) {
+// node_modules/jquery-ui-dist/jquery-ui.min.js
+!function(t) {
   "use strict";
-  window2.console = window2.console || {
-    info: function(stuff) {
-    }
-  };
-  if (!$2) {
-    return;
-  }
-  if ($2.fn.fancybox) {
-    console.info("fancyBox already initialized");
-    return;
-  }
-  var defaults = {
-    // Close existing modals
-    // Set this to false if you do not need to stack multiple instances
-    closeExisting: false,
-    // Enable infinite gallery navigation
-    loop: false,
-    // Horizontal space between slides
-    gutter: 50,
-    // Enable keyboard navigation
-    keyboard: true,
-    // Should allow caption to overlap the content
-    preventCaptionOverlap: true,
-    // Should display navigation arrows at the screen edges
-    arrows: true,
-    // Should display counter at the top left corner
-    infobar: true,
-    // Should display close button (using `btnTpl.smallBtn` template) over the content
-    // Can be true, false, "auto"
-    // If "auto" - will be automatically enabled for "html", "inline" or "ajax" items
-    smallBtn: "auto",
-    // Should display toolbar (buttons at the top)
-    // Can be true, false, "auto"
-    // If "auto" - will be automatically hidden if "smallBtn" is enabled
-    toolbar: "auto",
-    // What buttons should appear in the top right corner.
-    // Buttons will be created using templates from `btnTpl` option
-    // and they will be placed into toolbar (class="fancybox-toolbar"` element)
-    buttons: [
-      "zoom",
-      //"share",
-      "slideShow",
-      //"fullScreen",
-      //"download",
-      "thumbs",
-      "close"
-    ],
-    // Detect "idle" time in seconds
-    idleTime: 3,
-    // Disable right-click and use simple image protection for images
-    protect: false,
-    // Shortcut to make content "modal" - disable keyboard navigtion, hide buttons, etc
-    modal: false,
-    image: {
-      // Wait for images to load before displaying
-      //   true  - wait for image to load and then display;
-      //   false - display thumbnail and load the full-sized image over top,
-      //           requires predefined image dimensions (`data-width` and `data-height` attributes)
-      preload: false
-    },
-    ajax: {
-      // Object containing settings for ajax request
-      settings: {
-        // This helps to indicate that request comes from the modal
-        // Feel free to change naming
-        data: {
-          fancybox: true
-        }
+  "function" == typeof define && define.amd ? define(["jquery"], t) : t(jQuery);
+}(function(V) {
+  "use strict";
+  V.ui = V.ui || {};
+  V.ui.version = "1.13.3";
+  var n, s, x, k, o, a, r, l, h, i, N = 0, E = Array.prototype.hasOwnProperty, c = Array.prototype.slice;
+  V.cleanData = (n = V.cleanData, function(t2) {
+    for (var e2, i2, s2 = 0; null != (i2 = t2[s2]); s2++) (e2 = V._data(i2, "events")) && e2.remove && V(i2).triggerHandler("remove");
+    n(t2);
+  }), V.widget = function(t2, i2, e2) {
+    var s2, n2, o2, a2 = {}, r2 = t2.split(".")[0], l2 = r2 + "-" + (t2 = t2.split(".")[1]);
+    return e2 || (e2 = i2, i2 = V.Widget), Array.isArray(e2) && (e2 = V.extend.apply(null, [{}].concat(e2))), V.expr.pseudos[l2.toLowerCase()] = function(t3) {
+      return !!V.data(t3, l2);
+    }, V[r2] = V[r2] || {}, s2 = V[r2][t2], n2 = V[r2][t2] = function(t3, e3) {
+      if (!this || !this._createWidget) return new n2(t3, e3);
+      arguments.length && this._createWidget(t3, e3);
+    }, V.extend(n2, s2, { version: e2.version, _proto: V.extend({}, e2), _childConstructors: [] }), (o2 = new i2()).options = V.widget.extend({}, o2.options), V.each(e2, function(e3, s3) {
+      function n3() {
+        return i2.prototype[e3].apply(this, arguments);
       }
-    },
-    iframe: {
-      // Iframe template
-      tpl: '<iframe id="fancybox-frame{rnd}" name="fancybox-frame{rnd}" class="fancybox-iframe" allowfullscreen="allowfullscreen" allow="autoplay; fullscreen" src=""></iframe>',
-      // Preload iframe before displaying it
-      // This allows to calculate iframe content width and height
-      // (note: Due to "Same Origin Policy", you can't get cross domain data).
-      preload: true,
-      // Custom CSS styling for iframe wrapping element
-      // You can use this to set custom iframe dimensions
-      css: {},
-      // Iframe tag attributes
-      attr: {
-        scrolling: "auto"
+      function o3(t3) {
+        return i2.prototype[e3].apply(this, t3);
       }
-    },
-    // For HTML5 video only
-    video: {
-      tpl: `<video class="fancybox-video" controls controlsList="nodownload" poster="{{poster}}"><source src="{{src}}" type="{{format}}" />Sorry, your browser doesn't support embedded videos, <a href="{{src}}">download</a> and watch with your favorite video player!</video>`,
-      format: "",
-      // custom video format
-      autoStart: true
-    },
-    // Default content type if cannot be detected automatically
-    defaultType: "image",
-    // Open/close animation type
-    // Possible values:
-    //   false            - disable
-    //   "zoom"           - zoom images from/to thumbnail
-    //   "fade"
-    //   "zoom-in-out"
-    //
-    animationEffect: "zoom",
-    // Duration in ms for open/close animation
-    animationDuration: 366,
-    // Should image change opacity while zooming
-    // If opacity is "auto", then opacity will be changed if image and thumbnail have different aspect ratios
-    zoomOpacity: "auto",
-    // Transition effect between slides
-    //
-    // Possible values:
-    //   false            - disable
-    //   "fade'
-    //   "slide'
-    //   "circular'
-    //   "tube'
-    //   "zoom-in-out'
-    //   "rotate'
-    //
-    transitionEffect: "fade",
-    // Duration in ms for transition animation
-    transitionDuration: 366,
-    // Custom CSS class for slide element
-    slideClass: "",
-    // Custom CSS class for layout
-    baseClass: "",
-    // Base template for layout
-    baseTpl: '<div class="fancybox-container" role="dialog" tabindex="-1"><div class="fancybox-bg"></div><div class="fancybox-inner"><div class="fancybox-infobar"><span data-fancybox-index></span>&nbsp;/&nbsp;<span data-fancybox-count></span></div><div class="fancybox-toolbar">{{buttons}}</div><div class="fancybox-navigation">{{arrows}}</div><div class="fancybox-stage"></div><div class="fancybox-caption"><div class="fancybox-caption__body"></div></div></div></div>',
-    // Loading indicator template
-    spinnerTpl: '<div class="fancybox-loading"></div>',
-    // Error message template
-    errorTpl: '<div class="fancybox-error"><p>{{ERROR}}</p></div>',
-    btnTpl: {
-      download: '<a download data-fancybox-download class="fancybox-button fancybox-button--download" title="{{DOWNLOAD}}" href="javascript:;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18.62 17.09V19H5.38v-1.91zm-2.97-6.96L17 11.45l-5 4.87-5-4.87 1.36-1.32 2.68 2.64V5h1.92v7.77z"/></svg></a>',
-      zoom: '<button data-fancybox-zoom class="fancybox-button fancybox-button--zoom" title="{{ZOOM}}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18.7 17.3l-3-3a5.9 5.9 0 0 0-.6-7.6 5.9 5.9 0 0 0-8.4 0 5.9 5.9 0 0 0 0 8.4 5.9 5.9 0 0 0 7.7.7l3 3a1 1 0 0 0 1.3 0c.4-.5.4-1 0-1.5zM8.1 13.8a4 4 0 0 1 0-5.7 4 4 0 0 1 5.7 0 4 4 0 0 1 0 5.7 4 4 0 0 1-5.7 0z"/></svg></button>',
-      close: '<button data-fancybox-close class="fancybox-button fancybox-button--close" title="{{CLOSE}}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 10.6L6.6 5.2 5.2 6.6l5.4 5.4-5.4 5.4 1.4 1.4 5.4-5.4 5.4 5.4 1.4-1.4-5.4-5.4 5.4-5.4-1.4-1.4-5.4 5.4z"/></svg></button>',
-      // Arrows
-      arrowLeft: '<button data-fancybox-prev class="fancybox-button fancybox-button--arrow_left" title="{{PREV}}"><div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11.28 15.7l-1.34 1.37L5 12l4.94-5.07 1.34 1.38-2.68 2.72H19v1.94H8.6z"/></svg></div></button>',
-      arrowRight: '<button data-fancybox-next class="fancybox-button fancybox-button--arrow_right" title="{{NEXT}}"><div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.4 12.97l-2.68 2.72 1.34 1.38L19 12l-4.94-5.07-1.34 1.38 2.68 2.72H5v1.94z"/></svg></div></button>',
-      // This small close button will be appended to your html/inline/ajax content by default,
-      // if "smallBtn" option is not set to false
-      smallBtn: '<button type="button" data-fancybox-close class="fancybox-button fancybox-close-small" title="{{CLOSE}}"><svg xmlns="http://www.w3.org/2000/svg" version="1" viewBox="0 0 24 24"><path d="M13 12l5-5-1-1-5 5-5-5-1 1 5 5-5 5 1 1 5-5 5 5 1-1z"/></svg></button>'
-    },
-    // Container is injected into this element
-    parentEl: "body",
-    // Hide browser vertical scrollbars; use at your own risk
-    hideScrollbar: true,
-    // Focus handling
-    // ==============
-    // Try to focus on the first focusable element after opening
-    autoFocus: true,
-    // Put focus back to active element after closing
-    backFocus: true,
-    // Do not let user to focus on element outside modal content
-    trapFocus: true,
-    // Module specific options
-    // =======================
-    fullScreen: {
-      autoStart: false
-    },
-    // Set `touch: false` to disable panning/swiping
-    touch: {
-      vertical: true,
-      // Allow to drag content vertically
-      momentum: true
-      // Continue movement after releasing mouse/touch when panning
-    },
-    // Hash value when initializing manually,
-    // set `false` to disable hash change
-    hash: null,
-    // Customize or add new media types
-    // Example:
-    /*
-      media : {
-        youtube : {
-          params : {
-            autoplay : 0
-          }
-        }
-      }
-    */
-    media: {},
-    slideShow: {
-      autoStart: false,
-      speed: 3e3
-    },
-    thumbs: {
-      autoStart: false,
-      // Display thumbnails on opening
-      hideOnClose: true,
-      // Hide thumbnail grid when closing animation starts
-      parentEl: ".fancybox-container",
-      // Container is injected into this element
-      axis: "y"
-      // Vertical (y) or horizontal (x) scrolling
-    },
-    // Use mousewheel to navigate gallery
-    // If 'auto' - enabled for images only
-    wheel: "auto",
-    // Callbacks
-    //==========
-    // See Documentation/API/Events for more information
-    // Example:
-    /*
-      afterShow: function( instance, current ) {
-        console.info( 'Clicked element:' );
-        console.info( current.opts.$orig );
-      }
-    */
-    onInit: $2.noop,
-    // When instance has been initialized
-    beforeLoad: $2.noop,
-    // Before the content of a slide is being loaded
-    afterLoad: $2.noop,
-    // When the content of a slide is done loading
-    beforeShow: $2.noop,
-    // Before open animation starts
-    afterShow: $2.noop,
-    // When content is done loading and animating
-    beforeClose: $2.noop,
-    // Before the instance attempts to close. Return false to cancel the close.
-    afterClose: $2.noop,
-    // After instance has been closed
-    onActivate: $2.noop,
-    // When instance is brought to front
-    onDeactivate: $2.noop,
-    // When other instance has been activated
-    // Interaction
-    // ===========
-    // Use options below to customize taken action when user clicks or double clicks on the fancyBox area,
-    // each option can be string or method that returns value.
-    //
-    // Possible values:
-    //   "close"           - close instance
-    //   "next"            - move to next gallery item
-    //   "nextOrClose"     - move to next gallery item or close if gallery has only one item
-    //   "toggleControls"  - show/hide controls
-    //   "zoom"            - zoom image (if loaded)
-    //   false             - do nothing
-    // Clicked on the content
-    clickContent: function(current, event) {
-      return current.type === "image" ? "zoom" : false;
-    },
-    // Clicked on the slide
-    clickSlide: "close",
-    // Clicked on the background (backdrop) element;
-    // if you have not changed the layout, then most likely you need to use `clickSlide` option
-    clickOutside: "close",
-    // Same as previous two, but for double click
-    dblclickContent: false,
-    dblclickSlide: false,
-    dblclickOutside: false,
-    // Custom options when mobile device is detected
-    // =============================================
-    mobile: {
-      preventCaptionOverlap: false,
-      idleTime: false,
-      clickContent: function(current, event) {
-        return current.type === "image" ? "toggleControls" : false;
-      },
-      clickSlide: function(current, event) {
-        return current.type === "image" ? "toggleControls" : "close";
-      },
-      dblclickContent: function(current, event) {
-        return current.type === "image" ? "zoom" : false;
-      },
-      dblclickSlide: function(current, event) {
-        return current.type === "image" ? "zoom" : false;
-      }
-    },
-    // Internationalization
-    // ====================
-    lang: "en",
-    i18n: {
-      en: {
-        CLOSE: "Close",
-        NEXT: "Next",
-        PREV: "Previous",
-        ERROR: "The requested content cannot be loaded. <br/> Please try again later.",
-        PLAY_START: "Start slideshow",
-        PLAY_STOP: "Pause slideshow",
-        FULL_SCREEN: "Full screen",
-        THUMBS: "Thumbnails",
-        DOWNLOAD: "Download",
-        SHARE: "Share",
-        ZOOM: "Zoom"
-      },
-      de: {
-        CLOSE: "Schlie&szlig;en",
-        NEXT: "Weiter",
-        PREV: "Zur&uuml;ck",
-        ERROR: "Die angeforderten Daten konnten nicht geladen werden. <br/> Bitte versuchen Sie es sp&auml;ter nochmal.",
-        PLAY_START: "Diaschau starten",
-        PLAY_STOP: "Diaschau beenden",
-        FULL_SCREEN: "Vollbild",
-        THUMBS: "Vorschaubilder",
-        DOWNLOAD: "Herunterladen",
-        SHARE: "Teilen",
-        ZOOM: "Vergr&ouml;&szlig;ern"
-      }
-    }
-  };
-  var $W = $2(window2);
-  var $D = $2(document2);
-  var called = 0;
-  var isQuery = function(obj) {
-    return obj && obj.hasOwnProperty && obj instanceof $2;
-  };
-  var requestAFrame = function() {
-    return window2.requestAnimationFrame || window2.webkitRequestAnimationFrame || window2.mozRequestAnimationFrame || window2.oRequestAnimationFrame || // if all else fails, use setTimeout
-    function(callback) {
-      return window2.setTimeout(callback, 1e3 / 60);
-    };
-  }();
-  var cancelAFrame = function() {
-    return window2.cancelAnimationFrame || window2.webkitCancelAnimationFrame || window2.mozCancelAnimationFrame || window2.oCancelAnimationFrame || function(id) {
-      window2.clearTimeout(id);
-    };
-  }();
-  var transitionEnd = function() {
-    var el = document2.createElement("fakeelement"), t;
-    var transitions = {
-      transition: "transitionend",
-      OTransition: "oTransitionEnd",
-      MozTransition: "transitionend",
-      WebkitTransition: "webkitTransitionEnd"
-    };
-    for (t in transitions) {
-      if (el.style[t] !== undefined2) {
-        return transitions[t];
-      }
-    }
-    return "transitionend";
-  }();
-  var forceRedraw = function($el) {
-    return $el && $el.length && $el[0].offsetHeight;
-  };
-  var mergeOpts = function(opts1, opts2) {
-    var rez = $2.extend(true, {}, opts1, opts2);
-    $2.each(opts2, function(key, value) {
-      if ($2.isArray(value)) {
-        rez[key] = value;
-      }
-    });
-    return rez;
-  };
-  var inViewport = function(elem) {
-    var elemCenter, rez;
-    if (!elem || elem.ownerDocument !== document2) {
-      return false;
-    }
-    $2(".fancybox-container").css("pointer-events", "none");
-    elemCenter = {
-      x: elem.getBoundingClientRect().left + elem.offsetWidth / 2,
-      y: elem.getBoundingClientRect().top + elem.offsetHeight / 2
-    };
-    rez = document2.elementFromPoint(elemCenter.x, elemCenter.y) === elem;
-    $2(".fancybox-container").css("pointer-events", "");
-    return rez;
-  };
-  var FancyBox = function(content, opts, index) {
-    var self2 = this;
-    self2.opts = mergeOpts({
-      index
-    }, $2.fancybox.defaults);
-    if ($2.isPlainObject(opts)) {
-      self2.opts = mergeOpts(self2.opts, opts);
-    }
-    if ($2.fancybox.isMobile) {
-      self2.opts = mergeOpts(self2.opts, self2.opts.mobile);
-    }
-    self2.id = self2.opts.id || ++called;
-    self2.currIndex = parseInt(self2.opts.index, 10) || 0;
-    self2.prevIndex = null;
-    self2.prevPos = null;
-    self2.currPos = 0;
-    self2.firstRun = true;
-    self2.group = [];
-    self2.slides = {};
-    self2.addContent(content);
-    if (!self2.group.length) {
-      return;
-    }
-    self2.init();
-  };
-  $2.extend(FancyBox.prototype, {
-    // Create DOM structure
-    // ====================
-    init: function() {
-      var self2 = this, firstItem = self2.group[self2.currIndex], firstItemOpts = firstItem.opts, $container, buttonStr;
-      if (firstItemOpts.closeExisting) {
-        $2.fancybox.close(true);
-      }
-      $2("body").addClass("fancybox-active");
-      if (!$2.fancybox.getInstance() && firstItemOpts.hideScrollbar !== false && !$2.fancybox.isMobile && document2.body.scrollHeight > window2.innerHeight) {
-        $2("head").append(
-          '<style id="fancybox-style-noscroll" type="text/css">.compensate-for-scrollbar{margin-right:' + (window2.innerWidth - document2.documentElement.clientWidth) + "px;}</style>"
-        );
-        $2("body").addClass("compensate-for-scrollbar");
-      }
-      buttonStr = "";
-      $2.each(firstItemOpts.buttons, function(index, value) {
-        buttonStr += firstItemOpts.btnTpl[value] || "";
-      });
-      $container = $2(
-        self2.translate(
-          self2,
-          firstItemOpts.baseTpl.replace("{{buttons}}", buttonStr).replace("{{arrows}}", firstItemOpts.btnTpl.arrowLeft + firstItemOpts.btnTpl.arrowRight)
-        )
-      ).attr("id", "fancybox-container-" + self2.id).addClass(firstItemOpts.baseClass).data("FancyBox", self2).appendTo(firstItemOpts.parentEl);
-      self2.$refs = {
-        container: $container
+      a2[e3] = "function" != typeof s3 ? s3 : function() {
+        var t3, e4 = this._super, i3 = this._superApply;
+        return this._super = n3, this._superApply = o3, t3 = s3.apply(this, arguments), this._super = e4, this._superApply = i3, t3;
       };
-      ["bg", "inner", "infobar", "toolbar", "stage", "caption", "navigation"].forEach(function(item) {
-        self2.$refs[item] = $container.find(".fancybox-" + item);
+    }), n2.prototype = V.widget.extend(o2, { widgetEventPrefix: s2 && o2.widgetEventPrefix || t2 }, a2, { constructor: n2, namespace: r2, widgetName: t2, widgetFullName: l2 }), s2 ? (V.each(s2._childConstructors, function(t3, e3) {
+      var i3 = e3.prototype;
+      V.widget(i3.namespace + "." + i3.widgetName, n2, e3._proto);
+    }), delete s2._childConstructors) : i2._childConstructors.push(n2), V.widget.bridge(t2, n2), n2;
+  }, V.widget.extend = function(t2) {
+    for (var e2, i2, s2 = c.call(arguments, 1), n2 = 0, o2 = s2.length; n2 < o2; n2++) for (e2 in s2[n2]) i2 = s2[n2][e2], E.call(s2[n2], e2) && void 0 !== i2 && (V.isPlainObject(i2) ? t2[e2] = V.isPlainObject(t2[e2]) ? V.widget.extend({}, t2[e2], i2) : V.widget.extend({}, i2) : t2[e2] = i2);
+    return t2;
+  }, V.widget.bridge = function(o2, e2) {
+    var a2 = e2.prototype.widgetFullName || o2;
+    V.fn[o2] = function(i2) {
+      var t2 = "string" == typeof i2, s2 = c.call(arguments, 1), n2 = this;
+      return t2 ? this.length || "instance" !== i2 ? this.each(function() {
+        var t3, e3 = V.data(this, a2);
+        return "instance" === i2 ? (n2 = e3, false) : e3 ? "function" != typeof e3[i2] || "_" === i2.charAt(0) ? V.error("no such method '" + i2 + "' for " + o2 + " widget instance") : (t3 = e3[i2].apply(e3, s2)) !== e3 && void 0 !== t3 ? (n2 = t3 && t3.jquery ? n2.pushStack(t3.get()) : t3, false) : void 0 : V.error("cannot call methods on " + o2 + " prior to initialization; attempted to call method '" + i2 + "'");
+      }) : n2 = void 0 : (s2.length && (i2 = V.widget.extend.apply(null, [i2].concat(s2))), this.each(function() {
+        var t3 = V.data(this, a2);
+        t3 ? (t3.option(i2 || {}), t3._init && t3._init()) : V.data(this, a2, new e2(i2, this));
+      })), n2;
+    };
+  }, V.Widget = function() {
+  }, V.Widget._childConstructors = [], V.Widget.prototype = { widgetName: "widget", widgetEventPrefix: "", defaultElement: "<div>", options: { classes: {}, disabled: false, create: null }, _createWidget: function(t2, e2) {
+    e2 = V(e2 || this.defaultElement || this)[0], this.element = V(e2), this.uuid = N++, this.eventNamespace = "." + this.widgetName + this.uuid, this.bindings = V(), this.hoverable = V(), this.focusable = V(), this.classesElementLookup = {}, e2 !== this && (V.data(e2, this.widgetFullName, this), this._on(true, this.element, { remove: function(t3) {
+      t3.target === e2 && this.destroy();
+    } }), this.document = V(e2.style ? e2.ownerDocument : e2.document || e2), this.window = V(this.document[0].defaultView || this.document[0].parentWindow)), this.options = V.widget.extend({}, this.options, this._getCreateOptions(), t2), this._create(), this.options.disabled && this._setOptionDisabled(this.options.disabled), this._trigger("create", null, this._getCreateEventData()), this._init();
+  }, _getCreateOptions: function() {
+    return {};
+  }, _getCreateEventData: V.noop, _create: V.noop, _init: V.noop, destroy: function() {
+    var i2 = this;
+    this._destroy(), V.each(this.classesElementLookup, function(t2, e2) {
+      i2._removeClass(e2, t2);
+    }), this.element.off(this.eventNamespace).removeData(this.widgetFullName), this.widget().off(this.eventNamespace).removeAttr("aria-disabled"), this.bindings.off(this.eventNamespace);
+  }, _destroy: V.noop, widget: function() {
+    return this.element;
+  }, option: function(t2, e2) {
+    var i2, s2, n2, o2 = t2;
+    if (0 === arguments.length) return V.widget.extend({}, this.options);
+    if ("string" == typeof t2) if (o2 = {}, t2 = (i2 = t2.split(".")).shift(), i2.length) {
+      for (s2 = o2[t2] = V.widget.extend({}, this.options[t2]), n2 = 0; n2 < i2.length - 1; n2++) s2[i2[n2]] = s2[i2[n2]] || {}, s2 = s2[i2[n2]];
+      if (t2 = i2.pop(), 1 === arguments.length) return void 0 === s2[t2] ? null : s2[t2];
+      s2[t2] = e2;
+    } else {
+      if (1 === arguments.length) return void 0 === this.options[t2] ? null : this.options[t2];
+      o2[t2] = e2;
+    }
+    return this._setOptions(o2), this;
+  }, _setOptions: function(t2) {
+    for (var e2 in t2) this._setOption(e2, t2[e2]);
+    return this;
+  }, _setOption: function(t2, e2) {
+    return "classes" === t2 && this._setOptionClasses(e2), this.options[t2] = e2, "disabled" === t2 && this._setOptionDisabled(e2), this;
+  }, _setOptionClasses: function(t2) {
+    var e2, i2, s2;
+    for (e2 in t2) s2 = this.classesElementLookup[e2], t2[e2] !== this.options.classes[e2] && s2 && s2.length && (i2 = V(s2.get()), this._removeClass(s2, e2), i2.addClass(this._classes({ element: i2, keys: e2, classes: t2, add: true })));
+  }, _setOptionDisabled: function(t2) {
+    this._toggleClass(this.widget(), this.widgetFullName + "-disabled", null, !!t2), t2 && (this._removeClass(this.hoverable, null, "ui-state-hover"), this._removeClass(this.focusable, null, "ui-state-focus"));
+  }, enable: function() {
+    return this._setOptions({ disabled: false });
+  }, disable: function() {
+    return this._setOptions({ disabled: true });
+  }, _classes: function(n2) {
+    var o2 = [], a2 = this;
+    function t2(t3, e2) {
+      for (var i2, s2 = 0; s2 < t3.length; s2++) i2 = a2.classesElementLookup[t3[s2]] || V(), i2 = n2.add ? (function() {
+        var i3 = [];
+        n2.element.each(function(t4, e3) {
+          V.map(a2.classesElementLookup, function(t5) {
+            return t5;
+          }).some(function(t5) {
+            return t5.is(e3);
+          }) || i3.push(e3);
+        }), a2._on(V(i3), { remove: "_untrackClassesElement" });
+      }(), V(V.uniqueSort(i2.get().concat(n2.element.get())))) : V(i2.not(n2.element).get()), a2.classesElementLookup[t3[s2]] = i2, o2.push(t3[s2]), e2 && n2.classes[t3[s2]] && o2.push(n2.classes[t3[s2]]);
+    }
+    return (n2 = V.extend({ element: this.element, classes: this.options.classes || {} }, n2)).keys && t2(n2.keys.match(/\S+/g) || [], true), n2.extra && t2(n2.extra.match(/\S+/g) || []), o2.join(" ");
+  }, _untrackClassesElement: function(i2) {
+    var s2 = this;
+    V.each(s2.classesElementLookup, function(t2, e2) {
+      -1 !== V.inArray(i2.target, e2) && (s2.classesElementLookup[t2] = V(e2.not(i2.target).get()));
+    }), this._off(V(i2.target));
+  }, _removeClass: function(t2, e2, i2) {
+    return this._toggleClass(t2, e2, i2, false);
+  }, _addClass: function(t2, e2, i2) {
+    return this._toggleClass(t2, e2, i2, true);
+  }, _toggleClass: function(t2, e2, i2, s2) {
+    var n2 = "string" == typeof t2 || null === t2, e2 = { extra: n2 ? e2 : i2, keys: n2 ? t2 : e2, element: n2 ? this.element : t2, add: s2 = "boolean" == typeof s2 ? s2 : i2 };
+    return e2.element.toggleClass(this._classes(e2), s2), this;
+  }, _on: function(n2, o2, t2) {
+    var a2, r2 = this;
+    "boolean" != typeof n2 && (t2 = o2, o2 = n2, n2 = false), t2 ? (o2 = a2 = V(o2), this.bindings = this.bindings.add(o2)) : (t2 = o2, o2 = this.element, a2 = this.widget()), V.each(t2, function(t3, e2) {
+      function i2() {
+        if (n2 || true !== r2.options.disabled && !V(this).hasClass("ui-state-disabled")) return ("string" == typeof e2 ? r2[e2] : e2).apply(r2, arguments);
+      }
+      "string" != typeof e2 && (i2.guid = e2.guid = e2.guid || i2.guid || V.guid++);
+      var t3 = t3.match(/^([\w:-]*)\s*(.*)$/), s2 = t3[1] + r2.eventNamespace, t3 = t3[2];
+      t3 ? a2.on(s2, t3, i2) : o2.on(s2, i2);
+    });
+  }, _off: function(t2, e2) {
+    e2 = (e2 || "").split(" ").join(this.eventNamespace + " ") + this.eventNamespace, t2.off(e2), this.bindings = V(this.bindings.not(t2).get()), this.focusable = V(this.focusable.not(t2).get()), this.hoverable = V(this.hoverable.not(t2).get());
+  }, _delay: function(t2, e2) {
+    var i2 = this;
+    return setTimeout(function() {
+      return ("string" == typeof t2 ? i2[t2] : t2).apply(i2, arguments);
+    }, e2 || 0);
+  }, _hoverable: function(t2) {
+    this.hoverable = this.hoverable.add(t2), this._on(t2, { mouseenter: function(t3) {
+      this._addClass(V(t3.currentTarget), null, "ui-state-hover");
+    }, mouseleave: function(t3) {
+      this._removeClass(V(t3.currentTarget), null, "ui-state-hover");
+    } });
+  }, _focusable: function(t2) {
+    this.focusable = this.focusable.add(t2), this._on(t2, { focusin: function(t3) {
+      this._addClass(V(t3.currentTarget), null, "ui-state-focus");
+    }, focusout: function(t3) {
+      this._removeClass(V(t3.currentTarget), null, "ui-state-focus");
+    } });
+  }, _trigger: function(t2, e2, i2) {
+    var s2, n2, o2 = this.options[t2];
+    if (i2 = i2 || {}, (e2 = V.Event(e2)).type = (t2 === this.widgetEventPrefix ? t2 : this.widgetEventPrefix + t2).toLowerCase(), e2.target = this.element[0], n2 = e2.originalEvent) for (s2 in n2) s2 in e2 || (e2[s2] = n2[s2]);
+    return this.element.trigger(e2, i2), !("function" == typeof o2 && false === o2.apply(this.element[0], [e2].concat(i2)) || e2.isDefaultPrevented());
+  } }, V.each({ show: "fadeIn", hide: "fadeOut" }, function(o2, a2) {
+    V.Widget.prototype["_" + o2] = function(e2, t2, i2) {
+      var s2, n2 = (t2 = "string" == typeof t2 ? { effect: t2 } : t2) ? true !== t2 && "number" != typeof t2 && t2.effect || a2 : o2;
+      "number" == typeof (t2 = t2 || {}) ? t2 = { duration: t2 } : true === t2 && (t2 = {}), s2 = !V.isEmptyObject(t2), t2.complete = i2, t2.delay && e2.delay(t2.delay), s2 && V.effects && V.effects.effect[n2] ? e2[o2](t2) : n2 !== o2 && e2[n2] ? e2[n2](t2.duration, t2.easing, i2) : e2.queue(function(t3) {
+        V(this)[o2](), i2 && i2.call(e2[0]), t3();
       });
-      self2.trigger("onInit");
-      self2.activate();
-      self2.jumpTo(self2.currIndex);
-    },
-    // Simple i18n support - replaces object keys found in template
-    // with corresponding values
-    // ============================================================
-    translate: function(obj, str) {
-      var arr = obj.opts.i18n[obj.opts.lang] || obj.opts.i18n.en;
-      return str.replace(/\{\{(\w+)\}\}/g, function(match, n) {
-        return arr[n] === undefined2 ? match : arr[n];
+    };
+  }), V.widget;
+  function C(t2, e2, i2) {
+    return [parseFloat(t2[0]) * (h.test(t2[0]) ? e2 / 100 : 1), parseFloat(t2[1]) * (h.test(t2[1]) ? i2 / 100 : 1)];
+  }
+  function D(t2, e2) {
+    return parseInt(V.css(t2, e2), 10) || 0;
+  }
+  function I(t2) {
+    return null != t2 && t2 === t2.window;
+  }
+  x = Math.max, k = Math.abs, o = /left|center|right/, a = /top|center|bottom/, r = /[\+\-]\d+(\.[\d]+)?%?/, l = /^\w+/, h = /%$/, i = V.fn.position, V.position = { scrollbarWidth: function() {
+    var t2, e2, i2;
+    return void 0 !== s ? s : (i2 = (e2 = V("<div style='display:block;position:absolute;width:200px;height:200px;overflow:hidden;'><div style='height:300px;width:auto;'></div></div>")).children()[0], V("body").append(e2), t2 = i2.offsetWidth, e2.css("overflow", "scroll"), t2 === (i2 = i2.offsetWidth) && (i2 = e2[0].clientWidth), e2.remove(), s = t2 - i2);
+  }, getScrollInfo: function(t2) {
+    var e2 = t2.isWindow || t2.isDocument ? "" : t2.element.css("overflow-x"), i2 = t2.isWindow || t2.isDocument ? "" : t2.element.css("overflow-y"), e2 = "scroll" === e2 || "auto" === e2 && t2.width < t2.element[0].scrollWidth;
+    return { width: "scroll" === i2 || "auto" === i2 && t2.height < t2.element[0].scrollHeight ? V.position.scrollbarWidth() : 0, height: e2 ? V.position.scrollbarWidth() : 0 };
+  }, getWithinInfo: function(t2) {
+    var e2 = V(t2 || window), i2 = I(e2[0]), s2 = !!e2[0] && 9 === e2[0].nodeType;
+    return { element: e2, isWindow: i2, isDocument: s2, offset: !i2 && !s2 ? V(t2).offset() : { left: 0, top: 0 }, scrollLeft: e2.scrollLeft(), scrollTop: e2.scrollTop(), width: e2.outerWidth(), height: e2.outerHeight() };
+  } }, V.fn.position = function(u2) {
+    var d2, p2, f2, g2, m3, _2, v2, b2, y2, w2, t2, e2;
+    return u2 && u2.of ? (_2 = "string" == typeof (u2 = V.extend({}, u2)).of ? V(document).find(u2.of) : V(u2.of), v2 = V.position.getWithinInfo(u2.within), b2 = V.position.getScrollInfo(v2), y2 = (u2.collision || "flip").split(" "), w2 = {}, e2 = 9 === (e2 = (t2 = _2)[0]).nodeType ? { width: t2.width(), height: t2.height(), offset: { top: 0, left: 0 } } : I(e2) ? { width: t2.width(), height: t2.height(), offset: { top: t2.scrollTop(), left: t2.scrollLeft() } } : e2.preventDefault ? { width: 0, height: 0, offset: { top: e2.pageY, left: e2.pageX } } : { width: t2.outerWidth(), height: t2.outerHeight(), offset: t2.offset() }, _2[0].preventDefault && (u2.at = "left top"), p2 = e2.width, f2 = e2.height, m3 = V.extend({}, g2 = e2.offset), V.each(["my", "at"], function() {
+      var t3, e3, i2 = (u2[this] || "").split(" ");
+      (i2 = 1 === i2.length ? o.test(i2[0]) ? i2.concat(["center"]) : a.test(i2[0]) ? ["center"].concat(i2) : ["center", "center"] : i2)[0] = o.test(i2[0]) ? i2[0] : "center", i2[1] = a.test(i2[1]) ? i2[1] : "center", t3 = r.exec(i2[0]), e3 = r.exec(i2[1]), w2[this] = [t3 ? t3[0] : 0, e3 ? e3[0] : 0], u2[this] = [l.exec(i2[0])[0], l.exec(i2[1])[0]];
+    }), 1 === y2.length && (y2[1] = y2[0]), "right" === u2.at[0] ? m3.left += p2 : "center" === u2.at[0] && (m3.left += p2 / 2), "bottom" === u2.at[1] ? m3.top += f2 : "center" === u2.at[1] && (m3.top += f2 / 2), d2 = C(w2.at, p2, f2), m3.left += d2[0], m3.top += d2[1], this.each(function() {
+      var i2, t3, a2 = V(this), r2 = a2.outerWidth(), l2 = a2.outerHeight(), e3 = D(this, "marginLeft"), s2 = D(this, "marginTop"), n2 = r2 + e3 + D(this, "marginRight") + b2.width, o2 = l2 + s2 + D(this, "marginBottom") + b2.height, h2 = V.extend({}, m3), c2 = C(w2.my, a2.outerWidth(), a2.outerHeight());
+      "right" === u2.my[0] ? h2.left -= r2 : "center" === u2.my[0] && (h2.left -= r2 / 2), "bottom" === u2.my[1] ? h2.top -= l2 : "center" === u2.my[1] && (h2.top -= l2 / 2), h2.left += c2[0], h2.top += c2[1], i2 = { marginLeft: e3, marginTop: s2 }, V.each(["left", "top"], function(t4, e4) {
+        V.ui.position[y2[t4]] && V.ui.position[y2[t4]][e4](h2, { targetWidth: p2, targetHeight: f2, elemWidth: r2, elemHeight: l2, collisionPosition: i2, collisionWidth: n2, collisionHeight: o2, offset: [d2[0] + c2[0], d2[1] + c2[1]], my: u2.my, at: u2.at, within: v2, elem: a2 });
+      }), u2.using && (t3 = function(t4) {
+        var e4 = g2.left - h2.left, i3 = e4 + p2 - r2, s3 = g2.top - h2.top, n3 = s3 + f2 - l2, o3 = { target: { element: _2, left: g2.left, top: g2.top, width: p2, height: f2 }, element: { element: a2, left: h2.left, top: h2.top, width: r2, height: l2 }, horizontal: i3 < 0 ? "left" : 0 < e4 ? "right" : "center", vertical: n3 < 0 ? "top" : 0 < s3 ? "bottom" : "middle" };
+        p2 < r2 && k(e4 + i3) < p2 && (o3.horizontal = "center"), f2 < l2 && k(s3 + n3) < f2 && (o3.vertical = "middle"), x(k(e4), k(i3)) > x(k(s3), k(n3)) ? o3.important = "horizontal" : o3.important = "vertical", u2.using.call(this, t4, o3);
+      }), a2.offset(V.extend(h2, { using: t3 }));
+    })) : i.apply(this, arguments);
+  }, V.ui.position = { fit: { left: function(t2, e2) {
+    var i2, s2 = e2.within, n2 = s2.isWindow ? s2.scrollLeft : s2.offset.left, s2 = s2.width, o2 = t2.left - e2.collisionPosition.marginLeft, a2 = n2 - o2, r2 = o2 + e2.collisionWidth - s2 - n2;
+    e2.collisionWidth > s2 ? 0 < a2 && r2 <= 0 ? (i2 = t2.left + a2 + e2.collisionWidth - s2 - n2, t2.left += a2 - i2) : t2.left = !(0 < r2 && a2 <= 0) && r2 < a2 ? n2 + s2 - e2.collisionWidth : n2 : 0 < a2 ? t2.left += a2 : 0 < r2 ? t2.left -= r2 : t2.left = x(t2.left - o2, t2.left);
+  }, top: function(t2, e2) {
+    var i2, s2 = e2.within, s2 = s2.isWindow ? s2.scrollTop : s2.offset.top, n2 = e2.within.height, o2 = t2.top - e2.collisionPosition.marginTop, a2 = s2 - o2, r2 = o2 + e2.collisionHeight - n2 - s2;
+    e2.collisionHeight > n2 ? 0 < a2 && r2 <= 0 ? (i2 = t2.top + a2 + e2.collisionHeight - n2 - s2, t2.top += a2 - i2) : t2.top = !(0 < r2 && a2 <= 0) && r2 < a2 ? s2 + n2 - e2.collisionHeight : s2 : 0 < a2 ? t2.top += a2 : 0 < r2 ? t2.top -= r2 : t2.top = x(t2.top - o2, t2.top);
+  } }, flip: { left: function(t2, e2) {
+    var i2 = e2.within, s2 = i2.offset.left + i2.scrollLeft, n2 = i2.width, i2 = i2.isWindow ? i2.scrollLeft : i2.offset.left, o2 = t2.left - e2.collisionPosition.marginLeft, a2 = o2 - i2, o2 = o2 + e2.collisionWidth - n2 - i2, r2 = "left" === e2.my[0] ? -e2.elemWidth : "right" === e2.my[0] ? e2.elemWidth : 0, l2 = "left" === e2.at[0] ? e2.targetWidth : "right" === e2.at[0] ? -e2.targetWidth : 0, h2 = -2 * e2.offset[0];
+    a2 < 0 ? ((n2 = t2.left + r2 + l2 + h2 + e2.collisionWidth - n2 - s2) < 0 || n2 < k(a2)) && (t2.left += r2 + l2 + h2) : 0 < o2 && (0 < (s2 = t2.left - e2.collisionPosition.marginLeft + r2 + l2 + h2 - i2) || k(s2) < o2) && (t2.left += r2 + l2 + h2);
+  }, top: function(t2, e2) {
+    var i2 = e2.within, s2 = i2.offset.top + i2.scrollTop, n2 = i2.height, i2 = i2.isWindow ? i2.scrollTop : i2.offset.top, o2 = t2.top - e2.collisionPosition.marginTop, a2 = o2 - i2, o2 = o2 + e2.collisionHeight - n2 - i2, r2 = "top" === e2.my[1] ? -e2.elemHeight : "bottom" === e2.my[1] ? e2.elemHeight : 0, l2 = "top" === e2.at[1] ? e2.targetHeight : "bottom" === e2.at[1] ? -e2.targetHeight : 0, h2 = -2 * e2.offset[1];
+    a2 < 0 ? ((n2 = t2.top + r2 + l2 + h2 + e2.collisionHeight - n2 - s2) < 0 || n2 < k(a2)) && (t2.top += r2 + l2 + h2) : 0 < o2 && (0 < (s2 = t2.top - e2.collisionPosition.marginTop + r2 + l2 + h2 - i2) || k(s2) < o2) && (t2.top += r2 + l2 + h2);
+  } }, flipfit: { left: function() {
+    V.ui.position.flip.left.apply(this, arguments), V.ui.position.fit.left.apply(this, arguments);
+  }, top: function() {
+    V.ui.position.flip.top.apply(this, arguments), V.ui.position.fit.top.apply(this, arguments);
+  } } };
+  V.ui.position, V.extend(V.expr.pseudos, { data: V.expr.createPseudo ? V.expr.createPseudo(function(e2) {
+    return function(t2) {
+      return !!V.data(t2, e2);
+    };
+  }) : function(t2, e2, i2) {
+    return !!V.data(t2, i2[3]);
+  } }), V.fn.extend({ disableSelection: (W = "onselectstart" in document.createElement("div") ? "selectstart" : "mousedown", function() {
+    return this.on(W + ".ui-disableSelection", function(t2) {
+      t2.preventDefault();
+    });
+  }), enableSelection: function() {
+    return this.off(".ui-disableSelection");
+  } });
+  var W, u = V, d = {}, F = d.toString, L = /^([\-+])=\s*(\d+\.?\d*)/, R = [{ re: /rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(\d?(?:\.\d+)?)\s*)?\)/, parse: function(t2) {
+    return [t2[1], t2[2], t2[3], t2[4]];
+  } }, { re: /rgba?\(\s*(\d+(?:\.\d+)?)\%\s*,\s*(\d+(?:\.\d+)?)\%\s*,\s*(\d+(?:\.\d+)?)\%\s*(?:,\s*(\d?(?:\.\d+)?)\s*)?\)/, parse: function(t2) {
+    return [2.55 * t2[1], 2.55 * t2[2], 2.55 * t2[3], t2[4]];
+  } }, { re: /#([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})?/, parse: function(t2) {
+    return [parseInt(t2[1], 16), parseInt(t2[2], 16), parseInt(t2[3], 16), t2[4] ? (parseInt(t2[4], 16) / 255).toFixed(2) : 1];
+  } }, { re: /#([a-f0-9])([a-f0-9])([a-f0-9])([a-f0-9])?/, parse: function(t2) {
+    return [parseInt(t2[1] + t2[1], 16), parseInt(t2[2] + t2[2], 16), parseInt(t2[3] + t2[3], 16), t2[4] ? (parseInt(t2[4] + t2[4], 16) / 255).toFixed(2) : 1];
+  } }, { re: /hsla?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\%\s*,\s*(\d+(?:\.\d+)?)\%\s*(?:,\s*(\d?(?:\.\d+)?)\s*)?\)/, space: "hsla", parse: function(t2) {
+    return [t2[1], t2[2] / 100, t2[3] / 100, t2[4]];
+  } }], p = u.Color = function(t2, e2, i2, s2) {
+    return new u.Color.fn.parse(t2, e2, i2, s2);
+  }, f = { rgba: { props: { red: { idx: 0, type: "byte" }, green: { idx: 1, type: "byte" }, blue: { idx: 2, type: "byte" } } }, hsla: { props: { hue: { idx: 0, type: "degrees" }, saturation: { idx: 1, type: "percent" }, lightness: { idx: 2, type: "percent" } } } }, Y = { byte: { floor: true, max: 255 }, percent: { max: 1 }, degrees: { mod: 360, floor: true } }, B = p.support = {}, t = u("<p>")[0], g = u.each;
+  function m2(t2) {
+    return null == t2 ? t2 + "" : "object" == typeof t2 ? d[F.call(t2)] || "object" : typeof t2;
+  }
+  function _(t2, e2, i2) {
+    var s2 = Y[e2.type] || {};
+    return null == t2 ? i2 || !e2.def ? null : e2.def : (t2 = s2.floor ? ~~t2 : parseFloat(t2), isNaN(t2) ? e2.def : s2.mod ? (t2 + s2.mod) % s2.mod : Math.min(s2.max, Math.max(0, t2)));
+  }
+  function j(s2) {
+    var n2 = p(), o2 = n2._rgba = [];
+    return s2 = s2.toLowerCase(), g(R, function(t2, e2) {
+      var i2 = e2.re.exec(s2), i2 = i2 && e2.parse(i2), e2 = e2.space || "rgba";
+      if (i2) return i2 = n2[e2](i2), n2[f[e2].cache] = i2[f[e2].cache], o2 = n2._rgba = i2._rgba, false;
+    }), o2.length ? ("0,0,0,0" === o2.join() && u.extend(o2, y.transparent), n2) : y[s2];
+  }
+  function v(t2, e2, i2) {
+    return 6 * (i2 = (i2 + 1) % 1) < 1 ? t2 + (e2 - t2) * i2 * 6 : 2 * i2 < 1 ? e2 : 3 * i2 < 2 ? t2 + (e2 - t2) * (2 / 3 - i2) * 6 : t2;
+  }
+  t.style.cssText = "background-color:rgba(1,1,1,.5)", B.rgba = -1 < t.style.backgroundColor.indexOf("rgba"), g(f, function(t2, e2) {
+    e2.cache = "_" + t2, e2.props.alpha = { idx: 3, type: "percent", def: 1 };
+  }), u.each("Boolean Number String Function Array Date RegExp Object Error Symbol".split(" "), function(t2, e2) {
+    d["[object " + e2 + "]"] = e2.toLowerCase();
+  }), (p.fn = u.extend(p.prototype, { parse: function(n2, t2, e2, i2) {
+    if (void 0 === n2) return this._rgba = [null, null, null, null], this;
+    (n2.jquery || n2.nodeType) && (n2 = u(n2).css(t2), t2 = void 0);
+    var o2 = this, s2 = m2(n2), a2 = this._rgba = [];
+    return void 0 !== t2 && (n2 = [n2, t2, e2, i2], s2 = "array"), "string" === s2 ? this.parse(j(n2) || y._default) : "array" === s2 ? (g(f.rgba.props, function(t3, e3) {
+      a2[e3.idx] = _(n2[e3.idx], e3);
+    }), this) : "object" === s2 ? (n2 instanceof p ? g(f, function(t3, e3) {
+      n2[e3.cache] && (o2[e3.cache] = n2[e3.cache].slice());
+    }) : g(f, function(t3, i3) {
+      var s3 = i3.cache;
+      g(i3.props, function(t4, e3) {
+        if (!o2[s3] && i3.to) {
+          if ("alpha" === t4 || null == n2[t4]) return;
+          o2[s3] = i3.to(o2._rgba);
+        }
+        o2[s3][e3.idx] = _(n2[t4], e3, true);
+      }), o2[s3] && u.inArray(null, o2[s3].slice(0, 3)) < 0 && (null == o2[s3][3] && (o2[s3][3] = 1), i3.from) && (o2._rgba = i3.from(o2[s3]));
+    }), this) : void 0;
+  }, is: function(t2) {
+    var n2 = p(t2), o2 = true, a2 = this;
+    return g(f, function(t3, e2) {
+      var i2, s2 = n2[e2.cache];
+      return s2 && (i2 = a2[e2.cache] || e2.to && e2.to(a2._rgba) || [], g(e2.props, function(t4, e3) {
+        if (null != s2[e3.idx]) return o2 = s2[e3.idx] === i2[e3.idx];
+      })), o2;
+    }), o2;
+  }, _space: function() {
+    var i2 = [], s2 = this;
+    return g(f, function(t2, e2) {
+      s2[e2.cache] && i2.push(t2);
+    }), i2.pop();
+  }, transition: function(t2, a2) {
+    var t2 = (h2 = p(t2))._space(), e2 = f[t2], i2 = 0 === this.alpha() ? p("transparent") : this, r2 = i2[e2.cache] || e2.to(i2._rgba), l2 = r2.slice(), h2 = h2[e2.cache];
+    return g(e2.props, function(t3, e3) {
+      var i3 = e3.idx, s2 = r2[i3], n2 = h2[i3], o2 = Y[e3.type] || {};
+      null !== n2 && (null === s2 ? l2[i3] = n2 : (o2.mod && (n2 - s2 > o2.mod / 2 ? s2 += o2.mod : s2 - n2 > o2.mod / 2 && (s2 -= o2.mod)), l2[i3] = _((n2 - s2) * a2 + s2, e3)));
+    }), this[t2](l2);
+  }, blend: function(t2) {
+    var e2, i2, s2;
+    return 1 === this._rgba[3] ? this : (e2 = this._rgba.slice(), i2 = e2.pop(), s2 = p(t2)._rgba, p(u.map(e2, function(t3, e3) {
+      return (1 - i2) * s2[e3] + i2 * t3;
+    })));
+  }, toRgbaString: function() {
+    var t2 = "rgba(", e2 = u.map(this._rgba, function(t3, e3) {
+      return null != t3 ? t3 : 2 < e3 ? 1 : 0;
+    });
+    return 1 === e2[3] && (e2.pop(), t2 = "rgb("), t2 + e2.join() + ")";
+  }, toHslaString: function() {
+    var t2 = "hsla(", e2 = u.map(this.hsla(), function(t3, e3) {
+      return null == t3 && (t3 = 2 < e3 ? 1 : 0), t3 = e3 && e3 < 3 ? Math.round(100 * t3) + "%" : t3;
+    });
+    return 1 === e2[3] && (e2.pop(), t2 = "hsl("), t2 + e2.join() + ")";
+  }, toHexString: function(t2) {
+    var e2 = this._rgba.slice(), i2 = e2.pop();
+    return t2 && e2.push(~~(255 * i2)), "#" + u.map(e2, function(t3) {
+      return 1 === (t3 = (t3 || 0).toString(16)).length ? "0" + t3 : t3;
+    }).join("");
+  }, toString: function() {
+    return 0 === this._rgba[3] ? "transparent" : this.toRgbaString();
+  } })).parse.prototype = p.fn, f.hsla.to = function(t2) {
+    var e2, i2, s2, n2, o2, a2, r2, l2;
+    return null == t2[0] || null == t2[1] || null == t2[2] ? [null, null, null, t2[3]] : (e2 = t2[0] / 255, i2 = t2[1] / 255, s2 = t2[2] / 255, t2 = t2[3], n2 = (l2 = Math.max(e2, i2, s2)) - (r2 = Math.min(e2, i2, s2)), a2 = 0.5 * (o2 = l2 + r2), r2 = r2 === l2 ? 0 : e2 === l2 ? 60 * (i2 - s2) / n2 + 360 : i2 === l2 ? 60 * (s2 - e2) / n2 + 120 : 60 * (e2 - i2) / n2 + 240, l2 = 0 == n2 ? 0 : a2 <= 0.5 ? n2 / o2 : n2 / (2 - o2), [Math.round(r2) % 360, l2, a2, null == t2 ? 1 : t2]);
+  }, f.hsla.from = function(t2) {
+    var e2, i2, s2;
+    return null == t2[0] || null == t2[1] || null == t2[2] ? [null, null, null, t2[3]] : (e2 = t2[0] / 360, s2 = t2[1], i2 = t2[2], t2 = t2[3], s2 = 2 * i2 - (i2 = i2 <= 0.5 ? i2 * (1 + s2) : i2 + s2 - i2 * s2), [Math.round(255 * v(s2, i2, e2 + 1 / 3)), Math.round(255 * v(s2, i2, e2)), Math.round(255 * v(s2, i2, e2 - 1 / 3)), t2]);
+  }, g(f, function(r2, t2) {
+    var e2 = t2.props, o2 = t2.cache, a2 = t2.to, l2 = t2.from;
+    p.fn[r2] = function(t3) {
+      var i2, s2, n2;
+      return a2 && !this[o2] && (this[o2] = a2(this._rgba)), void 0 === t3 ? this[o2].slice() : (i2 = m2(t3), s2 = "array" === i2 || "object" === i2 ? t3 : arguments, n2 = this[o2].slice(), g(e2, function(t4, e3) {
+        t4 = s2["object" === i2 ? t4 : e3.idx];
+        null == t4 && (t4 = n2[e3.idx]), n2[e3.idx] = _(t4, e3);
+      }), l2 ? ((t3 = p(l2(n2)))[o2] = n2, t3) : p(n2));
+    }, g(e2, function(o3, a3) {
+      p.fn[o3] || (p.fn[o3] = function(t3) {
+        var e3 = m2(t3), i2 = "alpha" === o3 ? this._hsla ? "hsla" : "rgba" : r2, s2 = this[i2](), n2 = s2[a3.idx];
+        return "undefined" === e3 ? n2 : ("function" === e3 && (e3 = m2(t3 = t3.call(this, n2))), null == t3 && a3.empty ? this : ("string" === e3 && (e3 = L.exec(t3)) && (t3 = n2 + parseFloat(e3[2]) * ("+" === e3[1] ? 1 : -1)), s2[a3.idx] = t3, this[i2](s2)));
       });
-    },
-    // Populate current group with fresh content
-    // Check if each object has valid type and content
-    // ===============================================
-    addContent: function(content) {
-      var self2 = this, items = $2.makeArray(content), thumbs;
-      $2.each(items, function(i, item) {
-        var obj = {}, opts = {}, $item, type, found, src, srcParts;
-        if ($2.isPlainObject(item)) {
-          obj = item;
-          opts = item.opts || item;
-        } else if ($2.type(item) === "object" && $2(item).length) {
-          $item = $2(item);
-          opts = $item.data() || {};
-          opts = $2.extend(true, {}, opts, opts.options);
-          opts.$orig = $item;
-          obj.src = self2.opts.src || opts.src || $item.attr("href");
-          if (!obj.type && !obj.src) {
-            obj.type = "inline";
-            obj.src = item;
-          }
-        } else {
-          obj = {
-            type: "html",
-            src: item + ""
-          };
-        }
-        obj.opts = $2.extend(true, {}, self2.opts, opts);
-        if ($2.isArray(opts.buttons)) {
-          obj.opts.buttons = opts.buttons;
-        }
-        if ($2.fancybox.isMobile && obj.opts.mobile) {
-          obj.opts = mergeOpts(obj.opts, obj.opts.mobile);
-        }
-        type = obj.type || obj.opts.type;
-        src = obj.src || "";
-        if (!type && src) {
-          if (found = src.match(/\.(mp4|mov|ogv|webm)((\?|#).*)?$/i)) {
-            type = "video";
-            if (!obj.opts.video.format) {
-              obj.opts.video.format = "video/" + (found[1] === "ogv" ? "ogg" : found[1]);
+    });
+  }), (p.hook = function(t2) {
+    t2 = t2.split(" ");
+    g(t2, function(t3, o2) {
+      u.cssHooks[o2] = { set: function(t4, e2) {
+        var i2, s2, n2 = "";
+        if ("transparent" !== e2 && ("string" !== m2(e2) || (i2 = j(e2)))) {
+          if (e2 = p(i2 || e2), !B.rgba && 1 !== e2._rgba[3]) {
+            for (s2 = "backgroundColor" === o2 ? t4.parentNode : t4; ("" === n2 || "transparent" === n2) && s2 && s2.style; ) try {
+              n2 = u.css(s2, "backgroundColor"), s2 = s2.parentNode;
+            } catch (t5) {
             }
-          } else if (src.match(/(^data:image\/[a-z0-9+\/=]*,)|(\.(jp(e|g|eg)|gif|png|bmp|webp|svg|ico)((\?|#).*)?$)/i)) {
-            type = "image";
-          } else if (src.match(/\.(pdf)((\?|#).*)?$/i)) {
-            type = "iframe";
-            obj = $2.extend(true, obj, {
-              contentType: "pdf",
-              opts: {
-                iframe: {
-                  preload: false
-                }
-              }
-            });
-          } else if (src.charAt(0) === "#") {
-            type = "inline";
+            e2 = e2.blend(n2 && "transparent" !== n2 ? n2 : "_default");
           }
+          e2 = e2.toRgbaString();
         }
-        if (type) {
-          obj.type = type;
-        } else {
-          self2.trigger("objectNeedsType", obj);
-        }
-        if (!obj.contentType) {
-          obj.contentType = $2.inArray(obj.type, ["html", "inline", "ajax"]) > -1 ? "html" : obj.type;
-        }
-        obj.index = self2.group.length;
-        if (obj.opts.smallBtn == "auto") {
-          obj.opts.smallBtn = $2.inArray(obj.type, ["html", "inline", "ajax"]) > -1;
-        }
-        if (obj.opts.toolbar === "auto") {
-          obj.opts.toolbar = !obj.opts.smallBtn;
-        }
-        obj.$thumb = obj.opts.$thumb || null;
-        if (obj.opts.$trigger && obj.index === self2.opts.index) {
-          obj.$thumb = obj.opts.$trigger.find("img:first");
-          if (obj.$thumb.length) {
-            obj.opts.$orig = obj.opts.$trigger;
-          }
-        }
-        if (!(obj.$thumb && obj.$thumb.length) && obj.opts.$orig) {
-          obj.$thumb = obj.opts.$orig.find("img:first");
-        }
-        if (obj.$thumb && !obj.$thumb.length) {
-          obj.$thumb = null;
-        }
-        obj.thumb = obj.opts.thumb || (obj.$thumb ? obj.$thumb[0].src : null);
-        if ($2.type(obj.opts.caption) === "function") {
-          obj.opts.caption = obj.opts.caption.apply(item, [self2, obj]);
-        }
-        if ($2.type(self2.opts.caption) === "function") {
-          obj.opts.caption = self2.opts.caption.apply(item, [self2, obj]);
-        }
-        if (!(obj.opts.caption instanceof $2)) {
-          obj.opts.caption = obj.opts.caption === undefined2 ? "" : obj.opts.caption + "";
-        }
-        if (obj.type === "ajax") {
-          srcParts = src.split(/\s+/, 2);
-          if (srcParts.length > 1) {
-            obj.src = srcParts.shift();
-            obj.opts.filter = srcParts.shift();
-          }
-        }
-        if (obj.opts.modal) {
-          obj.opts = $2.extend(true, obj.opts, {
-            trapFocus: true,
-            // Remove buttons
-            infobar: 0,
-            toolbar: 0,
-            smallBtn: 0,
-            // Disable keyboard navigation
-            keyboard: 0,
-            // Disable some modules
-            slideShow: 0,
-            fullScreen: 0,
-            thumbs: 0,
-            touch: 0,
-            // Disable click event handlers
-            clickContent: false,
-            clickSlide: false,
-            clickOutside: false,
-            dblclickContent: false,
-            dblclickSlide: false,
-            dblclickOutside: false
-          });
-        }
-        self2.group.push(obj);
-      });
-      if (Object.keys(self2.slides).length) {
-        self2.updateControls();
-        thumbs = self2.Thumbs;
-        if (thumbs && thumbs.isActive) {
-          thumbs.create();
-          thumbs.focus();
-        }
-      }
-    },
-    // Attach an event handler functions for:
-    //   - navigation buttons
-    //   - browser scrolling, resizing;
-    //   - focusing
-    //   - keyboard
-    //   - detecting inactivity
-    // ======================================
-    addEvents: function() {
-      var self2 = this;
-      self2.removeEvents();
-      self2.$refs.container.on("click.fb-close", "[data-fancybox-close]", function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        self2.close(e);
-      }).on("touchstart.fb-prev click.fb-prev", "[data-fancybox-prev]", function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        self2.previous();
-      }).on("touchstart.fb-next click.fb-next", "[data-fancybox-next]", function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        self2.next();
-      }).on("click.fb", "[data-fancybox-zoom]", function(e) {
-        self2[self2.isScaledDown() ? "scaleToActual" : "scaleToFit"]();
-      });
-      $W.on("orientationchange.fb resize.fb", function(e) {
-        if (e && e.originalEvent && e.originalEvent.type === "resize") {
-          if (self2.requestId) {
-            cancelAFrame(self2.requestId);
-          }
-          self2.requestId = requestAFrame(function() {
-            self2.update(e);
-          });
-        } else {
-          if (self2.current && self2.current.type === "iframe") {
-            self2.$refs.stage.hide();
-          }
-          setTimeout(
-            function() {
-              self2.$refs.stage.show();
-              self2.update(e);
-            },
-            $2.fancybox.isMobile ? 600 : 250
-          );
-        }
-      });
-      $D.on("keydown.fb", function(e) {
-        var instance = $2.fancybox ? $2.fancybox.getInstance() : null, current = instance.current, keycode = e.keyCode || e.which;
-        if (keycode == 9) {
-          if (current.opts.trapFocus) {
-            self2.focus(e);
-          }
-          return;
-        }
-        if (!current.opts.keyboard || e.ctrlKey || e.altKey || e.shiftKey || $2(e.target).is("input,textarea,video,audio,select")) {
-          return;
-        }
-        if (keycode === 8 || keycode === 27) {
-          e.preventDefault();
-          self2.close(e);
-          return;
-        }
-        if (keycode === 37 || keycode === 38) {
-          e.preventDefault();
-          self2.previous();
-          return;
-        }
-        if (keycode === 39 || keycode === 40) {
-          e.preventDefault();
-          self2.next();
-          return;
-        }
-        self2.trigger("afterKeydown", e, keycode);
-      });
-      if (self2.group[self2.currIndex].opts.idleTime) {
-        self2.idleSecondsCounter = 0;
-        $D.on(
-          "mousemove.fb-idle mouseleave.fb-idle mousedown.fb-idle touchstart.fb-idle touchmove.fb-idle scroll.fb-idle keydown.fb-idle",
-          function(e) {
-            self2.idleSecondsCounter = 0;
-            if (self2.isIdle) {
-              self2.showControls();
-            }
-            self2.isIdle = false;
-          }
-        );
-        self2.idleInterval = window2.setInterval(function() {
-          self2.idleSecondsCounter++;
-          if (self2.idleSecondsCounter >= self2.group[self2.currIndex].opts.idleTime && !self2.isDragging) {
-            self2.isIdle = true;
-            self2.idleSecondsCounter = 0;
-            self2.hideControls();
-          }
-        }, 1e3);
-      }
-    },
-    // Remove events added by the core
-    // ===============================
-    removeEvents: function() {
-      var self2 = this;
-      $W.off("orientationchange.fb resize.fb");
-      $D.off("keydown.fb .fb-idle");
-      this.$refs.container.off(".fb-close .fb-prev .fb-next");
-      if (self2.idleInterval) {
-        window2.clearInterval(self2.idleInterval);
-        self2.idleInterval = null;
-      }
-    },
-    // Change to previous gallery item
-    // ===============================
-    previous: function(duration) {
-      return this.jumpTo(this.currPos - 1, duration);
-    },
-    // Change to next gallery item
-    // ===========================
-    next: function(duration) {
-      return this.jumpTo(this.currPos + 1, duration);
-    },
-    // Switch to selected gallery item
-    // ===============================
-    jumpTo: function(pos, duration) {
-      var self2 = this, groupLen = self2.group.length, firstRun, isMoved, loop, current, previous, slidePos, stagePos, prop, diff;
-      if (self2.isDragging || self2.isClosing || self2.isAnimating && self2.firstRun) {
-        return;
-      }
-      pos = parseInt(pos, 10);
-      loop = self2.current ? self2.current.opts.loop : self2.opts.loop;
-      if (!loop && (pos < 0 || pos >= groupLen)) {
-        return false;
-      }
-      firstRun = self2.firstRun = !Object.keys(self2.slides).length;
-      previous = self2.current;
-      self2.prevIndex = self2.currIndex;
-      self2.prevPos = self2.currPos;
-      current = self2.createSlide(pos);
-      if (groupLen > 1) {
-        if (loop || current.index < groupLen - 1) {
-          self2.createSlide(pos + 1);
-        }
-        if (loop || current.index > 0) {
-          self2.createSlide(pos - 1);
-        }
-      }
-      self2.current = current;
-      self2.currIndex = current.index;
-      self2.currPos = current.pos;
-      self2.trigger("beforeShow", firstRun);
-      self2.updateControls();
-      current.forcedDuration = undefined2;
-      if ($2.isNumeric(duration)) {
-        current.forcedDuration = duration;
-      } else {
-        duration = current.opts[firstRun ? "animationDuration" : "transitionDuration"];
-      }
-      duration = parseInt(duration, 10);
-      isMoved = self2.isMoved(current);
-      current.$slide.addClass("fancybox-slide--current");
-      if (firstRun) {
-        if (current.opts.animationEffect && duration) {
-          self2.$refs.container.css("transition-duration", duration + "ms");
-        }
-        self2.$refs.container.addClass("fancybox-is-open").trigger("focus");
-        self2.loadSlide(current);
-        self2.preload("image");
-        return;
-      }
-      slidePos = $2.fancybox.getTranslate(previous.$slide);
-      stagePos = $2.fancybox.getTranslate(self2.$refs.stage);
-      $2.each(self2.slides, function(index, slide) {
-        $2.fancybox.stop(slide.$slide, true);
-      });
-      if (previous.pos !== current.pos) {
-        previous.isComplete = false;
-      }
-      previous.$slide.removeClass("fancybox-slide--complete fancybox-slide--current");
-      if (isMoved) {
-        diff = slidePos.left - (previous.pos * slidePos.width + previous.pos * previous.opts.gutter);
-        $2.each(self2.slides, function(index, slide) {
-          slide.$slide.removeClass("fancybox-animated").removeClass(function(index2, className) {
-            return (className.match(/(^|\s)fancybox-fx-\S+/g) || []).join(" ");
-          });
-          var leftPos = slide.pos * slidePos.width + slide.pos * slide.opts.gutter;
-          $2.fancybox.setTranslate(slide.$slide, {
-            top: 0,
-            left: leftPos - stagePos.left + diff
-          });
-          if (slide.pos !== current.pos) {
-            slide.$slide.addClass("fancybox-slide--" + (slide.pos > current.pos ? "next" : "previous"));
-          }
-          forceRedraw(slide.$slide);
-          $2.fancybox.animate(
-            slide.$slide,
-            {
-              top: 0,
-              left: (slide.pos - current.pos) * slidePos.width + (slide.pos - current.pos) * slide.opts.gutter
-            },
-            duration,
-            function() {
-              slide.$slide.css({
-                transform: "",
-                opacity: ""
-              }).removeClass("fancybox-slide--next fancybox-slide--previous");
-              if (slide.pos === self2.currPos) {
-                self2.complete();
-              }
-            }
-          );
-        });
-      } else if (duration && current.opts.transitionEffect) {
-        prop = "fancybox-animated fancybox-fx-" + current.opts.transitionEffect;
-        previous.$slide.addClass("fancybox-slide--" + (previous.pos > current.pos ? "next" : "previous"));
-        $2.fancybox.animate(
-          previous.$slide,
-          prop,
-          duration,
-          function() {
-            previous.$slide.removeClass(prop).removeClass("fancybox-slide--next fancybox-slide--previous");
-          },
-          false
-        );
-      }
-      if (current.isLoaded) {
-        self2.revealContent(current);
-      } else {
-        self2.loadSlide(current);
-      }
-      self2.preload("image");
-    },
-    // Create new "slide" element
-    // These are gallery items  that are actually added to DOM
-    // =======================================================
-    createSlide: function(pos) {
-      var self2 = this, $slide, index;
-      index = pos % self2.group.length;
-      index = index < 0 ? self2.group.length + index : index;
-      if (!self2.slides[pos] && self2.group[index]) {
-        $slide = $2('<div class="fancybox-slide"></div>').appendTo(self2.$refs.stage);
-        self2.slides[pos] = $2.extend(true, {}, self2.group[index], {
-          pos,
-          $slide,
-          isLoaded: false
-        });
-        self2.updateSlide(self2.slides[pos]);
-      }
-      return self2.slides[pos];
-    },
-    // Scale image to the actual size of the image;
-    // x and y values should be relative to the slide
-    // ==============================================
-    scaleToActual: function(x, y, duration) {
-      var self2 = this, current = self2.current, $content = current.$content, canvasWidth = $2.fancybox.getTranslate(current.$slide).width, canvasHeight = $2.fancybox.getTranslate(current.$slide).height, newImgWidth = current.width, newImgHeight = current.height, imgPos, posX, posY, scaleX, scaleY;
-      if (self2.isAnimating || self2.isMoved() || !$content || !(current.type == "image" && current.isLoaded && !current.hasError)) {
-        return;
-      }
-      self2.isAnimating = true;
-      $2.fancybox.stop($content);
-      x = x === undefined2 ? canvasWidth * 0.5 : x;
-      y = y === undefined2 ? canvasHeight * 0.5 : y;
-      imgPos = $2.fancybox.getTranslate($content);
-      imgPos.top -= $2.fancybox.getTranslate(current.$slide).top;
-      imgPos.left -= $2.fancybox.getTranslate(current.$slide).left;
-      scaleX = newImgWidth / imgPos.width;
-      scaleY = newImgHeight / imgPos.height;
-      posX = canvasWidth * 0.5 - newImgWidth * 0.5;
-      posY = canvasHeight * 0.5 - newImgHeight * 0.5;
-      if (newImgWidth > canvasWidth) {
-        posX = imgPos.left * scaleX - (x * scaleX - x);
-        if (posX > 0) {
-          posX = 0;
-        }
-        if (posX < canvasWidth - newImgWidth) {
-          posX = canvasWidth - newImgWidth;
-        }
-      }
-      if (newImgHeight > canvasHeight) {
-        posY = imgPos.top * scaleY - (y * scaleY - y);
-        if (posY > 0) {
-          posY = 0;
-        }
-        if (posY < canvasHeight - newImgHeight) {
-          posY = canvasHeight - newImgHeight;
-        }
-      }
-      self2.updateCursor(newImgWidth, newImgHeight);
-      $2.fancybox.animate(
-        $content,
-        {
-          top: posY,
-          left: posX,
-          scaleX,
-          scaleY
-        },
-        duration || 366,
-        function() {
-          self2.isAnimating = false;
-        }
-      );
-      if (self2.SlideShow && self2.SlideShow.isActive) {
-        self2.SlideShow.stop();
-      }
-    },
-    // Scale image to fit inside parent element
-    // ========================================
-    scaleToFit: function(duration) {
-      var self2 = this, current = self2.current, $content = current.$content, end2;
-      if (self2.isAnimating || self2.isMoved() || !$content || !(current.type == "image" && current.isLoaded && !current.hasError)) {
-        return;
-      }
-      self2.isAnimating = true;
-      $2.fancybox.stop($content);
-      end2 = self2.getFitPos(current);
-      self2.updateCursor(end2.width, end2.height);
-      $2.fancybox.animate(
-        $content,
-        {
-          top: end2.top,
-          left: end2.left,
-          scaleX: end2.width / $content.width(),
-          scaleY: end2.height / $content.height()
-        },
-        duration || 366,
-        function() {
-          self2.isAnimating = false;
-        }
-      );
-    },
-    // Calculate image size to fit inside viewport
-    // ===========================================
-    getFitPos: function(slide) {
-      var self2 = this, $content = slide.$content, $slide = slide.$slide, width = slide.width || slide.opts.width, height = slide.height || slide.opts.height, maxWidth, maxHeight, minRatio, aspectRatio, rez = {};
-      if (!slide.isLoaded || !$content || !$content.length) {
-        return false;
-      }
-      maxWidth = $2.fancybox.getTranslate(self2.$refs.stage).width;
-      maxHeight = $2.fancybox.getTranslate(self2.$refs.stage).height;
-      maxWidth -= parseFloat($slide.css("paddingLeft")) + parseFloat($slide.css("paddingRight")) + parseFloat($content.css("marginLeft")) + parseFloat($content.css("marginRight"));
-      maxHeight -= parseFloat($slide.css("paddingTop")) + parseFloat($slide.css("paddingBottom")) + parseFloat($content.css("marginTop")) + parseFloat($content.css("marginBottom"));
-      if (!width || !height) {
-        width = maxWidth;
-        height = maxHeight;
-      }
-      minRatio = Math.min(1, maxWidth / width, maxHeight / height);
-      width = minRatio * width;
-      height = minRatio * height;
-      if (width > maxWidth - 0.5) {
-        width = maxWidth;
-      }
-      if (height > maxHeight - 0.5) {
-        height = maxHeight;
-      }
-      if (slide.type === "image") {
-        rez.top = Math.floor((maxHeight - height) * 0.5) + parseFloat($slide.css("paddingTop"));
-        rez.left = Math.floor((maxWidth - width) * 0.5) + parseFloat($slide.css("paddingLeft"));
-      } else if (slide.contentType === "video") {
-        aspectRatio = slide.opts.width && slide.opts.height ? width / height : slide.opts.ratio || 16 / 9;
-        if (height > width / aspectRatio) {
-          height = width / aspectRatio;
-        } else if (width > height * aspectRatio) {
-          width = height * aspectRatio;
-        }
-      }
-      rez.width = width;
-      rez.height = height;
-      return rez;
-    },
-    // Update content size and position for all slides
-    // ==============================================
-    update: function(e) {
-      var self2 = this;
-      $2.each(self2.slides, function(key, slide) {
-        self2.updateSlide(slide, e);
-      });
-    },
-    // Update slide content position and size
-    // ======================================
-    updateSlide: function(slide, e) {
-      var self2 = this, $content = slide && slide.$content, width = slide.width || slide.opts.width, height = slide.height || slide.opts.height, $slide = slide.$slide;
-      self2.adjustCaption(slide);
-      if ($content && (width || height || slide.contentType === "video") && !slide.hasError) {
-        $2.fancybox.stop($content);
-        $2.fancybox.setTranslate($content, self2.getFitPos(slide));
-        if (slide.pos === self2.currPos) {
-          self2.isAnimating = false;
-          self2.updateCursor();
-        }
-      }
-      self2.adjustLayout(slide);
-      if ($slide.length) {
-        $slide.trigger("refresh");
-        if (slide.pos === self2.currPos) {
-          self2.$refs.toolbar.add(self2.$refs.navigation.find(".fancybox-button--arrow_right")).toggleClass("compensate-for-scrollbar", $slide.get(0).scrollHeight > $slide.get(0).clientHeight);
-        }
-      }
-      self2.trigger("onUpdate", slide, e);
-    },
-    // Horizontally center slide
-    // =========================
-    centerSlide: function(duration) {
-      var self2 = this, current = self2.current, $slide = current.$slide;
-      if (self2.isClosing || !current) {
-        return;
-      }
-      $slide.siblings().css({
-        transform: "",
-        opacity: ""
-      });
-      $slide.parent().children().removeClass("fancybox-slide--previous fancybox-slide--next");
-      $2.fancybox.animate(
-        $slide,
-        {
-          top: 0,
-          left: 0,
-          opacity: 1
-        },
-        duration === undefined2 ? 0 : duration,
-        function() {
-          $slide.css({
-            transform: "",
-            opacity: ""
-          });
-          if (!current.isComplete) {
-            self2.complete();
-          }
-        },
-        false
-      );
-    },
-    // Check if current slide is moved (swiped)
-    // ========================================
-    isMoved: function(slide) {
-      var current = slide || this.current, slidePos, stagePos;
-      if (!current) {
-        return false;
-      }
-      stagePos = $2.fancybox.getTranslate(this.$refs.stage);
-      slidePos = $2.fancybox.getTranslate(current.$slide);
-      return !current.$slide.hasClass("fancybox-animated") && (Math.abs(slidePos.top - stagePos.top) > 0.5 || Math.abs(slidePos.left - stagePos.left) > 0.5);
-    },
-    // Update cursor style depending if content can be zoomed
-    // ======================================================
-    updateCursor: function(nextWidth, nextHeight) {
-      var self2 = this, current = self2.current, $container = self2.$refs.container, canPan, isZoomable;
-      if (!current || self2.isClosing || !self2.Guestures) {
-        return;
-      }
-      $container.removeClass("fancybox-is-zoomable fancybox-can-zoomIn fancybox-can-zoomOut fancybox-can-swipe fancybox-can-pan");
-      canPan = self2.canPan(nextWidth, nextHeight);
-      isZoomable = canPan ? true : self2.isZoomable();
-      $container.toggleClass("fancybox-is-zoomable", isZoomable);
-      $2("[data-fancybox-zoom]").prop("disabled", !isZoomable);
-      if (canPan) {
-        $container.addClass("fancybox-can-pan");
-      } else if (isZoomable && (current.opts.clickContent === "zoom" || $2.isFunction(current.opts.clickContent) && current.opts.clickContent(current) == "zoom")) {
-        $container.addClass("fancybox-can-zoomIn");
-      } else if (current.opts.touch && (current.opts.touch.vertical || self2.group.length > 1) && current.contentType !== "video") {
-        $container.addClass("fancybox-can-swipe");
-      }
-    },
-    // Check if current slide is zoomable
-    // ==================================
-    isZoomable: function() {
-      var self2 = this, current = self2.current, fitPos;
-      if (current && !self2.isClosing && current.type === "image" && !current.hasError) {
-        if (!current.isLoaded) {
-          return true;
-        }
-        fitPos = self2.getFitPos(current);
-        if (fitPos && (current.width > fitPos.width || current.height > fitPos.height)) {
-          return true;
-        }
-      }
-      return false;
-    },
-    // Check if current image dimensions are smaller than actual
-    // =========================================================
-    isScaledDown: function(nextWidth, nextHeight) {
-      var self2 = this, rez = false, current = self2.current, $content = current.$content;
-      if (nextWidth !== undefined2 && nextHeight !== undefined2) {
-        rez = nextWidth < current.width && nextHeight < current.height;
-      } else if ($content) {
-        rez = $2.fancybox.getTranslate($content);
-        rez = rez.width < current.width && rez.height < current.height;
-      }
-      return rez;
-    },
-    // Check if image dimensions exceed parent element
-    // ===============================================
-    canPan: function(nextWidth, nextHeight) {
-      var self2 = this, current = self2.current, pos = null, rez = false;
-      if (current.type === "image" && (current.isComplete || nextWidth && nextHeight) && !current.hasError) {
-        rez = self2.getFitPos(current);
-        if (nextWidth !== undefined2 && nextHeight !== undefined2) {
-          pos = {
-            width: nextWidth,
-            height: nextHeight
-          };
-        } else if (current.isComplete) {
-          pos = $2.fancybox.getTranslate(current.$content);
-        }
-        if (pos && rez) {
-          rez = Math.abs(pos.width - rez.width) > 1.5 || Math.abs(pos.height - rez.height) > 1.5;
-        }
-      }
-      return rez;
-    },
-    // Load content into the slide
-    // ===========================
-    loadSlide: function(slide) {
-      var self2 = this, type, $slide, ajaxLoad;
-      if (slide.isLoading || slide.isLoaded) {
-        return;
-      }
-      slide.isLoading = true;
-      if (self2.trigger("beforeLoad", slide) === false) {
-        slide.isLoading = false;
-        return false;
-      }
-      type = slide.type;
-      $slide = slide.$slide;
-      $slide.off("refresh").trigger("onReset").addClass(slide.opts.slideClass);
-      switch (type) {
-        case "image":
-          self2.setImage(slide);
-          break;
-        case "iframe":
-          self2.setIframe(slide);
-          break;
-        case "html":
-          self2.setContent(slide, slide.src || slide.content);
-          break;
-        case "video":
-          self2.setContent(
-            slide,
-            slide.opts.video.tpl.replace(/\{\{src\}\}/gi, slide.src).replace("{{format}}", slide.opts.videoFormat || slide.opts.video.format || "").replace("{{poster}}", slide.thumb || "")
-          );
-          break;
-        case "inline":
-          if ($2(slide.src).length) {
-            self2.setContent(slide, $2(slide.src));
-          } else {
-            self2.setError(slide);
-          }
-          break;
-        case "ajax":
-          self2.showLoading(slide);
-          ajaxLoad = $2.ajax(
-            $2.extend({}, slide.opts.ajax.settings, {
-              url: slide.src,
-              success: function(data, textStatus) {
-                if (textStatus === "success") {
-                  self2.setContent(slide, data);
-                }
-              },
-              error: function(jqXHR, textStatus) {
-                if (jqXHR && textStatus !== "abort") {
-                  self2.setError(slide);
-                }
-              }
-            })
-          );
-          $slide.one("onReset", function() {
-            ajaxLoad.abort();
-          });
-          break;
-        default:
-          self2.setError(slide);
-          break;
-      }
-      return true;
-    },
-    // Use thumbnail image, if possible
-    // ================================
-    setImage: function(slide) {
-      var self2 = this, ghost;
-      setTimeout(function() {
-        var $img = slide.$image;
-        if (!self2.isClosing && slide.isLoading && (!$img || !$img.length || !$img[0].complete) && !slide.hasError) {
-          self2.showLoading(slide);
-        }
-      }, 50);
-      self2.checkSrcset(slide);
-      slide.$content = $2('<div class="fancybox-content"></div>').addClass("fancybox-is-hidden").appendTo(slide.$slide.addClass("fancybox-slide--image"));
-      if (slide.opts.preload !== false && slide.opts.width && slide.opts.height && slide.thumb) {
-        slide.width = slide.opts.width;
-        slide.height = slide.opts.height;
-        ghost = document2.createElement("img");
-        ghost.onerror = function() {
-          $2(this).remove();
-          slide.$ghost = null;
-        };
-        ghost.onload = function() {
-          self2.afterLoad(slide);
-        };
-        slide.$ghost = $2(ghost).addClass("fancybox-image").appendTo(slide.$content).attr("src", slide.thumb);
-      }
-      self2.setBigImage(slide);
-    },
-    // Check if image has srcset and get the source
-    // ============================================
-    checkSrcset: function(slide) {
-      var srcset = slide.opts.srcset || slide.opts.image.srcset, found, temp, pxRatio, windowWidth;
-      if (srcset) {
-        pxRatio = window2.devicePixelRatio || 1;
-        windowWidth = window2.innerWidth * pxRatio;
-        temp = srcset.split(",").map(function(el2) {
-          var ret = {};
-          el2.trim().split(/\s+/).forEach(function(el3, i) {
-            var value = parseInt(el3.substring(0, el3.length - 1), 10);
-            if (i === 0) {
-              return ret.url = el3;
-            }
-            if (value) {
-              ret.value = value;
-              ret.postfix = el3[el3.length - 1];
-            }
-          });
-          return ret;
-        });
-        temp.sort(function(a, b) {
-          return a.value - b.value;
-        });
-        for (var j = 0; j < temp.length; j++) {
-          var el = temp[j];
-          if (el.postfix === "w" && el.value >= windowWidth || el.postfix === "x" && el.value >= pxRatio) {
-            found = el;
-            break;
-          }
-        }
-        if (!found && temp.length) {
-          found = temp[temp.length - 1];
-        }
-        if (found) {
-          slide.src = found.url;
-          if (slide.width && slide.height && found.postfix == "w") {
-            slide.height = slide.width / slide.height * found.value;
-            slide.width = found.value;
-          }
-          slide.opts.srcset = srcset;
-        }
-      }
-    },
-    // Create full-size image
-    // ======================
-    setBigImage: function(slide) {
-      var self2 = this, img = document2.createElement("img"), $img = $2(img);
-      slide.$image = $img.one("error", function() {
-        self2.setError(slide);
-      }).one("load", function() {
-        var sizes;
-        if (!slide.$ghost) {
-          self2.resolveImageSlideSize(slide, this.naturalWidth, this.naturalHeight);
-          self2.afterLoad(slide);
-        }
-        if (self2.isClosing) {
-          return;
-        }
-        if (slide.opts.srcset) {
-          sizes = slide.opts.sizes;
-          if (!sizes || sizes === "auto") {
-            sizes = (slide.width / slide.height > 1 && $W.width() / $W.height() > 1 ? "100" : Math.round(slide.width / slide.height * 100)) + "vw";
-          }
-          $img.attr("sizes", sizes).attr("srcset", slide.opts.srcset);
-        }
-        if (slide.$ghost) {
-          setTimeout(function() {
-            if (slide.$ghost && !self2.isClosing) {
-              slide.$ghost.hide();
-            }
-          }, Math.min(300, Math.max(1e3, slide.height / 1600)));
-        }
-        self2.hideLoading(slide);
-      }).addClass("fancybox-image").attr("src", slide.src).appendTo(slide.$content);
-      if ((img.complete || img.readyState == "complete") && $img.naturalWidth && $img.naturalHeight) {
-        $img.trigger("load");
-      } else if (img.error) {
-        $img.trigger("error");
-      }
-    },
-    // Computes the slide size from image size and maxWidth/maxHeight
-    // ==============================================================
-    resolveImageSlideSize: function(slide, imgWidth, imgHeight) {
-      var maxWidth = parseInt(slide.opts.width, 10), maxHeight = parseInt(slide.opts.height, 10);
-      slide.width = imgWidth;
-      slide.height = imgHeight;
-      if (maxWidth > 0) {
-        slide.width = maxWidth;
-        slide.height = Math.floor(maxWidth * imgHeight / imgWidth);
-      }
-      if (maxHeight > 0) {
-        slide.width = Math.floor(maxHeight * imgWidth / imgHeight);
-        slide.height = maxHeight;
-      }
-    },
-    // Create iframe wrapper, iframe and bindings
-    // ==========================================
-    setIframe: function(slide) {
-      var self2 = this, opts = slide.opts.iframe, $slide = slide.$slide, $iframe;
-      slide.$content = $2('<div class="fancybox-content' + (opts.preload ? " fancybox-is-hidden" : "") + '"></div>').css(opts.css).appendTo($slide);
-      $slide.addClass("fancybox-slide--" + slide.contentType);
-      slide.$iframe = $iframe = $2(opts.tpl.replace(/\{rnd\}/g, (/* @__PURE__ */ new Date()).getTime())).attr(opts.attr).appendTo(slide.$content);
-      if (opts.preload) {
-        self2.showLoading(slide);
-        $iframe.on("load.fb error.fb", function(e) {
-          this.isReady = 1;
-          slide.$slide.trigger("refresh");
-          self2.afterLoad(slide);
-        });
-        $slide.on("refresh.fb", function() {
-          var $content = slide.$content, frameWidth = opts.css.width, frameHeight = opts.css.height, $contents, $body;
-          if ($iframe[0].isReady !== 1) {
-            return;
-          }
-          try {
-            $contents = $iframe.contents();
-            $body = $contents.find("body");
-          } catch (ignore) {
-          }
-          if ($body && $body.length && $body.children().length) {
-            $slide.css("overflow", "visible");
-            $content.css({
-              width: "100%",
-              "max-width": "100%",
-              height: "9999px"
-            });
-            if (frameWidth === undefined2) {
-              frameWidth = Math.ceil(Math.max($body[0].clientWidth, $body.outerWidth(true)));
-            }
-            $content.css("width", frameWidth ? frameWidth : "").css("max-width", "");
-            if (frameHeight === undefined2) {
-              frameHeight = Math.ceil(Math.max($body[0].clientHeight, $body.outerHeight(true)));
-            }
-            $content.css("height", frameHeight ? frameHeight : "");
-            $slide.css("overflow", "auto");
-          }
-          $content.removeClass("fancybox-is-hidden");
-        });
-      } else {
-        self2.afterLoad(slide);
-      }
-      $iframe.attr("src", slide.src);
-      $slide.one("onReset", function() {
         try {
-          $2(this).find("iframe").hide().unbind().attr("src", "//about:blank");
-        } catch (ignore) {
+          t4.style[o2] = e2;
+        } catch (t5) {
         }
-        $2(this).off("refresh.fb").empty();
-        slide.isLoaded = false;
-        slide.isRevealed = false;
-      });
-    },
-    // Wrap and append content to the slide
-    // ======================================
-    setContent: function(slide, content) {
-      var self2 = this;
-      if (self2.isClosing) {
-        return;
-      }
-      self2.hideLoading(slide);
-      if (slide.$content) {
-        $2.fancybox.stop(slide.$content);
-      }
-      slide.$slide.empty();
-      if (isQuery(content) && content.parent().length) {
-        if (content.hasClass("fancybox-content") || content.parent().hasClass("fancybox-content")) {
-          content.parents(".fancybox-slide").trigger("onReset");
-        }
-        slide.$placeholder = $2("<div>").hide().insertAfter(content);
-        content.css("display", "inline-block");
-      } else if (!slide.hasError) {
-        if ($2.type(content) === "string") {
-          content = $2("<div>").append($2.trim(content)).contents();
-        }
-        if (slide.opts.filter) {
-          content = $2("<div>").html(content).find(slide.opts.filter);
-        }
-      }
-      slide.$slide.one("onReset", function() {
-        $2(this).find("video,audio").trigger("pause");
-        if (slide.$placeholder) {
-          slide.$placeholder.after(content.removeClass("fancybox-content").hide()).remove();
-          slide.$placeholder = null;
-        }
-        if (slide.$smallBtn) {
-          slide.$smallBtn.remove();
-          slide.$smallBtn = null;
-        }
-        if (!slide.hasError) {
-          $2(this).empty();
-          slide.isLoaded = false;
-          slide.isRevealed = false;
-        }
-      });
-      $2(content).appendTo(slide.$slide);
-      if ($2(content).is("video,audio")) {
-        $2(content).addClass("fancybox-video");
-        $2(content).wrap("<div></div>");
-        slide.contentType = "video";
-        slide.opts.width = slide.opts.width || $2(content).attr("width");
-        slide.opts.height = slide.opts.height || $2(content).attr("height");
-      }
-      slide.$content = slide.$slide.children().filter("div,form,main,video,audio,article,.fancybox-content").first();
-      slide.$content.siblings().hide();
-      if (!slide.$content.length) {
-        slide.$content = slide.$slide.wrapInner("<div></div>").children().first();
-      }
-      slide.$content.addClass("fancybox-content");
-      slide.$slide.addClass("fancybox-slide--" + slide.contentType);
-      self2.afterLoad(slide);
-    },
-    // Display error message
-    // =====================
-    setError: function(slide) {
-      slide.hasError = true;
-      slide.$slide.trigger("onReset").removeClass("fancybox-slide--" + slide.contentType).addClass("fancybox-slide--error");
-      slide.contentType = "html";
-      this.setContent(slide, this.translate(slide, slide.opts.errorTpl));
-      if (slide.pos === this.currPos) {
-        this.isAnimating = false;
-      }
-    },
-    // Show loading icon inside the slide
-    // ==================================
-    showLoading: function(slide) {
-      var self2 = this;
-      slide = slide || self2.current;
-      if (slide && !slide.$spinner) {
-        slide.$spinner = $2(self2.translate(self2, self2.opts.spinnerTpl)).appendTo(slide.$slide).hide().fadeIn("fast");
-      }
-    },
-    // Remove loading icon from the slide
-    // ==================================
-    hideLoading: function(slide) {
-      var self2 = this;
-      slide = slide || self2.current;
-      if (slide && slide.$spinner) {
-        slide.$spinner.stop().remove();
-        delete slide.$spinner;
-      }
-    },
-    // Adjustments after slide content has been loaded
-    // ===============================================
-    afterLoad: function(slide) {
-      var self2 = this;
-      if (self2.isClosing) {
-        return;
-      }
-      slide.isLoading = false;
-      slide.isLoaded = true;
-      self2.trigger("afterLoad", slide);
-      self2.hideLoading(slide);
-      if (slide.opts.smallBtn && (!slide.$smallBtn || !slide.$smallBtn.length)) {
-        slide.$smallBtn = $2(self2.translate(slide, slide.opts.btnTpl.smallBtn)).appendTo(slide.$content);
-      }
-      if (slide.opts.protect && slide.$content && !slide.hasError) {
-        slide.$content.on("contextmenu.fb", function(e) {
-          if (e.button == 2) {
-            e.preventDefault();
-          }
-          return true;
-        });
-        if (slide.type === "image") {
-          $2('<div class="fancybox-spaceball"></div>').appendTo(slide.$content);
-        }
-      }
-      self2.adjustCaption(slide);
-      self2.adjustLayout(slide);
-      if (slide.pos === self2.currPos) {
-        self2.updateCursor();
-      }
-      self2.revealContent(slide);
-    },
-    // Prevent caption overlap,
-    // fix css inconsistency across browsers
-    // =====================================
-    adjustCaption: function(slide) {
-      var self2 = this, current = slide || self2.current, caption = current.opts.caption, preventOverlap = current.opts.preventCaptionOverlap, $caption = self2.$refs.caption, $clone, captionH = false;
-      $caption.toggleClass("fancybox-caption--separate", preventOverlap);
-      if (preventOverlap && caption && caption.length) {
-        if (current.pos !== self2.currPos) {
-          $clone = $caption.clone().appendTo($caption.parent());
-          $clone.children().eq(0).empty().html(caption);
-          captionH = $clone.outerHeight(true);
-          $clone.empty().remove();
-        } else if (self2.$caption) {
-          captionH = self2.$caption.outerHeight(true);
-        }
-        current.$slide.css("padding-bottom", captionH || "");
-      }
-    },
-    // Simple hack to fix inconsistency across browsers, described here (affects Edge, too):
-    // https://bugzilla.mozilla.org/show_bug.cgi?id=748518
-    // ====================================================================================
-    adjustLayout: function(slide) {
-      var self2 = this, current = slide || self2.current, scrollHeight, marginBottom, inlinePadding, actualPadding;
-      if (current.isLoaded && current.opts.disableLayoutFix !== true) {
-        current.$content.css("margin-bottom", "");
-        if (current.$content.outerHeight() > current.$slide.height() + 0.5) {
-          inlinePadding = current.$slide[0].style["padding-bottom"];
-          actualPadding = current.$slide.css("padding-bottom");
-          if (parseFloat(actualPadding) > 0) {
-            scrollHeight = current.$slide[0].scrollHeight;
-            current.$slide.css("padding-bottom", 0);
-            if (Math.abs(scrollHeight - current.$slide[0].scrollHeight) < 1) {
-              marginBottom = actualPadding;
-            }
-            current.$slide.css("padding-bottom", inlinePadding);
-          }
-        }
-        current.$content.css("margin-bottom", marginBottom);
-      }
-    },
-    // Make content visible
-    // This method is called right after content has been loaded or
-    // user navigates gallery and transition should start
-    // ============================================================
-    revealContent: function(slide) {
-      var self2 = this, $slide = slide.$slide, end2 = false, start3 = false, isMoved = self2.isMoved(slide), isRevealed = slide.isRevealed, effect4, effectClassName, duration, opacity;
-      slide.isRevealed = true;
-      effect4 = slide.opts[self2.firstRun ? "animationEffect" : "transitionEffect"];
-      duration = slide.opts[self2.firstRun ? "animationDuration" : "transitionDuration"];
-      duration = parseInt(slide.forcedDuration === undefined2 ? duration : slide.forcedDuration, 10);
-      if (isMoved || slide.pos !== self2.currPos || !duration) {
-        effect4 = false;
-      }
-      if (effect4 === "zoom") {
-        if (slide.pos === self2.currPos && duration && slide.type === "image" && !slide.hasError && (start3 = self2.getThumbPos(slide))) {
-          end2 = self2.getFitPos(slide);
-        } else {
-          effect4 = "fade";
-        }
-      }
-      if (effect4 === "zoom") {
-        self2.isAnimating = true;
-        end2.scaleX = end2.width / start3.width;
-        end2.scaleY = end2.height / start3.height;
-        opacity = slide.opts.zoomOpacity;
-        if (opacity == "auto") {
-          opacity = Math.abs(slide.width / slide.height - start3.width / start3.height) > 0.1;
-        }
-        if (opacity) {
-          start3.opacity = 0.1;
-          end2.opacity = 1;
-        }
-        $2.fancybox.setTranslate(slide.$content.removeClass("fancybox-is-hidden"), start3);
-        forceRedraw(slide.$content);
-        $2.fancybox.animate(slide.$content, end2, duration, function() {
-          self2.isAnimating = false;
-          self2.complete();
-        });
-        return;
-      }
-      self2.updateSlide(slide);
-      if (!effect4) {
-        slide.$content.removeClass("fancybox-is-hidden");
-        if (!isRevealed && isMoved && slide.type === "image" && !slide.hasError) {
-          slide.$content.hide().fadeIn("fast");
-        }
-        if (slide.pos === self2.currPos) {
-          self2.complete();
-        }
-        return;
-      }
-      $2.fancybox.stop($slide);
-      effectClassName = "fancybox-slide--" + (slide.pos >= self2.prevPos ? "next" : "previous") + " fancybox-animated fancybox-fx-" + effect4;
-      $slide.addClass(effectClassName).removeClass("fancybox-slide--current");
-      slide.$content.removeClass("fancybox-is-hidden");
-      forceRedraw($slide);
-      if (slide.type !== "image") {
-        slide.$content.hide().show(0);
-      }
-      $2.fancybox.animate(
-        $slide,
-        "fancybox-slide--current",
-        duration,
-        function() {
-          $slide.removeClass(effectClassName).css({
-            transform: "",
-            opacity: ""
-          });
-          if (slide.pos === self2.currPos) {
-            self2.complete();
-          }
-        },
-        true
-      );
-    },
-    // Check if we can and have to zoom from thumbnail
-    //================================================
-    getThumbPos: function(slide) {
-      var rez = false, $thumb = slide.$thumb, thumbPos, btw, brw, bbw, blw;
-      if (!$thumb || !inViewport($thumb[0])) {
-        return false;
-      }
-      thumbPos = $2.fancybox.getTranslate($thumb);
-      btw = parseFloat($thumb.css("border-top-width") || 0);
-      brw = parseFloat($thumb.css("border-right-width") || 0);
-      bbw = parseFloat($thumb.css("border-bottom-width") || 0);
-      blw = parseFloat($thumb.css("border-left-width") || 0);
-      rez = {
-        top: thumbPos.top + btw,
-        left: thumbPos.left + blw,
-        width: thumbPos.width - brw - blw,
-        height: thumbPos.height - btw - bbw,
-        scaleX: 1,
-        scaleY: 1
+      } }, u.fx.step[o2] = function(t4) {
+        t4.colorInit || (t4.start = p(t4.elem, o2), t4.end = p(t4.end), t4.colorInit = true), u.cssHooks[o2].set(t4.elem, t4.start.transition(t4.end, t4.pos));
       };
-      return thumbPos.width > 0 && thumbPos.height > 0 ? rez : false;
-    },
-    // Final adjustments after current gallery item is moved to position
-    // and it`s content is loaded
-    // ==================================================================
-    complete: function() {
-      var self2 = this, current = self2.current, slides = {}, $el;
-      if (self2.isMoved() || !current.isLoaded) {
-        return;
-      }
-      if (!current.isComplete) {
-        current.isComplete = true;
-        current.$slide.siblings().trigger("onReset");
-        self2.preload("inline");
-        forceRedraw(current.$slide);
-        current.$slide.addClass("fancybox-slide--complete");
-        $2.each(self2.slides, function(key, slide) {
-          if (slide.pos >= self2.currPos - 1 && slide.pos <= self2.currPos + 1) {
-            slides[slide.pos] = slide;
-          } else if (slide) {
-            $2.fancybox.stop(slide.$slide);
-            slide.$slide.off().remove();
-          }
-        });
-        self2.slides = slides;
-      }
-      self2.isAnimating = false;
-      self2.updateCursor();
-      self2.trigger("afterShow");
-      if (!!current.opts.video.autoStart) {
-        current.$slide.find("video,audio").filter(":visible:first").trigger("play").one("ended", function() {
-          if (Document.exitFullscreen) {
-            Document.exitFullscreen();
-          } else if (this.webkitExitFullscreen) {
-            this.webkitExitFullscreen();
-          }
-          self2.next();
-        });
-      }
-      if (current.opts.autoFocus && current.contentType === "html") {
-        $el = current.$content.find("input[autofocus]:enabled:visible:first");
-        if ($el.length) {
-          $el.trigger("focus");
-        } else {
-          self2.focus(null, true);
-        }
-      }
-      current.$slide.scrollTop(0).scrollLeft(0);
-    },
-    // Preload next and previous slides
-    // ================================
-    preload: function(type) {
-      var self2 = this, prev, next;
-      if (self2.group.length < 2) {
-        return;
-      }
-      next = self2.slides[self2.currPos + 1];
-      prev = self2.slides[self2.currPos - 1];
-      if (prev && prev.type === type) {
-        self2.loadSlide(prev);
-      }
-      if (next && next.type === type) {
-        self2.loadSlide(next);
-      }
-    },
-    // Try to find and focus on the first focusable element
-    // ====================================================
-    focus: function(e, firstRun) {
-      var self2 = this, focusableStr = [
-        "a[href]",
-        "area[href]",
-        'input:not([disabled]):not([type="hidden"]):not([aria-hidden])',
-        "select:not([disabled]):not([aria-hidden])",
-        "textarea:not([disabled]):not([aria-hidden])",
-        "button:not([disabled]):not([aria-hidden])",
-        "iframe",
-        "object",
-        "embed",
-        "video",
-        "audio",
-        "[contenteditable]",
-        '[tabindex]:not([tabindex^="-"])'
-      ].join(","), focusableItems, focusedItemIndex;
-      if (self2.isClosing) {
-        return;
-      }
-      if (e || !self2.current || !self2.current.isComplete) {
-        focusableItems = self2.$refs.container.find("*:visible");
-      } else {
-        focusableItems = self2.current.$slide.find("*:visible" + (firstRun ? ":not(.fancybox-close-small)" : ""));
-      }
-      focusableItems = focusableItems.filter(focusableStr).filter(function() {
-        return $2(this).css("visibility") !== "hidden" && !$2(this).hasClass("disabled");
-      });
-      if (focusableItems.length) {
-        focusedItemIndex = focusableItems.index(document2.activeElement);
-        if (e && e.shiftKey) {
-          if (focusedItemIndex < 0 || focusedItemIndex == 0) {
-            e.preventDefault();
-            focusableItems.eq(focusableItems.length - 1).trigger("focus");
-          }
-        } else {
-          if (focusedItemIndex < 0 || focusedItemIndex == focusableItems.length - 1) {
-            if (e) {
-              e.preventDefault();
-            }
-            focusableItems.eq(0).trigger("focus");
-          }
-        }
-      } else {
-        self2.$refs.container.trigger("focus");
-      }
-    },
-    // Activates current instance - brings container to the front and enables keyboard,
-    // notifies other instances about deactivating
-    // =================================================================================
-    activate: function() {
-      var self2 = this;
-      $2(".fancybox-container").each(function() {
-        var instance = $2(this).data("FancyBox");
-        if (instance && instance.id !== self2.id && !instance.isClosing) {
-          instance.trigger("onDeactivate");
-          instance.removeEvents();
-          instance.isVisible = false;
-        }
-      });
-      self2.isVisible = true;
-      if (self2.current || self2.isIdle) {
-        self2.update();
-        self2.updateControls();
-      }
-      self2.trigger("onActivate");
-      self2.addEvents();
-    },
-    // Start closing procedure
-    // This will start "zoom-out" animation if needed and clean everything up afterwards
-    // =================================================================================
-    close: function(e, d) {
-      var self2 = this, current = self2.current, effect4, duration, $content, domRect, opacity, start3, end2;
-      var done = function() {
-        self2.cleanUp(e);
-      };
-      if (self2.isClosing) {
-        return false;
-      }
-      self2.isClosing = true;
-      if (self2.trigger("beforeClose", e) === false) {
-        self2.isClosing = false;
-        requestAFrame(function() {
-          self2.update();
-        });
-        return false;
-      }
-      self2.removeEvents();
-      $content = current.$content;
-      effect4 = current.opts.animationEffect;
-      duration = $2.isNumeric(d) ? d : effect4 ? current.opts.animationDuration : 0;
-      current.$slide.removeClass("fancybox-slide--complete fancybox-slide--next fancybox-slide--previous fancybox-animated");
-      if (e !== true) {
-        $2.fancybox.stop(current.$slide);
-      } else {
-        effect4 = false;
-      }
-      current.$slide.siblings().trigger("onReset").remove();
-      if (duration) {
-        self2.$refs.container.removeClass("fancybox-is-open").addClass("fancybox-is-closing").css("transition-duration", duration + "ms");
-      }
-      self2.hideLoading(current);
-      self2.hideControls(true);
-      self2.updateCursor();
-      if (effect4 === "zoom" && !($content && duration && current.type === "image" && !self2.isMoved() && !current.hasError && (end2 = self2.getThumbPos(current)))) {
-        effect4 = "fade";
-      }
-      if (effect4 === "zoom") {
-        $2.fancybox.stop($content);
-        domRect = $2.fancybox.getTranslate($content);
-        start3 = {
-          top: domRect.top,
-          left: domRect.left,
-          scaleX: domRect.width / end2.width,
-          scaleY: domRect.height / end2.height,
-          width: end2.width,
-          height: end2.height
-        };
-        opacity = current.opts.zoomOpacity;
-        if (opacity == "auto") {
-          opacity = Math.abs(current.width / current.height - end2.width / end2.height) > 0.1;
-        }
-        if (opacity) {
-          end2.opacity = 0;
-        }
-        $2.fancybox.setTranslate($content, start3);
-        forceRedraw($content);
-        $2.fancybox.animate($content, end2, duration, done);
-        return true;
-      }
-      if (effect4 && duration) {
-        $2.fancybox.animate(
-          current.$slide.addClass("fancybox-slide--previous").removeClass("fancybox-slide--current"),
-          "fancybox-animated fancybox-fx-" + effect4,
-          duration,
-          done
-        );
-      } else {
-        if (e === true) {
-          setTimeout(done, duration);
-        } else {
-          done();
-        }
-      }
-      return true;
-    },
-    // Final adjustments after removing the instance
-    // =============================================
-    cleanUp: function(e) {
-      var self2 = this, instance, $focus = self2.current.opts.$orig, x, y;
-      self2.current.$slide.trigger("onReset");
-      self2.$refs.container.empty().remove();
-      self2.trigger("afterClose", e);
-      if (!!self2.current.opts.backFocus) {
-        if (!$focus || !$focus.length || !$focus.is(":visible")) {
-          $focus = self2.$trigger;
-        }
-        if ($focus && $focus.length) {
-          x = window2.scrollX;
-          y = window2.scrollY;
-          $focus.trigger("focus");
-          $2("html, body").scrollTop(y).scrollLeft(x);
-        }
-      }
-      self2.current = null;
-      instance = $2.fancybox.getInstance();
-      if (instance) {
-        instance.activate();
-      } else {
-        $2("body").removeClass("fancybox-active compensate-for-scrollbar");
-        $2("#fancybox-style-noscroll").remove();
-      }
-    },
-    // Call callback and trigger an event
-    // ==================================
-    trigger: function(name, slide) {
-      var args = Array.prototype.slice.call(arguments, 1), self2 = this, obj = slide && slide.opts ? slide : self2.current, rez;
-      if (obj) {
-        args.unshift(obj);
-      } else {
-        obj = self2;
-      }
-      args.unshift(self2);
-      if ($2.isFunction(obj.opts[name])) {
-        rez = obj.opts[name].apply(obj, args);
-      }
-      if (rez === false) {
-        return rez;
-      }
-      if (name === "afterClose" || !self2.$refs) {
-        $D.trigger(name + ".fb", args);
-      } else {
-        self2.$refs.container.trigger(name + ".fb", args);
-      }
-    },
-    // Update infobar values, navigation button states and reveal caption
-    // ==================================================================
-    updateControls: function() {
-      var self2 = this, current = self2.current, index = current.index, $container = self2.$refs.container, $caption = self2.$refs.caption, caption = current.opts.caption;
-      current.$slide.trigger("refresh");
-      if (caption && caption.length) {
-        self2.$caption = $caption;
-        $caption.children().eq(0).html(caption);
-      } else {
-        self2.$caption = null;
-      }
-      if (!self2.hasHiddenControls && !self2.isIdle) {
-        self2.showControls();
-      }
-      $container.find("[data-fancybox-count]").html(self2.group.length);
-      $container.find("[data-fancybox-index]").html(index + 1);
-      $container.find("[data-fancybox-prev]").prop("disabled", !current.opts.loop && index <= 0);
-      $container.find("[data-fancybox-next]").prop("disabled", !current.opts.loop && index >= self2.group.length - 1);
-      if (current.type === "image") {
-        $container.find("[data-fancybox-zoom]").show().end().find("[data-fancybox-download]").attr("href", current.opts.image.src || current.src).show();
-      } else if (current.opts.toolbar) {
-        $container.find("[data-fancybox-download],[data-fancybox-zoom]").hide();
-      }
-      if ($2(document2.activeElement).is(":hidden,[disabled]")) {
-        self2.$refs.container.trigger("focus");
-      }
-    },
-    // Hide toolbar and caption
-    // ========================
-    hideControls: function(andCaption) {
-      var self2 = this, arr = ["infobar", "toolbar", "nav"];
-      if (andCaption || !self2.current.opts.preventCaptionOverlap) {
-        arr.push("caption");
-      }
-      this.$refs.container.removeClass(
-        arr.map(function(i) {
-          return "fancybox-show-" + i;
-        }).join(" ")
-      );
-      this.hasHiddenControls = true;
-    },
-    showControls: function() {
-      var self2 = this, opts = self2.current ? self2.current.opts : self2.opts, $container = self2.$refs.container;
-      self2.hasHiddenControls = false;
-      self2.idleSecondsCounter = 0;
-      $container.toggleClass("fancybox-show-toolbar", !!(opts.toolbar && opts.buttons)).toggleClass("fancybox-show-infobar", !!(opts.infobar && self2.group.length > 1)).toggleClass("fancybox-show-caption", !!self2.$caption).toggleClass("fancybox-show-nav", !!(opts.arrows && self2.group.length > 1)).toggleClass("fancybox-is-modal", !!opts.modal);
-    },
-    // Toggle toolbar and caption
-    // ==========================
-    toggleControls: function() {
-      if (this.hasHiddenControls) {
-        this.showControls();
-      } else {
-        this.hideControls();
-      }
-    }
-  });
-  $2.fancybox = {
-    version: "3.5.7",
-    defaults,
-    // Get current instance and execute a command.
-    //
-    // Examples of usage:
-    //
-    //   $instance = $.fancybox.getInstance();
-    //   $.fancybox.getInstance().jumpTo( 1 );
-    //   $.fancybox.getInstance( 'jumpTo', 1 );
-    //   $.fancybox.getInstance( function() {
-    //       console.info( this.currIndex );
-    //   });
-    // ======================================================
-    getInstance: function(command) {
-      var instance = $2('.fancybox-container:not(".fancybox-is-closing"):last').data("FancyBox"), args = Array.prototype.slice.call(arguments, 1);
-      if (instance instanceof FancyBox) {
-        if ($2.type(command) === "string") {
-          instance[command].apply(instance, args);
-        } else if ($2.type(command) === "function") {
-          command.apply(instance, args);
-        }
-        return instance;
-      }
-      return false;
-    },
-    // Create new instance
-    // ===================
-    open: function(items, opts, index) {
-      return new FancyBox(items, opts, index);
-    },
-    // Close current or all instances
-    // ==============================
-    close: function(all) {
-      var instance = this.getInstance();
-      if (instance) {
-        instance.close();
-        if (all === true) {
-          this.close(all);
-        }
-      }
-    },
-    // Close all instances and unbind all events
-    // =========================================
-    destroy: function() {
-      this.close(true);
-      $D.add("body").off("click.fb-start", "**");
-    },
-    // Try to detect mobile devices
-    // ============================
-    isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-    // Detect if 'translate3d' support is available
-    // ============================================
-    use3d: function() {
-      var div = document2.createElement("div");
-      return window2.getComputedStyle && window2.getComputedStyle(div) && window2.getComputedStyle(div).getPropertyValue("transform") && !(document2.documentMode && document2.documentMode < 11);
-    }(),
-    // Helper function to get current visual state of an element
-    // returns array[ top, left, horizontal-scale, vertical-scale, opacity ]
-    // =====================================================================
-    getTranslate: function($el) {
-      var domRect;
-      if (!$el || !$el.length) {
-        return false;
-      }
-      domRect = $el[0].getBoundingClientRect();
-      return {
-        top: domRect.top || 0,
-        left: domRect.left || 0,
-        width: domRect.width,
-        height: domRect.height,
-        opacity: parseFloat($el.css("opacity"))
-      };
-    },
-    // Shortcut for setting "translate3d" properties for element
-    // Can set be used to set opacity, too
-    // ========================================================
-    setTranslate: function($el, props) {
-      var str = "", css = {};
-      if (!$el || !props) {
-        return;
-      }
-      if (props.left !== undefined2 || props.top !== undefined2) {
-        str = (props.left === undefined2 ? $el.position().left : props.left) + "px, " + (props.top === undefined2 ? $el.position().top : props.top) + "px";
-        if (this.use3d) {
-          str = "translate3d(" + str + ", 0px)";
-        } else {
-          str = "translate(" + str + ")";
-        }
-      }
-      if (props.scaleX !== undefined2 && props.scaleY !== undefined2) {
-        str += " scale(" + props.scaleX + ", " + props.scaleY + ")";
-      } else if (props.scaleX !== undefined2) {
-        str += " scaleX(" + props.scaleX + ")";
-      }
-      if (str.length) {
-        css.transform = str;
-      }
-      if (props.opacity !== undefined2) {
-        css.opacity = props.opacity;
-      }
-      if (props.width !== undefined2) {
-        css.width = props.width;
-      }
-      if (props.height !== undefined2) {
-        css.height = props.height;
-      }
-      return $el.css(css);
-    },
-    // Simple CSS transition handler
-    // =============================
-    animate: function($el, to, duration, callback, leaveAnimationName) {
-      var self2 = this, from;
-      if ($2.isFunction(duration)) {
-        callback = duration;
-        duration = null;
-      }
-      self2.stop($el);
-      from = self2.getTranslate($el);
-      $el.on(transitionEnd, function(e) {
-        if (e && e.originalEvent && (!$el.is(e.originalEvent.target) || e.originalEvent.propertyName == "z-index")) {
-          return;
-        }
-        self2.stop($el);
-        if ($2.isNumeric(duration)) {
-          $el.css("transition-duration", "");
-        }
-        if ($2.isPlainObject(to)) {
-          if (to.scaleX !== undefined2 && to.scaleY !== undefined2) {
-            self2.setTranslate($el, {
-              top: to.top,
-              left: to.left,
-              width: from.width * to.scaleX,
-              height: from.height * to.scaleY,
-              scaleX: 1,
-              scaleY: 1
-            });
-          }
-        } else if (leaveAnimationName !== true) {
-          $el.removeClass(to);
-        }
-        if ($2.isFunction(callback)) {
-          callback(e);
-        }
-      });
-      if ($2.isNumeric(duration)) {
-        $el.css("transition-duration", duration + "ms");
-      }
-      if ($2.isPlainObject(to)) {
-        if (to.scaleX !== undefined2 && to.scaleY !== undefined2) {
-          delete to.width;
-          delete to.height;
-          if ($el.parent().hasClass("fancybox-slide--image")) {
-            $el.parent().addClass("fancybox-is-scaling");
-          }
-        }
-        $2.fancybox.setTranslate($el, to);
-      } else {
-        $el.addClass(to);
-      }
-      $el.data(
-        "timer",
-        setTimeout(function() {
-          $el.trigger(transitionEnd);
-        }, duration + 33)
-      );
-    },
-    stop: function($el, callCallback) {
-      if ($el && $el.length) {
-        clearTimeout($el.data("timer"));
-        if (callCallback) {
-          $el.trigger(transitionEnd);
-        }
-        $el.off(transitionEnd).css("transition-duration", "");
-        $el.parent().removeClass("fancybox-is-scaling");
-      }
-    }
-  };
-  function _run(e, opts) {
-    var items = [], index = 0, $target, value, instance;
-    if (e && e.isDefaultPrevented()) {
-      return;
-    }
-    e.preventDefault();
-    opts = opts || {};
-    if (e && e.data) {
-      opts = mergeOpts(e.data.options, opts);
-    }
-    $target = opts.$target || $2(e.currentTarget).trigger("blur");
-    instance = $2.fancybox.getInstance();
-    if (instance && instance.$trigger && instance.$trigger.is($target)) {
-      return;
-    }
-    if (opts.selector) {
-      items = $2(opts.selector);
-    } else {
-      value = $target.attr("data-fancybox") || "";
-      if (value) {
-        items = e.data ? e.data.items : [];
-        items = items.length ? items.filter('[data-fancybox="' + value + '"]') : $2('[data-fancybox="' + value + '"]');
-      } else {
-        items = [$target];
-      }
-    }
-    index = $2(items).index($target);
-    if (index < 0) {
-      index = 0;
-    }
-    instance = $2.fancybox.open(items, opts, index);
-    instance.$trigger = $target;
+    });
+  })("backgroundColor borderBottomColor borderLeftColor borderRightColor borderTopColor color columnRuleColor outlineColor textDecorationColor textEmphasisColor"), u.cssHooks.borderColor = { expand: function(i2) {
+    var s2 = {};
+    return g(["Top", "Right", "Bottom", "Left"], function(t2, e2) {
+      s2["border" + e2 + "Color"] = i2;
+    }), s2;
+  } };
+  var q, K, U, X, $3, G, Q, J, Z, b, y = u.Color.names = { aqua: "#00ffff", black: "#000000", blue: "#0000ff", fuchsia: "#ff00ff", gray: "#808080", green: "#008000", lime: "#00ff00", maroon: "#800000", navy: "#000080", olive: "#808000", purple: "#800080", red: "#ff0000", silver: "#c0c0c0", teal: "#008080", white: "#ffffff", yellow: "#ffff00", transparent: [null, null, null, 0], _default: "#ffffff" }, w = "ui-effects-", e = "ui-effects-style", T = "ui-effects-animated";
+  function tt(t2) {
+    var e2, i2, s2 = t2.ownerDocument.defaultView ? t2.ownerDocument.defaultView.getComputedStyle(t2, null) : t2.currentStyle, n2 = {};
+    if (s2 && s2.length && s2[0] && s2[s2[0]]) for (i2 = s2.length; i2--; ) "string" == typeof s2[e2 = s2[i2]] && (n2[e2.replace(/-([\da-z])/gi, function(t3, e3) {
+      return e3.toUpperCase();
+    })] = s2[e2]);
+    else for (e2 in s2) "string" == typeof s2[e2] && (n2[e2] = s2[e2]);
+    return n2;
   }
-  $2.fn.fancybox = function(options) {
-    var selector;
-    options = options || {};
-    selector = options.selector || false;
-    if (selector) {
-      $2("body").off("click.fb-start", selector).on("click.fb-start", selector, {
-        options
-      }, _run);
-    } else {
-      this.off("click.fb-start").on(
-        "click.fb-start",
-        {
-          items: this,
-          options
-        },
-        _run
-      );
-    }
-    return this;
-  };
-  $D.on("click.fb-start", "[data-fancybox]", _run);
-  $D.on("click.fb-start", "[data-fancybox-trigger]", function(e) {
-    $2('[data-fancybox="' + $2(this).attr("data-fancybox-trigger") + '"]').eq($2(this).attr("data-fancybox-index") || 0).trigger("click.fb-start", {
-      $trigger: $2(this)
-    });
-  });
-  (function() {
-    var buttonStr = ".fancybox-button", focusStr = "fancybox-focus", $pressed = null;
-    $D.on("mousedown mouseup focus blur", buttonStr, function(e) {
-      switch (e.type) {
-        case "mousedown":
-          $pressed = $2(this);
-          break;
-        case "mouseup":
-          $pressed = null;
-          break;
-        case "focusin":
-          $2(buttonStr).removeClass(focusStr);
-          if (!$2(this).is($pressed) && !$2(this).is("[disabled]")) {
-            $2(this).addClass(focusStr);
-          }
-          break;
-        case "focusout":
-          $2(buttonStr).removeClass(focusStr);
-          break;
-      }
-    });
-  })();
-})(window, document, jQuery);
-(function($2) {
-  "use strict";
-  var defaults = {
-    youtube: {
-      matcher: /(youtube\.com|youtu\.be|youtube\-nocookie\.com)\/(watch\?(.*&)?v=|v\/|u\/|embed\/?)?(videoseries\?list=(.*)|[\w-]{11}|\?listType=(.*)&list=(.*))(.*)/i,
-      params: {
-        autoplay: 1,
-        autohide: 1,
-        fs: 1,
-        rel: 0,
-        hd: 1,
-        wmode: "transparent",
-        enablejsapi: 1,
-        html5: 1
-      },
-      paramPlace: 8,
-      type: "iframe",
-      url: "https://www.youtube-nocookie.com/embed/$4",
-      thumb: "https://img.youtube.com/vi/$4/hqdefault.jpg"
-    },
-    vimeo: {
-      matcher: /^.+vimeo.com\/(.*\/)?([\d]+)(.*)?/,
-      params: {
-        autoplay: 1,
-        hd: 1,
-        show_title: 1,
-        show_byline: 1,
-        show_portrait: 0,
-        fullscreen: 1
-      },
-      paramPlace: 3,
-      type: "iframe",
-      url: "//player.vimeo.com/video/$2"
-    },
-    instagram: {
-      matcher: /(instagr\.am|instagram\.com)\/p\/([a-zA-Z0-9_\-]+)\/?/i,
-      type: "image",
-      url: "//$1/p/$2/media/?size=l"
-    },
-    // Examples:
-    // http://maps.google.com/?ll=48.857995,2.294297&spn=0.007666,0.021136&t=m&z=16
-    // https://www.google.com/maps/@37.7852006,-122.4146355,14.65z
-    // https://www.google.com/maps/@52.2111123,2.9237542,6.61z?hl=en
-    // https://www.google.com/maps/place/Googleplex/@37.4220041,-122.0833494,17z/data=!4m5!3m4!1s0x0:0x6c296c66619367e0!8m2!3d37.4219998!4d-122.0840572
-    gmap_place: {
-      matcher: /(maps\.)?google\.([a-z]{2,3}(\.[a-z]{2})?)\/(((maps\/(place\/(.*)\/)?\@(.*),(\d+.?\d+?)z))|(\?ll=))(.*)?/i,
-      type: "iframe",
-      url: function(rez) {
-        return "//maps.google." + rez[2] + "/?ll=" + (rez[9] ? rez[9] + "&z=" + Math.floor(rez[10]) + (rez[12] ? rez[12].replace(/^\//, "&") : "") : rez[12] + "").replace(/\?/, "&") + "&output=" + (rez[12] && rez[12].indexOf("layer=c") > 0 ? "svembed" : "embed");
-      }
-    },
-    // Examples:
-    // https://www.google.com/maps/search/Empire+State+Building/
-    // https://www.google.com/maps/search/?api=1&query=centurylink+field
-    // https://www.google.com/maps/search/?api=1&query=47.5951518,-122.3316393
-    gmap_search: {
-      matcher: /(maps\.)?google\.([a-z]{2,3}(\.[a-z]{2})?)\/(maps\/search\/)(.*)/i,
-      type: "iframe",
-      url: function(rez) {
-        return "//maps.google." + rez[2] + "/maps?q=" + rez[5].replace("query=", "q=").replace("api=1", "") + "&output=embed";
-      }
-    }
-  };
-  var format = function(url, rez, params) {
-    if (!url) {
-      return;
-    }
-    params = params || "";
-    if ($2.type(params) === "object") {
-      params = $2.param(params, true);
-    }
-    $2.each(rez, function(key, value) {
-      url = url.replace("$" + key, value || "");
-    });
-    if (params.length) {
-      url += (url.indexOf("?") > 0 ? "&" : "?") + params;
-    }
-    return url;
-  };
-  $2(document).on("objectNeedsType.fb", function(e, instance, item) {
-    var url = item.src || "", type = false, media, thumb, rez, params, urlParams, paramObj, provider;
-    media = $2.extend(true, {}, defaults, item.opts.media);
-    $2.each(media, function(providerName, providerOpts) {
-      rez = url.match(providerOpts.matcher);
-      if (!rez) {
-        return;
-      }
-      type = providerOpts.type;
-      provider = providerName;
-      paramObj = {};
-      if (providerOpts.paramPlace && rez[providerOpts.paramPlace]) {
-        urlParams = rez[providerOpts.paramPlace];
-        if (urlParams[0] == "?") {
-          urlParams = urlParams.substring(1);
-        }
-        urlParams = urlParams.split("&");
-        for (var m = 0; m < urlParams.length; ++m) {
-          var p = urlParams[m].split("=", 2);
-          if (p.length == 2) {
-            paramObj[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
-          }
-        }
-      }
-      params = $2.extend(true, {}, providerOpts.params, item.opts[providerName], paramObj);
-      url = $2.type(providerOpts.url) === "function" ? providerOpts.url.call(this, rez, params, item) : format(providerOpts.url, rez, params);
-      thumb = $2.type(providerOpts.thumb) === "function" ? providerOpts.thumb.call(this, rez, params, item) : format(providerOpts.thumb, rez);
-      if (providerName === "youtube") {
-        url = url.replace(/&t=((\d+)m)?(\d+)s/, function(match, p1, m2, s) {
-          return "&start=" + ((m2 ? parseInt(m2, 10) * 60 : 0) + parseInt(s, 10));
+  function P(t2, e2, i2, s2) {
+    return t2 = { effect: t2 = V.isPlainObject(t2) ? (e2 = t2).effect : t2 }, "function" == typeof (e2 = null == e2 ? {} : e2) && (s2 = e2, i2 = null, e2 = {}), "number" != typeof e2 && !V.fx.speeds[e2] || (s2 = i2, i2 = e2, e2 = {}), "function" == typeof i2 && (s2 = i2, i2 = null), e2 && V.extend(t2, e2), i2 = i2 || e2.duration, t2.duration = V.fx.off ? 0 : "number" == typeof i2 ? i2 : i2 in V.fx.speeds ? V.fx.speeds[i2] : V.fx.speeds._default, t2.complete = s2 || e2.complete, t2;
+  }
+  function M(t2) {
+    return !t2 || "number" == typeof t2 || V.fx.speeds[t2] || "string" == typeof t2 && !V.effects.effect[t2] || "function" == typeof t2 || "object" == typeof t2 && !t2.effect;
+  }
+  function et(t2, e2) {
+    var i2 = e2.outerWidth(), e2 = e2.outerHeight(), t2 = /^rect\((-?\d*\.?\d*px|-?\d+%|auto),?\s*(-?\d*\.?\d*px|-?\d+%|auto),?\s*(-?\d*\.?\d*px|-?\d+%|auto),?\s*(-?\d*\.?\d*px|-?\d+%|auto)\)$/.exec(t2) || ["", 0, i2, e2, 0];
+    return { top: parseFloat(t2[1]) || 0, right: "auto" === t2[2] ? i2 : parseFloat(t2[2]), bottom: "auto" === t2[3] ? e2 : parseFloat(t2[3]), left: parseFloat(t2[4]) || 0 };
+  }
+  V.effects = { effect: {} }, X = ["add", "remove", "toggle"], $3 = { border: 1, borderBottom: 1, borderColor: 1, borderLeft: 1, borderRight: 1, borderTop: 1, borderWidth: 1, margin: 1, padding: 1 }, V.each(["borderLeftStyle", "borderRightStyle", "borderBottomStyle", "borderTopStyle"], function(t2, e2) {
+    V.fx.step[e2] = function(t3) {
+      ("none" !== t3.end && !t3.setAttr || 1 === t3.pos && !t3.setAttr) && (u.style(t3.elem, e2, t3.end), t3.setAttr = true);
+    };
+  }), V.fn.addBack || (V.fn.addBack = function(t2) {
+    return this.add(null == t2 ? this.prevObject : this.prevObject.filter(t2));
+  }), V.effects.animateClass = function(n2, t2, e2, i2) {
+    var o2 = V.speed(t2, e2, i2);
+    return this.queue(function() {
+      var i3 = V(this), t3 = i3.attr("class") || "", e3 = (e3 = o2.children ? i3.find("*").addBack() : i3).map(function() {
+        return { el: V(this), start: tt(this) };
+      }), s2 = function() {
+        V.each(X, function(t4, e4) {
+          n2[e4] && i3[e4 + "Class"](n2[e4]);
         });
-      } else if (providerName === "vimeo") {
-        url = url.replace("&%23", "#");
-      }
-      return false;
-    });
-    if (type) {
-      if (!item.opts.thumb && !(item.opts.$thumb && item.opts.$thumb.length)) {
-        item.opts.thumb = thumb;
-      }
-      if (type === "iframe") {
-        item.opts = $2.extend(true, item.opts, {
-          iframe: {
-            preload: false,
-            attr: {
-              scrolling: "no"
-            }
-          }
-        });
-      }
-      $2.extend(item, {
-        type,
-        src: url,
-        origSrc: item.src,
-        contentSource: provider,
-        contentType: type === "image" ? "image" : provider == "gmap_place" || provider == "gmap_search" ? "map" : "video"
+      };
+      s2(), e3 = e3.map(function() {
+        return this.end = tt(this.el[0]), this.diff = function(t4, e4) {
+          var i4, s3, n3 = {};
+          for (i4 in e4) s3 = e4[i4], t4[i4] === s3 || $3[i4] || !V.fx.step[i4] && isNaN(parseFloat(s3)) || (n3[i4] = s3);
+          return n3;
+        }(this.start, this.end), this;
+      }), i3.attr("class", t3), e3 = e3.map(function() {
+        var t4 = this, e4 = V.Deferred(), i4 = V.extend({}, o2, { queue: false, complete: function() {
+          e4.resolve(t4);
+        } });
+        return this.el.animate(this.diff, i4), e4.promise();
+      }), V.when.apply(V, e3.get()).done(function() {
+        s2(), V.each(arguments, function() {
+          var e4 = this.el;
+          V.each(this.diff, function(t4) {
+            e4.css(t4, "");
+          });
+        }), o2.complete.call(i3[0]);
       });
-    } else if (url) {
-      item.type = item.opts.defaultType;
+    });
+  }, V.fn.extend({ addClass: (U = V.fn.addClass, function(t2, e2, i2, s2) {
+    return e2 ? V.effects.animateClass.call(this, { add: t2 }, e2, i2, s2) : U.apply(this, arguments);
+  }), removeClass: (K = V.fn.removeClass, function(t2, e2, i2, s2) {
+    return 1 < arguments.length ? V.effects.animateClass.call(this, { remove: t2 }, e2, i2, s2) : K.apply(this, arguments);
+  }), toggleClass: (q = V.fn.toggleClass, function(t2, e2, i2, s2, n2) {
+    return "boolean" == typeof e2 || void 0 === e2 ? i2 ? V.effects.animateClass.call(this, e2 ? { add: t2 } : { remove: t2 }, i2, s2, n2) : q.apply(this, arguments) : V.effects.animateClass.call(this, { toggle: t2 }, e2, i2, s2);
+  }), switchClass: function(t2, e2, i2, s2, n2) {
+    return V.effects.animateClass.call(this, { add: e2, remove: t2 }, i2, s2, n2);
+  } }), V.expr && V.expr.pseudos && V.expr.pseudos.animated && (V.expr.pseudos.animated = (G = V.expr.pseudos.animated, function(t2) {
+    return !!V(t2).data(T) || G(t2);
+  })), false !== V.uiBackCompat && V.extend(V.effects, { save: function(t2, e2) {
+    for (var i2 = 0, s2 = e2.length; i2 < s2; i2++) null !== e2[i2] && t2.data(w + e2[i2], t2[0].style[e2[i2]]);
+  }, restore: function(t2, e2) {
+    for (var i2, s2 = 0, n2 = e2.length; s2 < n2; s2++) null !== e2[s2] && (i2 = t2.data(w + e2[s2]), t2.css(e2[s2], i2));
+  }, setMode: function(t2, e2) {
+    return e2 = "toggle" === e2 ? t2.is(":hidden") ? "show" : "hide" : e2;
+  }, createWrapper: function(i2) {
+    if (i2.parent().is(".ui-effects-wrapper")) return i2.parent();
+    var s2 = { width: i2.outerWidth(true), height: i2.outerHeight(true), float: i2.css("float") }, t2 = V("<div></div>").addClass("ui-effects-wrapper").css({ fontSize: "100%", background: "transparent", border: "none", margin: 0, padding: 0 }), e2 = { width: i2.width(), height: i2.height() }, n2 = document.activeElement;
+    try {
+      n2.id;
+    } catch (t3) {
+      n2 = document.body;
     }
-  });
-  var VideoAPILoader = {
-    youtube: {
-      src: "https://www.youtube.com/iframe_api",
-      class: "YT",
-      loading: false,
-      loaded: false
-    },
-    vimeo: {
-      src: "https://player.vimeo.com/api/player.js",
-      class: "Vimeo",
-      loading: false,
-      loaded: false
-    },
-    load: function(vendor) {
-      var _this = this, script;
-      if (this[vendor].loaded) {
-        setTimeout(function() {
-          _this.done(vendor);
-        });
-        return;
-      }
-      if (this[vendor].loading) {
-        return;
-      }
-      this[vendor].loading = true;
-      script = document.createElement("script");
-      script.type = "text/javascript";
-      script.src = this[vendor].src;
-      if (vendor === "youtube") {
-        window.onYouTubeIframeAPIReady = function() {
-          _this[vendor].loaded = true;
-          _this.done(vendor);
-        };
-      } else {
-        script.onload = function() {
-          _this[vendor].loaded = true;
-          _this.done(vendor);
-        };
-      }
-      document.body.appendChild(script);
-    },
-    done: function(vendor) {
-      var instance, $el, player;
-      if (vendor === "youtube") {
-        delete window.onYouTubeIframeAPIReady;
-      }
-      instance = $2.fancybox.getInstance();
-      if (instance) {
-        $el = instance.current.$content.find("iframe");
-        if (vendor === "youtube" && YT !== void 0 && YT) {
-          player = new YT.Player($el.attr("id"), {
-            events: {
-              onStateChange: function(e) {
-                if (e.data == 0) {
-                  instance.next();
-                }
-              }
-            }
-          });
-        } else if (vendor === "vimeo" && Vimeo !== void 0 && Vimeo) {
-          player = new Vimeo.Player($el);
-          player.on("ended", function() {
-            instance.next();
-          });
-        }
-      }
-    }
-  };
-  $2(document).on({
-    "afterShow.fb": function(e, instance, current) {
-      if (instance.group.length > 1 && (current.contentSource === "youtube" || current.contentSource === "vimeo")) {
-        VideoAPILoader.load(current.contentSource);
-      }
-    }
-  });
-})(jQuery);
-(function(window2, document2, $2) {
-  "use strict";
-  var requestAFrame = function() {
-    return window2.requestAnimationFrame || window2.webkitRequestAnimationFrame || window2.mozRequestAnimationFrame || window2.oRequestAnimationFrame || // if all else fails, use setTimeout
-    function(callback) {
-      return window2.setTimeout(callback, 1e3 / 60);
-    };
-  }();
-  var cancelAFrame = function() {
-    return window2.cancelAnimationFrame || window2.webkitCancelAnimationFrame || window2.mozCancelAnimationFrame || window2.oCancelAnimationFrame || function(id) {
-      window2.clearTimeout(id);
-    };
-  }();
-  var getPointerXY = function(e) {
-    var result = [];
-    e = e.originalEvent || e || window2.e;
-    e = e.touches && e.touches.length ? e.touches : e.changedTouches && e.changedTouches.length ? e.changedTouches : [e];
-    for (var key in e) {
-      if (e[key].pageX) {
-        result.push({
-          x: e[key].pageX,
-          y: e[key].pageY
-        });
-      } else if (e[key].clientX) {
-        result.push({
-          x: e[key].clientX,
-          y: e[key].clientY
-        });
-      }
-    }
-    return result;
-  };
-  var distance = function(point2, point1, what) {
-    if (!point1 || !point2) {
-      return 0;
-    }
-    if (what === "x") {
-      return point2.x - point1.x;
-    } else if (what === "y") {
-      return point2.y - point1.y;
-    }
-    return Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
-  };
-  var isClickable = function($el) {
-    if ($el.is('a,area,button,[role="button"],input,label,select,summary,textarea,video,audio,iframe') || $2.isFunction($el.get(0).onclick) || $el.data("selectable")) {
-      return true;
-    }
-    for (var i = 0, atts = $el[0].attributes, n = atts.length; i < n; i++) {
-      if (atts[i].nodeName.substr(0, 14) === "data-fancybox-") {
-        return true;
-      }
-    }
-    return false;
-  };
-  var hasScrollbars = function(el) {
-    var overflowY = window2.getComputedStyle(el)["overflow-y"], overflowX = window2.getComputedStyle(el)["overflow-x"], vertical = (overflowY === "scroll" || overflowY === "auto") && el.scrollHeight > el.clientHeight, horizontal = (overflowX === "scroll" || overflowX === "auto") && el.scrollWidth > el.clientWidth;
-    return vertical || horizontal;
-  };
-  var isScrollable = function($el) {
-    var rez = false;
-    while (true) {
-      rez = hasScrollbars($el.get(0));
-      if (rez) {
+    return i2.wrap(t2), i2[0] !== n2 && !V.contains(i2[0], n2) || V(n2).trigger("focus"), t2 = i2.parent(), "static" === i2.css("position") ? (t2.css({ position: "relative" }), i2.css({ position: "relative" })) : (V.extend(s2, { position: i2.css("position"), zIndex: i2.css("z-index") }), V.each(["top", "left", "bottom", "right"], function(t3, e3) {
+      s2[e3] = i2.css(e3), isNaN(parseInt(s2[e3], 10)) && (s2[e3] = "auto");
+    }), i2.css({ position: "relative", top: 0, left: 0, right: "auto", bottom: "auto" })), i2.css(e2), t2.css(s2).show();
+  }, removeWrapper: function(t2) {
+    var e2 = document.activeElement;
+    return t2.parent().is(".ui-effects-wrapper") && (t2.parent().replaceWith(t2), t2[0] !== e2 && !V.contains(t2[0], e2) || V(e2).trigger("focus")), t2;
+  } }), V.extend(V.effects, { version: "1.13.3", define: function(t2, e2, i2) {
+    return i2 || (i2 = e2, e2 = "effect"), V.effects.effect[t2] = i2, V.effects.effect[t2].mode = e2, i2;
+  }, scaledDimensions: function(t2, e2, i2) {
+    var s2;
+    return 0 === e2 ? { height: 0, width: 0, outerHeight: 0, outerWidth: 0 } : (s2 = "horizontal" !== i2 ? (e2 || 100) / 100 : 1, i2 = "vertical" !== i2 ? (e2 || 100) / 100 : 1, { height: t2.height() * i2, width: t2.width() * s2, outerHeight: t2.outerHeight() * i2, outerWidth: t2.outerWidth() * s2 });
+  }, clipToBox: function(t2) {
+    return { width: t2.clip.right - t2.clip.left, height: t2.clip.bottom - t2.clip.top, left: t2.clip.left, top: t2.clip.top };
+  }, unshift: function(t2, e2, i2) {
+    var s2 = t2.queue();
+    1 < e2 && s2.splice.apply(s2, [1, 0].concat(s2.splice(e2, i2))), t2.dequeue();
+  }, saveStyle: function(t2) {
+    t2.data(e, t2[0].style.cssText);
+  }, restoreStyle: function(t2) {
+    t2[0].style.cssText = t2.data(e) || "", t2.removeData(e);
+  }, mode: function(t2, e2) {
+    t2 = t2.is(":hidden");
+    return "toggle" === e2 && (e2 = t2 ? "show" : "hide"), e2 = (t2 ? "hide" === e2 : "show" === e2) ? "none" : e2;
+  }, getBaseline: function(t2, e2) {
+    var i2, s2;
+    switch (t2[0]) {
+      case "top":
+        i2 = 0;
         break;
-      }
-      $el = $el.parent();
-      if (!$el.length || $el.hasClass("fancybox-stage") || $el.is("body")) {
+      case "middle":
+        i2 = 0.5;
         break;
+      case "bottom":
+        i2 = 1;
+        break;
+      default:
+        i2 = t2[0] / e2.height;
+    }
+    switch (t2[1]) {
+      case "left":
+        s2 = 0;
+        break;
+      case "center":
+        s2 = 0.5;
+        break;
+      case "right":
+        s2 = 1;
+        break;
+      default:
+        s2 = t2[1] / e2.width;
+    }
+    return { x: s2, y: i2 };
+  }, createPlaceholder: function(t2) {
+    var e2, i2 = t2.css("position"), s2 = t2.position();
+    return t2.css({ marginTop: t2.css("marginTop"), marginBottom: t2.css("marginBottom"), marginLeft: t2.css("marginLeft"), marginRight: t2.css("marginRight") }).outerWidth(t2.outerWidth()).outerHeight(t2.outerHeight()), /^(static|relative)/.test(i2) && (i2 = "absolute", e2 = V("<" + t2[0].nodeName + ">").insertAfter(t2).css({ display: /^(inline|ruby)/.test(t2.css("display")) ? "inline-block" : "block", visibility: "hidden", marginTop: t2.css("marginTop"), marginBottom: t2.css("marginBottom"), marginLeft: t2.css("marginLeft"), marginRight: t2.css("marginRight"), float: t2.css("float") }).outerWidth(t2.outerWidth()).outerHeight(t2.outerHeight()).addClass("ui-effects-placeholder"), t2.data(w + "placeholder", e2)), t2.css({ position: i2, left: s2.left, top: s2.top }), e2;
+  }, removePlaceholder: function(t2) {
+    var e2 = w + "placeholder", i2 = t2.data(e2);
+    i2 && (i2.remove(), t2.removeData(e2));
+  }, cleanUp: function(t2) {
+    V.effects.restoreStyle(t2), V.effects.removePlaceholder(t2);
+  }, setTransition: function(s2, t2, n2, o2) {
+    return o2 = o2 || {}, V.each(t2, function(t3, e2) {
+      var i2 = s2.cssUnit(e2);
+      0 < i2[0] && (o2[e2] = i2[0] * n2 + i2[1]);
+    }), o2;
+  } }), V.fn.extend({ effect: function() {
+    function t2(t3) {
+      var e3 = V(this), i3 = V.effects.mode(e3, r2) || o2;
+      e3.data(T, true), l2.push(i3), o2 && ("show" === i3 || i3 === o2 && "hide" === i3) && e3.show(), o2 && "none" === i3 || V.effects.saveStyle(e3), "function" == typeof t3 && t3();
+    }
+    var s2 = P.apply(this, arguments), n2 = V.effects.effect[s2.effect], o2 = n2.mode, e2 = s2.queue, i2 = e2 || "fx", a2 = s2.complete, r2 = s2.mode, l2 = [];
+    return V.fx.off || !n2 ? r2 ? this[r2](s2.duration, a2) : this.each(function() {
+      a2 && a2.call(this);
+    }) : false === e2 ? this.each(t2).each(h2) : this.queue(i2, t2).queue(i2, h2);
+    function h2(t3) {
+      var e3 = V(this);
+      function i3() {
+        "function" == typeof a2 && a2.call(e3[0]), "function" == typeof t3 && t3();
       }
+      s2.mode = l2.shift(), false === V.uiBackCompat || o2 ? "none" === s2.mode ? (e3[r2](), i3()) : n2.call(e3[0], s2, function() {
+        e3.removeData(T), V.effects.cleanUp(e3), "hide" === s2.mode && e3.hide(), i3();
+      }) : (e3.is(":hidden") ? "hide" === r2 : "show" === r2) ? (e3[r2](), i3()) : n2.call(e3[0], s2, i3);
     }
-    return rez;
-  };
-  var Guestures = function(instance) {
-    var self2 = this;
-    self2.instance = instance;
-    self2.$bg = instance.$refs.bg;
-    self2.$stage = instance.$refs.stage;
-    self2.$container = instance.$refs.container;
-    self2.destroy();
-    self2.$container.on("touchstart.fb.touch mousedown.fb.touch", $2.proxy(self2, "ontouchstart"));
-  };
-  Guestures.prototype.destroy = function() {
-    var self2 = this;
-    self2.$container.off(".fb.touch");
-    $2(document2).off(".fb.touch");
-    if (self2.requestId) {
-      cancelAFrame(self2.requestId);
-      self2.requestId = null;
-    }
-    if (self2.tapped) {
-      clearTimeout(self2.tapped);
-      self2.tapped = null;
-    }
-  };
-  Guestures.prototype.ontouchstart = function(e) {
-    var self2 = this, $target = $2(e.target), instance = self2.instance, current = instance.current, $slide = current.$slide, $content = current.$content, isTouchDevice = e.type == "touchstart";
-    if (isTouchDevice) {
-      self2.$container.off("mousedown.fb.touch");
-    }
-    if (e.originalEvent && e.originalEvent.button == 2) {
-      return;
-    }
-    if (!$slide.length || !$target.length || isClickable($target) || isClickable($target.parent())) {
-      return;
-    }
-    if (!$target.is("img") && e.originalEvent.clientX > $target[0].clientWidth + $target.offset().left) {
-      return;
-    }
-    if (!current || instance.isAnimating || current.$slide.hasClass("fancybox-animated")) {
-      e.stopPropagation();
-      e.preventDefault();
-      return;
-    }
-    self2.realPoints = self2.startPoints = getPointerXY(e);
-    if (!self2.startPoints.length) {
-      return;
-    }
-    if (current.touch) {
-      e.stopPropagation();
-    }
-    self2.startEvent = e;
-    self2.canTap = true;
-    self2.$target = $target;
-    self2.$content = $content;
-    self2.opts = current.opts.touch;
-    self2.isPanning = false;
-    self2.isSwiping = false;
-    self2.isZooming = false;
-    self2.isScrolling = false;
-    self2.canPan = instance.canPan();
-    self2.startTime = (/* @__PURE__ */ new Date()).getTime();
-    self2.distanceX = self2.distanceY = self2.distance = 0;
-    self2.canvasWidth = Math.round($slide[0].clientWidth);
-    self2.canvasHeight = Math.round($slide[0].clientHeight);
-    self2.contentLastPos = null;
-    self2.contentStartPos = $2.fancybox.getTranslate(self2.$content) || {
-      top: 0,
-      left: 0
-    };
-    self2.sliderStartPos = $2.fancybox.getTranslate($slide);
-    self2.stagePos = $2.fancybox.getTranslate(instance.$refs.stage);
-    self2.sliderStartPos.top -= self2.stagePos.top;
-    self2.sliderStartPos.left -= self2.stagePos.left;
-    self2.contentStartPos.top -= self2.stagePos.top;
-    self2.contentStartPos.left -= self2.stagePos.left;
-    $2(document2).off(".fb.touch").on(isTouchDevice ? "touchend.fb.touch touchcancel.fb.touch" : "mouseup.fb.touch mouseleave.fb.touch", $2.proxy(self2, "ontouchend")).on(isTouchDevice ? "touchmove.fb.touch" : "mousemove.fb.touch", $2.proxy(self2, "ontouchmove"));
-    if ($2.fancybox.isMobile) {
-      document2.addEventListener("scroll", self2.onscroll, true);
-    }
-    if (!(self2.opts || self2.canPan) || !($target.is(self2.$stage) || self2.$stage.find($target).length)) {
-      if ($target.is(".fancybox-image")) {
-        e.preventDefault();
-      }
-      if (!($2.fancybox.isMobile && $target.parents(".fancybox-caption").length)) {
-        return;
-      }
-    }
-    self2.isScrollable = isScrollable($target) || isScrollable($target.parent());
-    if (!($2.fancybox.isMobile && self2.isScrollable)) {
-      e.preventDefault();
-    }
-    if (self2.startPoints.length === 1 || current.hasError) {
-      if (self2.canPan) {
-        $2.fancybox.stop(self2.$content);
-        self2.isPanning = true;
-      } else {
-        self2.isSwiping = true;
-      }
-      self2.$container.addClass("fancybox-is-grabbing");
-    }
-    if (self2.startPoints.length === 2 && current.type === "image" && (current.isLoaded || current.$ghost)) {
-      self2.canTap = false;
-      self2.isSwiping = false;
-      self2.isPanning = false;
-      self2.isZooming = true;
-      $2.fancybox.stop(self2.$content);
-      self2.centerPointStartX = (self2.startPoints[0].x + self2.startPoints[1].x) * 0.5 - $2(window2).scrollLeft();
-      self2.centerPointStartY = (self2.startPoints[0].y + self2.startPoints[1].y) * 0.5 - $2(window2).scrollTop();
-      self2.percentageOfImageAtPinchPointX = (self2.centerPointStartX - self2.contentStartPos.left) / self2.contentStartPos.width;
-      self2.percentageOfImageAtPinchPointY = (self2.centerPointStartY - self2.contentStartPos.top) / self2.contentStartPos.height;
-      self2.startDistanceBetweenFingers = distance(self2.startPoints[0], self2.startPoints[1]);
-    }
-  };
-  Guestures.prototype.onscroll = function(e) {
-    var self2 = this;
-    self2.isScrolling = true;
-    document2.removeEventListener("scroll", self2.onscroll, true);
-  };
-  Guestures.prototype.ontouchmove = function(e) {
-    var self2 = this;
-    if (e.originalEvent.buttons !== void 0 && e.originalEvent.buttons === 0) {
-      self2.ontouchend(e);
-      return;
-    }
-    if (self2.isScrolling) {
-      self2.canTap = false;
-      return;
-    }
-    self2.newPoints = getPointerXY(e);
-    if (!(self2.opts || self2.canPan) || !self2.newPoints.length || !self2.newPoints.length) {
-      return;
-    }
-    if (!(self2.isSwiping && self2.isSwiping === true)) {
-      e.preventDefault();
-    }
-    self2.distanceX = distance(self2.newPoints[0], self2.startPoints[0], "x");
-    self2.distanceY = distance(self2.newPoints[0], self2.startPoints[0], "y");
-    self2.distance = distance(self2.newPoints[0], self2.startPoints[0]);
-    if (self2.distance > 0) {
-      if (self2.isSwiping) {
-        self2.onSwipe(e);
-      } else if (self2.isPanning) {
-        self2.onPan();
-      } else if (self2.isZooming) {
-        self2.onZoom();
-      }
-    }
-  };
-  Guestures.prototype.onSwipe = function(e) {
-    var self2 = this, instance = self2.instance, swiping = self2.isSwiping, left2 = self2.sliderStartPos.left || 0, angle;
-    if (swiping === true) {
-      if (Math.abs(self2.distance) > 10) {
-        self2.canTap = false;
-        if (instance.group.length < 2 && self2.opts.vertical) {
-          self2.isSwiping = "y";
-        } else if (instance.isDragging || self2.opts.vertical === false || self2.opts.vertical === "auto" && $2(window2).width() > 800) {
-          self2.isSwiping = "x";
-        } else {
-          angle = Math.abs(Math.atan2(self2.distanceY, self2.distanceX) * 180 / Math.PI);
-          self2.isSwiping = angle > 45 && angle < 135 ? "y" : "x";
-        }
-        if (self2.isSwiping === "y" && $2.fancybox.isMobile && self2.isScrollable) {
-          self2.isScrolling = true;
-          return;
-        }
-        instance.isDragging = self2.isSwiping;
-        self2.startPoints = self2.newPoints;
-        $2.each(instance.slides, function(index, slide) {
-          var slidePos, stagePos;
-          $2.fancybox.stop(slide.$slide);
-          slidePos = $2.fancybox.getTranslate(slide.$slide);
-          stagePos = $2.fancybox.getTranslate(instance.$refs.stage);
-          slide.$slide.css({
-            transform: "",
-            opacity: "",
-            "transition-duration": ""
-          }).removeClass("fancybox-animated").removeClass(function(index2, className) {
-            return (className.match(/(^|\s)fancybox-fx-\S+/g) || []).join(" ");
-          });
-          if (slide.pos === instance.current.pos) {
-            self2.sliderStartPos.top = slidePos.top - stagePos.top;
-            self2.sliderStartPos.left = slidePos.left - stagePos.left;
-          }
-          $2.fancybox.setTranslate(slide.$slide, {
-            top: slidePos.top - stagePos.top,
-            left: slidePos.left - stagePos.left
-          });
-        });
-        if (instance.SlideShow && instance.SlideShow.isActive) {
-          instance.SlideShow.stop();
-        }
-      }
-      return;
-    }
-    if (swiping == "x") {
-      if (self2.distanceX > 0 && (self2.instance.group.length < 2 || self2.instance.current.index === 0 && !self2.instance.current.opts.loop)) {
-        left2 = left2 + Math.pow(self2.distanceX, 0.8);
-      } else if (self2.distanceX < 0 && (self2.instance.group.length < 2 || self2.instance.current.index === self2.instance.group.length - 1 && !self2.instance.current.opts.loop)) {
-        left2 = left2 - Math.pow(-self2.distanceX, 0.8);
-      } else {
-        left2 = left2 + self2.distanceX;
-      }
-    }
-    self2.sliderLastPos = {
-      top: swiping == "x" ? 0 : self2.sliderStartPos.top + self2.distanceY,
-      left: left2
-    };
-    if (self2.requestId) {
-      cancelAFrame(self2.requestId);
-      self2.requestId = null;
-    }
-    self2.requestId = requestAFrame(function() {
-      if (self2.sliderLastPos) {
-        $2.each(self2.instance.slides, function(index, slide) {
-          var pos = slide.pos - self2.instance.currPos;
-          $2.fancybox.setTranslate(slide.$slide, {
-            top: self2.sliderLastPos.top,
-            left: self2.sliderLastPos.left + pos * self2.canvasWidth + pos * slide.opts.gutter
-          });
-        });
-        self2.$container.addClass("fancybox-is-sliding");
-      }
+  }, show: (Z = V.fn.show, function(t2) {
+    return M(t2) ? Z.apply(this, arguments) : ((t2 = P.apply(this, arguments)).mode = "show", this.effect.call(this, t2));
+  }), hide: (J = V.fn.hide, function(t2) {
+    return M(t2) ? J.apply(this, arguments) : ((t2 = P.apply(this, arguments)).mode = "hide", this.effect.call(this, t2));
+  }), toggle: (Q = V.fn.toggle, function(t2) {
+    return M(t2) || "boolean" == typeof t2 ? Q.apply(this, arguments) : ((t2 = P.apply(this, arguments)).mode = "toggle", this.effect.call(this, t2));
+  }), cssUnit: function(t2) {
+    var i2 = this.css(t2), s2 = [];
+    return V.each(["em", "px", "%", "pt"], function(t3, e2) {
+      0 < i2.indexOf(e2) && (s2 = [parseFloat(i2), e2]);
+    }), s2;
+  }, cssClip: function(t2) {
+    return t2 ? this.css("clip", "rect(" + t2.top + "px " + t2.right + "px " + t2.bottom + "px " + t2.left + "px)") : et(this.css("clip"), this);
+  }, transfer: function(t2, e2) {
+    var i2 = V(this), s2 = V(t2.to), n2 = "fixed" === s2.css("position"), o2 = V("body"), a2 = n2 ? o2.scrollTop() : 0, o2 = n2 ? o2.scrollLeft() : 0, r2 = s2.offset(), r2 = { top: r2.top - a2, left: r2.left - o2, height: s2.innerHeight(), width: s2.innerWidth() }, s2 = i2.offset(), l2 = V("<div class='ui-effects-transfer'></div>");
+    l2.appendTo("body").addClass(t2.className).css({ top: s2.top - a2, left: s2.left - o2, height: i2.innerHeight(), width: i2.innerWidth(), position: n2 ? "fixed" : "absolute" }).animate(r2, t2.duration, t2.easing, function() {
+      l2.remove(), "function" == typeof e2 && e2();
     });
-  };
-  Guestures.prototype.onPan = function() {
-    var self2 = this;
-    if (distance(self2.newPoints[0], self2.realPoints[0]) < ($2.fancybox.isMobile ? 10 : 5)) {
-      self2.startPoints = self2.newPoints;
-      return;
-    }
-    self2.canTap = false;
-    self2.contentLastPos = self2.limitMovement();
-    if (self2.requestId) {
-      cancelAFrame(self2.requestId);
-    }
-    self2.requestId = requestAFrame(function() {
-      $2.fancybox.setTranslate(self2.$content, self2.contentLastPos);
-    });
-  };
-  Guestures.prototype.limitMovement = function() {
-    var self2 = this;
-    var canvasWidth = self2.canvasWidth;
-    var canvasHeight = self2.canvasHeight;
-    var distanceX = self2.distanceX;
-    var distanceY = self2.distanceY;
-    var contentStartPos = self2.contentStartPos;
-    var currentOffsetX = contentStartPos.left;
-    var currentOffsetY = contentStartPos.top;
-    var currentWidth = contentStartPos.width;
-    var currentHeight = contentStartPos.height;
-    var minTranslateX, minTranslateY, maxTranslateX, maxTranslateY, newOffsetX, newOffsetY;
-    if (currentWidth > canvasWidth) {
-      newOffsetX = currentOffsetX + distanceX;
-    } else {
-      newOffsetX = currentOffsetX;
-    }
-    newOffsetY = currentOffsetY + distanceY;
-    minTranslateX = Math.max(0, canvasWidth * 0.5 - currentWidth * 0.5);
-    minTranslateY = Math.max(0, canvasHeight * 0.5 - currentHeight * 0.5);
-    maxTranslateX = Math.min(canvasWidth - currentWidth, canvasWidth * 0.5 - currentWidth * 0.5);
-    maxTranslateY = Math.min(canvasHeight - currentHeight, canvasHeight * 0.5 - currentHeight * 0.5);
-    if (distanceX > 0 && newOffsetX > minTranslateX) {
-      newOffsetX = minTranslateX - 1 + Math.pow(-minTranslateX + currentOffsetX + distanceX, 0.8) || 0;
-    }
-    if (distanceX < 0 && newOffsetX < maxTranslateX) {
-      newOffsetX = maxTranslateX + 1 - Math.pow(maxTranslateX - currentOffsetX - distanceX, 0.8) || 0;
-    }
-    if (distanceY > 0 && newOffsetY > minTranslateY) {
-      newOffsetY = minTranslateY - 1 + Math.pow(-minTranslateY + currentOffsetY + distanceY, 0.8) || 0;
-    }
-    if (distanceY < 0 && newOffsetY < maxTranslateY) {
-      newOffsetY = maxTranslateY + 1 - Math.pow(maxTranslateY - currentOffsetY - distanceY, 0.8) || 0;
-    }
-    return {
-      top: newOffsetY,
-      left: newOffsetX
+  } }), V.fx.step.clip = function(t2) {
+    t2.clipInit || (t2.start = V(t2.elem).cssClip(), "string" == typeof t2.end && (t2.end = et(t2.end, t2.elem)), t2.clipInit = true), V(t2.elem).cssClip({ top: t2.pos * (t2.end.top - t2.start.top) + t2.start.top, right: t2.pos * (t2.end.right - t2.start.right) + t2.start.right, bottom: t2.pos * (t2.end.bottom - t2.start.bottom) + t2.start.bottom, left: t2.pos * (t2.end.left - t2.start.left) + t2.start.left });
+  }, b = {}, V.each(["Quad", "Cubic", "Quart", "Quint", "Expo"], function(e2, t2) {
+    b[t2] = function(t3) {
+      return Math.pow(t3, e2 + 2);
     };
-  };
-  Guestures.prototype.limitPosition = function(newOffsetX, newOffsetY, newWidth, newHeight) {
-    var self2 = this;
-    var canvasWidth = self2.canvasWidth;
-    var canvasHeight = self2.canvasHeight;
-    if (newWidth > canvasWidth) {
-      newOffsetX = newOffsetX > 0 ? 0 : newOffsetX;
-      newOffsetX = newOffsetX < canvasWidth - newWidth ? canvasWidth - newWidth : newOffsetX;
-    } else {
-      newOffsetX = Math.max(0, canvasWidth / 2 - newWidth / 2);
-    }
-    if (newHeight > canvasHeight) {
-      newOffsetY = newOffsetY > 0 ? 0 : newOffsetY;
-      newOffsetY = newOffsetY < canvasHeight - newHeight ? canvasHeight - newHeight : newOffsetY;
-    } else {
-      newOffsetY = Math.max(0, canvasHeight / 2 - newHeight / 2);
-    }
-    return {
-      top: newOffsetY,
-      left: newOffsetX
+  }), V.extend(b, { Sine: function(t2) {
+    return 1 - Math.cos(t2 * Math.PI / 2);
+  }, Circ: function(t2) {
+    return 1 - Math.sqrt(1 - t2 * t2);
+  }, Elastic: function(t2) {
+    return 0 === t2 || 1 === t2 ? t2 : -Math.pow(2, 8 * (t2 - 1)) * Math.sin((80 * (t2 - 1) - 7.5) * Math.PI / 15);
+  }, Back: function(t2) {
+    return t2 * t2 * (3 * t2 - 2);
+  }, Bounce: function(t2) {
+    for (var e2, i2 = 4; t2 < ((e2 = Math.pow(2, --i2)) - 1) / 11; ) ;
+    return 1 / Math.pow(4, 3 - i2) - 7.5625 * Math.pow((3 * e2 - 2) / 22 - t2, 2);
+  } }), V.each(b, function(t2, e2) {
+    V.easing["easeIn" + t2] = e2, V.easing["easeOut" + t2] = function(t3) {
+      return 1 - e2(1 - t3);
+    }, V.easing["easeInOut" + t2] = function(t3) {
+      return t3 < 0.5 ? e2(2 * t3) / 2 : 1 - e2(-2 * t3 + 2) / 2;
     };
-  };
-  Guestures.prototype.onZoom = function() {
-    var self2 = this;
-    var contentStartPos = self2.contentStartPos;
-    var currentWidth = contentStartPos.width;
-    var currentHeight = contentStartPos.height;
-    var currentOffsetX = contentStartPos.left;
-    var currentOffsetY = contentStartPos.top;
-    var endDistanceBetweenFingers = distance(self2.newPoints[0], self2.newPoints[1]);
-    var pinchRatio = endDistanceBetweenFingers / self2.startDistanceBetweenFingers;
-    var newWidth = Math.floor(currentWidth * pinchRatio);
-    var newHeight = Math.floor(currentHeight * pinchRatio);
-    var translateFromZoomingX = (currentWidth - newWidth) * self2.percentageOfImageAtPinchPointX;
-    var translateFromZoomingY = (currentHeight - newHeight) * self2.percentageOfImageAtPinchPointY;
-    var centerPointEndX = (self2.newPoints[0].x + self2.newPoints[1].x) / 2 - $2(window2).scrollLeft();
-    var centerPointEndY = (self2.newPoints[0].y + self2.newPoints[1].y) / 2 - $2(window2).scrollTop();
-    var translateFromTranslatingX = centerPointEndX - self2.centerPointStartX;
-    var translateFromTranslatingY = centerPointEndY - self2.centerPointStartY;
-    var newOffsetX = currentOffsetX + (translateFromZoomingX + translateFromTranslatingX);
-    var newOffsetY = currentOffsetY + (translateFromZoomingY + translateFromTranslatingY);
-    var newPos = {
-      top: newOffsetY,
-      left: newOffsetX,
-      scaleX: pinchRatio,
-      scaleY: pinchRatio
-    };
-    self2.canTap = false;
-    self2.newWidth = newWidth;
-    self2.newHeight = newHeight;
-    self2.contentLastPos = newPos;
-    if (self2.requestId) {
-      cancelAFrame(self2.requestId);
-    }
-    self2.requestId = requestAFrame(function() {
-      $2.fancybox.setTranslate(self2.$content, self2.contentLastPos);
-    });
-  };
-  Guestures.prototype.ontouchend = function(e) {
-    var self2 = this;
-    var swiping = self2.isSwiping;
-    var panning = self2.isPanning;
-    var zooming = self2.isZooming;
-    var scrolling = self2.isScrolling;
-    self2.endPoints = getPointerXY(e);
-    self2.dMs = Math.max((/* @__PURE__ */ new Date()).getTime() - self2.startTime, 1);
-    self2.$container.removeClass("fancybox-is-grabbing");
-    $2(document2).off(".fb.touch");
-    document2.removeEventListener("scroll", self2.onscroll, true);
-    if (self2.requestId) {
-      cancelAFrame(self2.requestId);
-      self2.requestId = null;
-    }
-    self2.isSwiping = false;
-    self2.isPanning = false;
-    self2.isZooming = false;
-    self2.isScrolling = false;
-    self2.instance.isDragging = false;
-    if (self2.canTap) {
-      return self2.onTap(e);
-    }
-    self2.speed = 100;
-    self2.velocityX = self2.distanceX / self2.dMs * 0.5;
-    self2.velocityY = self2.distanceY / self2.dMs * 0.5;
-    if (panning) {
-      self2.endPanning();
-    } else if (zooming) {
-      self2.endZooming();
-    } else {
-      self2.endSwiping(swiping, scrolling);
-    }
-    return;
-  };
-  Guestures.prototype.endSwiping = function(swiping, scrolling) {
-    var self2 = this, ret = false, len = self2.instance.group.length, distanceX = Math.abs(self2.distanceX), canAdvance = swiping == "x" && len > 1 && (self2.dMs > 130 && distanceX > 10 || distanceX > 50), speedX = 300;
-    self2.sliderLastPos = null;
-    if (swiping == "y" && !scrolling && Math.abs(self2.distanceY) > 50) {
-      $2.fancybox.animate(
-        self2.instance.current.$slide,
-        {
-          top: self2.sliderStartPos.top + self2.distanceY + self2.velocityY * 150,
-          opacity: 0
-        },
-        200
-      );
-      ret = self2.instance.close(true, 250);
-    } else if (canAdvance && self2.distanceX > 0) {
-      ret = self2.instance.previous(speedX);
-    } else if (canAdvance && self2.distanceX < 0) {
-      ret = self2.instance.next(speedX);
-    }
-    if (ret === false && (swiping == "x" || swiping == "y")) {
-      self2.instance.centerSlide(200);
-    }
-    self2.$container.removeClass("fancybox-is-sliding");
-  };
-  Guestures.prototype.endPanning = function() {
-    var self2 = this, newOffsetX, newOffsetY, newPos;
-    if (!self2.contentLastPos) {
-      return;
-    }
-    if (self2.opts.momentum === false || self2.dMs > 350) {
-      newOffsetX = self2.contentLastPos.left;
-      newOffsetY = self2.contentLastPos.top;
-    } else {
-      newOffsetX = self2.contentLastPos.left + self2.velocityX * 500;
-      newOffsetY = self2.contentLastPos.top + self2.velocityY * 500;
-    }
-    newPos = self2.limitPosition(newOffsetX, newOffsetY, self2.contentStartPos.width, self2.contentStartPos.height);
-    newPos.width = self2.contentStartPos.width;
-    newPos.height = self2.contentStartPos.height;
-    $2.fancybox.animate(self2.$content, newPos, 366);
-  };
-  Guestures.prototype.endZooming = function() {
-    var self2 = this;
-    var current = self2.instance.current;
-    var newOffsetX, newOffsetY, newPos, reset;
-    var newWidth = self2.newWidth;
-    var newHeight = self2.newHeight;
-    if (!self2.contentLastPos) {
-      return;
-    }
-    newOffsetX = self2.contentLastPos.left;
-    newOffsetY = self2.contentLastPos.top;
-    reset = {
-      top: newOffsetY,
-      left: newOffsetX,
-      width: newWidth,
-      height: newHeight,
-      scaleX: 1,
-      scaleY: 1
-    };
-    $2.fancybox.setTranslate(self2.$content, reset);
-    if (newWidth < self2.canvasWidth && newHeight < self2.canvasHeight) {
-      self2.instance.scaleToFit(150);
-    } else if (newWidth > current.width || newHeight > current.height) {
-      self2.instance.scaleToActual(self2.centerPointStartX, self2.centerPointStartY, 150);
-    } else {
-      newPos = self2.limitPosition(newOffsetX, newOffsetY, newWidth, newHeight);
-      $2.fancybox.animate(self2.$content, newPos, 150);
-    }
-  };
-  Guestures.prototype.onTap = function(e) {
-    var self2 = this;
-    var $target = $2(e.target);
-    var instance = self2.instance;
-    var current = instance.current;
-    var endPoints = e && getPointerXY(e) || self2.startPoints;
-    var tapX = endPoints[0] ? endPoints[0].x - $2(window2).scrollLeft() - self2.stagePos.left : 0;
-    var tapY = endPoints[0] ? endPoints[0].y - $2(window2).scrollTop() - self2.stagePos.top : 0;
-    var where;
-    var process = function(prefix) {
-      var action = current.opts[prefix];
-      if ($2.isFunction(action)) {
-        action = action.apply(instance, [current, e]);
-      }
-      if (!action) {
-        return;
-      }
-      switch (action) {
-        case "close":
-          instance.close(self2.startEvent);
-          break;
-        case "toggleControls":
-          instance.toggleControls();
-          break;
-        case "next":
-          instance.next();
-          break;
-        case "nextOrClose":
-          if (instance.group.length > 1) {
-            instance.next();
-          } else {
-            instance.close(self2.startEvent);
-          }
-          break;
-        case "zoom":
-          if (current.type == "image" && (current.isLoaded || current.$ghost)) {
-            if (instance.canPan()) {
-              instance.scaleToFit();
-            } else if (instance.isScaledDown()) {
-              instance.scaleToActual(tapX, tapY);
-            } else if (instance.group.length < 2) {
-              instance.close(self2.startEvent);
-            }
-          }
-          break;
-      }
-    };
-    if (e.originalEvent && e.originalEvent.button == 2) {
-      return;
-    }
-    if (!$target.is("img") && tapX > $target[0].clientWidth + $target.offset().left) {
-      return;
-    }
-    if ($target.is(".fancybox-bg,.fancybox-inner,.fancybox-outer,.fancybox-container")) {
-      where = "Outside";
-    } else if ($target.is(".fancybox-slide")) {
-      where = "Slide";
-    } else if (instance.current.$content && instance.current.$content.find($target).addBack().filter($target).length) {
-      where = "Content";
-    } else {
-      return;
-    }
-    if (self2.tapped) {
-      clearTimeout(self2.tapped);
-      self2.tapped = null;
-      if (Math.abs(tapX - self2.tapX) > 50 || Math.abs(tapY - self2.tapY) > 50) {
-        return this;
-      }
-      process("dblclick" + where);
-    } else {
-      self2.tapX = tapX;
-      self2.tapY = tapY;
-      if (current.opts["dblclick" + where] && current.opts["dblclick" + where] !== current.opts["click" + where]) {
-        self2.tapped = setTimeout(function() {
-          self2.tapped = null;
-          if (!instance.isAnimating) {
-            process("click" + where);
-          }
-        }, 500);
-      } else {
-        process("click" + where);
-      }
-    }
-    return this;
-  };
-  $2(document2).on("onActivate.fb", function(e, instance) {
-    if (instance && !instance.Guestures) {
-      instance.Guestures = new Guestures(instance);
-    }
-  }).on("beforeClose.fb", function(e, instance) {
-    if (instance && instance.Guestures) {
-      instance.Guestures.destroy();
-    }
   });
-})(window, document, jQuery);
-(function(document2, $2) {
-  "use strict";
-  $2.extend(true, $2.fancybox.defaults, {
-    btnTpl: {
-      slideShow: '<button data-fancybox-play class="fancybox-button fancybox-button--play" title="{{PLAY_START}}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6.5 5.4v13.2l11-6.6z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.33 5.75h2.2v12.5h-2.2V5.75zm5.15 0h2.2v12.5h-2.2V5.75z"/></svg></button>'
-    },
-    slideShow: {
-      autoStart: false,
-      speed: 3e3,
-      progress: true
+  t = V.effects;
+  V.effects.define("blind", "hide", function(t2, e2) {
+    var i2 = { up: ["bottom", "top"], vertical: ["bottom", "top"], down: ["top", "bottom"], left: ["right", "left"], horizontal: ["right", "left"], right: ["left", "right"] }, s2 = V(this), n2 = t2.direction || "up", o2 = s2.cssClip(), a2 = { clip: V.extend({}, o2) }, r2 = V.effects.createPlaceholder(s2);
+    a2.clip[i2[n2][0]] = a2.clip[i2[n2][1]], "show" === t2.mode && (s2.cssClip(a2.clip), r2 && r2.css(V.effects.clipToBox(a2)), a2.clip = o2), r2 && r2.animate(V.effects.clipToBox(a2), t2.duration, t2.easing), s2.animate(a2, { queue: false, duration: t2.duration, easing: t2.easing, complete: e2 });
+  }), V.effects.define("bounce", function(t2, e2) {
+    var i2, s2, n2 = V(this), o2 = t2.mode, a2 = "hide" === o2, o2 = "show" === o2, r2 = t2.direction || "up", l2 = t2.distance, h2 = t2.times || 5, c2 = 2 * h2 + (o2 || a2 ? 1 : 0), u2 = t2.duration / c2, d2 = t2.easing, p2 = "up" === r2 || "down" === r2 ? "top" : "left", f2 = "up" === r2 || "left" === r2, g2 = 0, t2 = n2.queue().length;
+    for (V.effects.createPlaceholder(n2), r2 = n2.css(p2), l2 = l2 || n2["top" == p2 ? "outerHeight" : "outerWidth"]() / 3, o2 && ((s2 = { opacity: 1 })[p2] = r2, n2.css("opacity", 0).css(p2, f2 ? 2 * -l2 : 2 * l2).animate(s2, u2, d2)), a2 && (l2 /= Math.pow(2, h2 - 1)), (s2 = {})[p2] = r2; g2 < h2; g2++) (i2 = {})[p2] = (f2 ? "-=" : "+=") + l2, n2.animate(i2, u2, d2).animate(s2, u2, d2), l2 = a2 ? 2 * l2 : l2 / 2;
+    a2 && ((i2 = { opacity: 0 })[p2] = (f2 ? "-=" : "+=") + l2, n2.animate(i2, u2, d2)), n2.queue(e2), V.effects.unshift(n2, t2, 1 + c2);
+  }), V.effects.define("clip", "hide", function(t2, e2) {
+    var i2 = {}, s2 = V(this), n2 = t2.direction || "vertical", o2 = "both" === n2, a2 = o2 || "horizontal" === n2, o2 = o2 || "vertical" === n2, n2 = s2.cssClip();
+    i2.clip = { top: o2 ? (n2.bottom - n2.top) / 2 : n2.top, right: a2 ? (n2.right - n2.left) / 2 : n2.right, bottom: o2 ? (n2.bottom - n2.top) / 2 : n2.bottom, left: a2 ? (n2.right - n2.left) / 2 : n2.left }, V.effects.createPlaceholder(s2), "show" === t2.mode && (s2.cssClip(i2.clip), i2.clip = n2), s2.animate(i2, { queue: false, duration: t2.duration, easing: t2.easing, complete: e2 });
+  }), V.effects.define("drop", "hide", function(t2, e2) {
+    var i2, s2 = V(this), n2 = "show" === t2.mode, o2 = t2.direction || "left", a2 = "up" === o2 || "down" === o2 ? "top" : "left", o2 = "up" === o2 || "left" === o2 ? "-=" : "+=", r2 = "+=" == o2 ? "-=" : "+=", l2 = { opacity: 0 };
+    V.effects.createPlaceholder(s2), i2 = t2.distance || s2["top" == a2 ? "outerHeight" : "outerWidth"](true) / 2, l2[a2] = o2 + i2, n2 && (s2.css(l2), l2[a2] = r2 + i2, l2.opacity = 1), s2.animate(l2, { queue: false, duration: t2.duration, easing: t2.easing, complete: e2 });
+  }), V.effects.define("explode", "hide", function(t2, e2) {
+    var i2, s2, n2, o2, a2, r2, l2 = t2.pieces ? Math.round(Math.sqrt(t2.pieces)) : 3, h2 = l2, c2 = V(this), u2 = "show" === t2.mode, d2 = c2.show().css("visibility", "hidden").offset(), p2 = Math.ceil(c2.outerWidth() / h2), f2 = Math.ceil(c2.outerHeight() / l2), g2 = [];
+    function m3() {
+      g2.push(this), g2.length === l2 * h2 && (c2.css({ visibility: "visible" }), V(g2).remove(), e2());
     }
-  });
-  var SlideShow = function(instance) {
-    this.instance = instance;
-    this.init();
-  };
-  $2.extend(SlideShow.prototype, {
-    timer: null,
-    isActive: false,
-    $button: null,
-    init: function() {
-      var self2 = this, instance = self2.instance, opts = instance.group[instance.currIndex].opts.slideShow;
-      self2.$button = instance.$refs.toolbar.find("[data-fancybox-play]").on("click", function() {
-        self2.toggle();
+    for (i2 = 0; i2 < l2; i2++) for (o2 = d2.top + i2 * f2, r2 = i2 - (l2 - 1) / 2, s2 = 0; s2 < h2; s2++) n2 = d2.left + s2 * p2, a2 = s2 - (h2 - 1) / 2, c2.clone().appendTo("body").wrap("<div></div>").css({ position: "absolute", visibility: "visible", left: -s2 * p2, top: -i2 * f2 }).parent().addClass("ui-effects-explode").css({ position: "absolute", overflow: "hidden", width: p2, height: f2, left: n2 + (u2 ? a2 * p2 : 0), top: o2 + (u2 ? r2 * f2 : 0), opacity: u2 ? 0 : 1 }).animate({ left: n2 + (u2 ? 0 : a2 * p2), top: o2 + (u2 ? 0 : r2 * f2), opacity: u2 ? 1 : 0 }, t2.duration || 500, t2.easing, m3);
+  }), V.effects.define("fade", "toggle", function(t2, e2) {
+    var i2 = "show" === t2.mode;
+    V(this).css("opacity", i2 ? 0 : 1).animate({ opacity: i2 ? 1 : 0 }, { queue: false, duration: t2.duration, easing: t2.easing, complete: e2 });
+  }), V.effects.define("fold", "hide", function(e2, t2) {
+    var i2 = V(this), s2 = e2.mode, n2 = "show" === s2, s2 = "hide" === s2, o2 = e2.size || 15, a2 = /([0-9]+)%/.exec(o2), r2 = !!e2.horizFirst ? ["right", "bottom"] : ["bottom", "right"], l2 = e2.duration / 2, h2 = V.effects.createPlaceholder(i2), c2 = i2.cssClip(), u2 = { clip: V.extend({}, c2) }, d2 = { clip: V.extend({}, c2) }, p2 = [c2[r2[0]], c2[r2[1]]], f2 = i2.queue().length;
+    a2 && (o2 = parseInt(a2[1], 10) / 100 * p2[s2 ? 0 : 1]), u2.clip[r2[0]] = o2, d2.clip[r2[0]] = o2, d2.clip[r2[1]] = 0, n2 && (i2.cssClip(d2.clip), h2 && h2.css(V.effects.clipToBox(d2)), d2.clip = c2), i2.queue(function(t3) {
+      h2 && h2.animate(V.effects.clipToBox(u2), l2, e2.easing).animate(V.effects.clipToBox(d2), l2, e2.easing), t3();
+    }).animate(u2, l2, e2.easing).animate(d2, l2, e2.easing).queue(t2), V.effects.unshift(i2, f2, 4);
+  }), V.effects.define("highlight", "show", function(t2, e2) {
+    var i2 = V(this), s2 = { backgroundColor: i2.css("backgroundColor") };
+    "hide" === t2.mode && (s2.opacity = 0), V.effects.saveStyle(i2), i2.css({ backgroundImage: "none", backgroundColor: t2.color || "#ffff99" }).animate(s2, { queue: false, duration: t2.duration, easing: t2.easing, complete: e2 });
+  }), V.effects.define("size", function(s2, e2) {
+    var n2, i2 = V(this), t2 = ["fontSize"], o2 = ["borderTopWidth", "borderBottomWidth", "paddingTop", "paddingBottom"], a2 = ["borderLeftWidth", "borderRightWidth", "paddingLeft", "paddingRight"], r2 = s2.mode, l2 = "effect" !== r2, h2 = s2.scale || "both", c2 = s2.origin || ["middle", "center"], u2 = i2.css("position"), d2 = i2.position(), p2 = V.effects.scaledDimensions(i2), f2 = s2.from || p2, g2 = s2.to || V.effects.scaledDimensions(i2, 0);
+    V.effects.createPlaceholder(i2), "show" === r2 && (r2 = f2, f2 = g2, g2 = r2), n2 = { from: { y: f2.height / p2.height, x: f2.width / p2.width }, to: { y: g2.height / p2.height, x: g2.width / p2.width } }, "box" !== h2 && "both" !== h2 || (n2.from.y !== n2.to.y && (f2 = V.effects.setTransition(i2, o2, n2.from.y, f2), g2 = V.effects.setTransition(i2, o2, n2.to.y, g2)), n2.from.x !== n2.to.x && (f2 = V.effects.setTransition(i2, a2, n2.from.x, f2), g2 = V.effects.setTransition(i2, a2, n2.to.x, g2))), "content" !== h2 && "both" !== h2 || n2.from.y !== n2.to.y && (f2 = V.effects.setTransition(i2, t2, n2.from.y, f2), g2 = V.effects.setTransition(i2, t2, n2.to.y, g2)), c2 && (r2 = V.effects.getBaseline(c2, p2), f2.top = (p2.outerHeight - f2.outerHeight) * r2.y + d2.top, f2.left = (p2.outerWidth - f2.outerWidth) * r2.x + d2.left, g2.top = (p2.outerHeight - g2.outerHeight) * r2.y + d2.top, g2.left = (p2.outerWidth - g2.outerWidth) * r2.x + d2.left), delete f2.outerHeight, delete f2.outerWidth, i2.css(f2), "content" !== h2 && "both" !== h2 || (o2 = o2.concat(["marginTop", "marginBottom"]).concat(t2), a2 = a2.concat(["marginLeft", "marginRight"]), i2.find("*[width]").each(function() {
+      var t3 = V(this), e3 = V.effects.scaledDimensions(t3), i3 = { height: e3.height * n2.from.y, width: e3.width * n2.from.x, outerHeight: e3.outerHeight * n2.from.y, outerWidth: e3.outerWidth * n2.from.x }, e3 = { height: e3.height * n2.to.y, width: e3.width * n2.to.x, outerHeight: e3.height * n2.to.y, outerWidth: e3.width * n2.to.x };
+      n2.from.y !== n2.to.y && (i3 = V.effects.setTransition(t3, o2, n2.from.y, i3), e3 = V.effects.setTransition(t3, o2, n2.to.y, e3)), n2.from.x !== n2.to.x && (i3 = V.effects.setTransition(t3, a2, n2.from.x, i3), e3 = V.effects.setTransition(t3, a2, n2.to.x, e3)), l2 && V.effects.saveStyle(t3), t3.css(i3), t3.animate(e3, s2.duration, s2.easing, function() {
+        l2 && V.effects.restoreStyle(t3);
       });
-      if (instance.group.length < 2 || !opts) {
-        self2.$button.hide();
-      } else if (opts.progress) {
-        self2.$progress = $2('<div class="fancybox-progress"></div>').appendTo(instance.$refs.inner);
-      }
-    },
-    set: function(force) {
-      var self2 = this, instance = self2.instance, current = instance.current;
-      if (current && (force === true || current.opts.loop || instance.currIndex < instance.group.length - 1)) {
-        if (self2.isActive && current.contentType !== "video") {
-          if (self2.$progress) {
-            $2.fancybox.animate(self2.$progress.show(), {
-              scaleX: 1
-            }, current.opts.slideShow.speed);
-          }
-          self2.timer = setTimeout(function() {
-            if (!instance.current.opts.loop && instance.current.index == instance.group.length - 1) {
-              instance.jumpTo(0);
-            } else {
-              instance.next();
-            }
-          }, current.opts.slideShow.speed);
-        }
-      } else {
-        self2.stop();
-        instance.idleSecondsCounter = 0;
-        instance.showControls();
-      }
-    },
-    clear: function() {
-      var self2 = this;
-      clearTimeout(self2.timer);
-      self2.timer = null;
-      if (self2.$progress) {
-        self2.$progress.removeAttr("style").hide();
-      }
-    },
-    start: function() {
-      var self2 = this, current = self2.instance.current;
-      if (current) {
-        self2.$button.attr("title", (current.opts.i18n[current.opts.lang] || current.opts.i18n.en).PLAY_STOP).removeClass("fancybox-button--play").addClass("fancybox-button--pause");
-        self2.isActive = true;
-        if (current.isComplete) {
-          self2.set(true);
-        }
-        self2.instance.trigger("onSlideShowChange", true);
-      }
-    },
-    stop: function() {
-      var self2 = this, current = self2.instance.current;
-      self2.clear();
-      self2.$button.attr("title", (current.opts.i18n[current.opts.lang] || current.opts.i18n.en).PLAY_START).removeClass("fancybox-button--pause").addClass("fancybox-button--play");
-      self2.isActive = false;
-      self2.instance.trigger("onSlideShowChange", false);
-      if (self2.$progress) {
-        self2.$progress.removeAttr("style").hide();
-      }
-    },
-    toggle: function() {
-      var self2 = this;
-      if (self2.isActive) {
-        self2.stop();
-      } else {
-        self2.start();
-      }
-    }
-  });
-  $2(document2).on({
-    "onInit.fb": function(e, instance) {
-      if (instance && !instance.SlideShow) {
-        instance.SlideShow = new SlideShow(instance);
-      }
-    },
-    "beforeShow.fb": function(e, instance, current, firstRun) {
-      var SlideShow2 = instance && instance.SlideShow;
-      if (firstRun) {
-        if (SlideShow2 && current.opts.slideShow.autoStart) {
-          SlideShow2.start();
-        }
-      } else if (SlideShow2 && SlideShow2.isActive) {
-        SlideShow2.clear();
-      }
-    },
-    "afterShow.fb": function(e, instance, current) {
-      var SlideShow2 = instance && instance.SlideShow;
-      if (SlideShow2 && SlideShow2.isActive) {
-        SlideShow2.set();
-      }
-    },
-    "afterKeydown.fb": function(e, instance, current, keypress, keycode) {
-      var SlideShow2 = instance && instance.SlideShow;
-      if (SlideShow2 && current.opts.slideShow && (keycode === 80 || keycode === 32) && !$2(document2.activeElement).is("button,a,input")) {
-        keypress.preventDefault();
-        SlideShow2.toggle();
-      }
-    },
-    "beforeClose.fb onDeactivate.fb": function(e, instance) {
-      var SlideShow2 = instance && instance.SlideShow;
-      if (SlideShow2) {
-        SlideShow2.stop();
-      }
-    }
-  });
-  $2(document2).on("visibilitychange", function() {
-    var instance = $2.fancybox.getInstance(), SlideShow2 = instance && instance.SlideShow;
-    if (SlideShow2 && SlideShow2.isActive) {
-      if (document2.hidden) {
-        SlideShow2.clear();
-      } else {
-        SlideShow2.set();
-      }
-    }
-  });
-})(document, jQuery);
-(function(document2, $2) {
-  "use strict";
-  var fn2 = function() {
-    var fnMap = [
-      ["requestFullscreen", "exitFullscreen", "fullscreenElement", "fullscreenEnabled", "fullscreenchange", "fullscreenerror"],
-      // new WebKit
-      [
-        "webkitRequestFullscreen",
-        "webkitExitFullscreen",
-        "webkitFullscreenElement",
-        "webkitFullscreenEnabled",
-        "webkitfullscreenchange",
-        "webkitfullscreenerror"
-      ],
-      // old WebKit (Safari 5.1)
-      [
-        "webkitRequestFullScreen",
-        "webkitCancelFullScreen",
-        "webkitCurrentFullScreenElement",
-        "webkitCancelFullScreen",
-        "webkitfullscreenchange",
-        "webkitfullscreenerror"
-      ],
-      [
-        "mozRequestFullScreen",
-        "mozCancelFullScreen",
-        "mozFullScreenElement",
-        "mozFullScreenEnabled",
-        "mozfullscreenchange",
-        "mozfullscreenerror"
-      ],
-      ["msRequestFullscreen", "msExitFullscreen", "msFullscreenElement", "msFullscreenEnabled", "MSFullscreenChange", "MSFullscreenError"]
-    ];
-    var ret = {};
-    for (var i = 0; i < fnMap.length; i++) {
-      var val = fnMap[i];
-      if (val && val[1] in document2) {
-        for (var j = 0; j < val.length; j++) {
-          ret[fnMap[0][j]] = val[j];
-        }
-        return ret;
-      }
-    }
-    return false;
-  }();
-  if (fn2) {
-    var FullScreen = {
-      request: function(elem) {
-        elem = elem || document2.documentElement;
-        elem[fn2.requestFullscreen](elem.ALLOW_KEYBOARD_INPUT);
-      },
-      exit: function() {
-        document2[fn2.exitFullscreen]();
-      },
-      toggle: function(elem) {
-        elem = elem || document2.documentElement;
-        if (this.isFullscreen()) {
-          this.exit();
-        } else {
-          this.request(elem);
-        }
-      },
-      isFullscreen: function() {
-        return Boolean(document2[fn2.fullscreenElement]);
-      },
-      enabled: function() {
-        return Boolean(document2[fn2.fullscreenEnabled]);
-      }
-    };
-    $2.extend(true, $2.fancybox.defaults, {
-      btnTpl: {
-        fullScreen: '<button data-fancybox-fullscreen class="fancybox-button fancybox-button--fsenter" title="{{FULL_SCREEN}}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5zm3-8H5v2h5V5H8zm6 11h2v-3h3v-2h-5zm2-11V5h-2v5h5V8z"/></svg></button>'
-      },
-      fullScreen: {
-        autoStart: false
-      }
-    });
-    $2(document2).on(fn2.fullscreenchange, function() {
-      var isFullscreen = FullScreen.isFullscreen(), instance = $2.fancybox.getInstance();
-      if (instance) {
-        if (instance.current && instance.current.type === "image" && instance.isAnimating) {
-          instance.isAnimating = false;
-          instance.update(true, true, 0);
-          if (!instance.isComplete) {
-            instance.complete();
-          }
-        }
-        instance.trigger("onFullscreenChange", isFullscreen);
-        instance.$refs.container.toggleClass("fancybox-is-fullscreen", isFullscreen);
-        instance.$refs.toolbar.find("[data-fancybox-fullscreen]").toggleClass("fancybox-button--fsenter", !isFullscreen).toggleClass("fancybox-button--fsexit", isFullscreen);
-      }
-    });
-  }
-  $2(document2).on({
-    "onInit.fb": function(e, instance) {
-      var $container;
-      if (!fn2) {
-        instance.$refs.toolbar.find("[data-fancybox-fullscreen]").remove();
-        return;
-      }
-      if (instance && instance.group[instance.currIndex].opts.fullScreen) {
-        $container = instance.$refs.container;
-        $container.on("click.fb-fullscreen", "[data-fancybox-fullscreen]", function(e2) {
-          e2.stopPropagation();
-          e2.preventDefault();
-          FullScreen.toggle();
-        });
-        if (instance.opts.fullScreen && instance.opts.fullScreen.autoStart === true) {
-          FullScreen.request();
-        }
-        instance.FullScreen = FullScreen;
-      } else if (instance) {
-        instance.$refs.toolbar.find("[data-fancybox-fullscreen]").hide();
-      }
-    },
-    "afterKeydown.fb": function(e, instance, current, keypress, keycode) {
-      if (instance && instance.FullScreen && keycode === 70) {
-        keypress.preventDefault();
-        instance.FullScreen.toggle();
-      }
-    },
-    "beforeClose.fb": function(e, instance) {
-      if (instance && instance.FullScreen && instance.$refs.container.hasClass("fancybox-is-fullscreen")) {
-        FullScreen.exit();
-      }
-    }
-  });
-})(document, jQuery);
-(function(document2, $2) {
-  "use strict";
-  var CLASS = "fancybox-thumbs", CLASS_ACTIVE = CLASS + "-active";
-  $2.fancybox.defaults = $2.extend(
-    true,
-    {
-      btnTpl: {
-        thumbs: '<button data-fancybox-thumbs class="fancybox-button fancybox-button--thumbs" title="{{THUMBS}}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.59 14.59h3.76v3.76h-3.76v-3.76zm-4.47 0h3.76v3.76h-3.76v-3.76zm-4.47 0h3.76v3.76H5.65v-3.76zm8.94-4.47h3.76v3.76h-3.76v-3.76zm-4.47 0h3.76v3.76h-3.76v-3.76zm-4.47 0h3.76v3.76H5.65v-3.76zm8.94-4.47h3.76v3.76h-3.76V5.65zm-4.47 0h3.76v3.76h-3.76V5.65zm-4.47 0h3.76v3.76H5.65V5.65z"/></svg></button>'
-      },
-      thumbs: {
-        autoStart: false,
-        // Display thumbnails on opening
-        hideOnClose: true,
-        // Hide thumbnail grid when closing animation starts
-        parentEl: ".fancybox-container",
-        // Container is injected into this element
-        axis: "y"
-        // Vertical (y) or horizontal (x) scrolling
-      }
-    },
-    $2.fancybox.defaults
-  );
-  var FancyThumbs = function(instance) {
-    this.init(instance);
-  };
-  $2.extend(FancyThumbs.prototype, {
-    $button: null,
-    $grid: null,
-    $list: null,
-    isVisible: false,
-    isActive: false,
-    init: function(instance) {
-      var self2 = this, group = instance.group, enabled = 0;
-      self2.instance = instance;
-      self2.opts = group[instance.currIndex].opts.thumbs;
-      instance.Thumbs = self2;
-      self2.$button = instance.$refs.toolbar.find("[data-fancybox-thumbs]");
-      for (var i = 0, len = group.length; i < len; i++) {
-        if (group[i].thumb) {
-          enabled++;
-        }
-        if (enabled > 1) {
-          break;
-        }
-      }
-      if (enabled > 1 && !!self2.opts) {
-        self2.$button.removeAttr("style").on("click", function() {
-          self2.toggle();
-        });
-        self2.isActive = true;
-      } else {
-        self2.$button.hide();
-      }
-    },
-    create: function() {
-      var self2 = this, instance = self2.instance, parentEl = self2.opts.parentEl, list = [], src;
-      if (!self2.$grid) {
-        self2.$grid = $2('<div class="' + CLASS + " " + CLASS + "-" + self2.opts.axis + '"></div>').appendTo(
-          instance.$refs.container.find(parentEl).addBack().filter(parentEl)
-        );
-        self2.$grid.on("click", "a", function() {
-          instance.jumpTo($2(this).attr("data-index"));
-        });
-      }
-      if (!self2.$list) {
-        self2.$list = $2('<div class="' + CLASS + '__list">').appendTo(self2.$grid);
-      }
-      $2.each(instance.group, function(i, item) {
-        src = item.thumb;
-        if (!src && item.type === "image") {
-          src = item.src;
-        }
-        list.push(
-          '<a href="javascript:;" tabindex="0" data-index="' + i + '"' + (src && src.length ? ' style="background-image:url(' + src + ')"' : 'class="fancybox-thumbs-missing"') + "></a>"
-        );
-      });
-      self2.$list[0].innerHTML = list.join("");
-      if (self2.opts.axis === "x") {
-        self2.$list.width(
-          parseInt(self2.$grid.css("padding-right"), 10) + instance.group.length * self2.$list.children().eq(0).outerWidth(true)
-        );
-      }
-    },
-    focus: function(duration) {
-      var self2 = this, $list = self2.$list, $grid = self2.$grid, thumb, thumbPos;
-      if (!self2.instance.current) {
-        return;
-      }
-      thumb = $list.children().removeClass(CLASS_ACTIVE).filter('[data-index="' + self2.instance.current.index + '"]').addClass(CLASS_ACTIVE);
-      thumbPos = thumb.position();
-      if (self2.opts.axis === "y" && (thumbPos.top < 0 || thumbPos.top > $list.height() - thumb.outerHeight())) {
-        $list.stop().animate(
-          {
-            scrollTop: $list.scrollTop() + thumbPos.top
-          },
-          duration
-        );
-      } else if (self2.opts.axis === "x" && (thumbPos.left < $grid.scrollLeft() || thumbPos.left > $grid.scrollLeft() + ($grid.width() - thumb.outerWidth()))) {
-        $list.parent().stop().animate(
-          {
-            scrollLeft: thumbPos.left
-          },
-          duration
-        );
-      }
-    },
-    update: function() {
-      var that = this;
-      that.instance.$refs.container.toggleClass("fancybox-show-thumbs", this.isVisible);
-      if (that.isVisible) {
-        if (!that.$grid) {
-          that.create();
-        }
-        that.instance.trigger("onThumbsShow");
-        that.focus(0);
-      } else if (that.$grid) {
-        that.instance.trigger("onThumbsHide");
-      }
-      that.instance.update();
-    },
-    hide: function() {
-      this.isVisible = false;
-      this.update();
-    },
-    show: function() {
-      this.isVisible = true;
-      this.update();
-    },
-    toggle: function() {
-      this.isVisible = !this.isVisible;
-      this.update();
-    }
-  });
-  $2(document2).on({
-    "onInit.fb": function(e, instance) {
-      var Thumbs;
-      if (instance && !instance.Thumbs) {
-        Thumbs = new FancyThumbs(instance);
-        if (Thumbs.isActive && Thumbs.opts.autoStart === true) {
-          Thumbs.show();
-        }
-      }
-    },
-    "beforeShow.fb": function(e, instance, item, firstRun) {
-      var Thumbs = instance && instance.Thumbs;
-      if (Thumbs && Thumbs.isVisible) {
-        Thumbs.focus(firstRun ? 0 : 250);
-      }
-    },
-    "afterKeydown.fb": function(e, instance, current, keypress, keycode) {
-      var Thumbs = instance && instance.Thumbs;
-      if (Thumbs && Thumbs.isActive && keycode === 71) {
-        keypress.preventDefault();
-        Thumbs.toggle();
-      }
-    },
-    "beforeClose.fb": function(e, instance) {
-      var Thumbs = instance && instance.Thumbs;
-      if (Thumbs && Thumbs.isVisible && Thumbs.opts.hideOnClose !== false) {
-        Thumbs.$grid.hide();
-      }
-    }
-  });
-})(document, jQuery);
-(function(document2, $2) {
-  "use strict";
-  $2.extend(true, $2.fancybox.defaults, {
-    btnTpl: {
-      share: '<button data-fancybox-share class="fancybox-button fancybox-button--share" title="{{SHARE}}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.55 19c1.4-8.4 9.1-9.8 11.9-9.8V5l7 7-7 6.3v-3.5c-2.8 0-10.5 2.1-11.9 4.2z"/></svg></button>'
-    },
-    share: {
-      url: function(instance, item) {
-        return (!instance.currentHash && !(item.type === "inline" || item.type === "html") ? item.origSrc || item.src : false) || window.location;
-      },
-      tpl: '<div class="fancybox-share"><h1>{{SHARE}}</h1><p><a class="fancybox-share__button fancybox-share__button--fb" href="https://www.facebook.com/sharer/sharer.php?u={{url}}"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="m287 456v-299c0-21 6-35 35-35h38v-63c-7-1-29-3-55-3-54 0-91 33-91 94v306m143-254h-205v72h196" /></svg><span>Facebook</span></a><a class="fancybox-share__button fancybox-share__button--tw" href="https://twitter.com/intent/tweet?url={{url}}&text={{descr}}"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="m456 133c-14 7-31 11-47 13 17-10 30-27 37-46-15 10-34 16-52 20-61-62-157-7-141 75-68-3-129-35-169-85-22 37-11 86 26 109-13 0-26-4-37-9 0 39 28 72 65 80-12 3-25 4-37 2 10 33 41 57 77 57-42 30-77 38-122 34 170 111 378-32 359-208 16-11 30-25 41-42z" /></svg><span>Twitter</span></a><a class="fancybox-share__button fancybox-share__button--pt" href="https://www.pinterest.com/pin/create/button/?url={{url}}&description={{descr}}&media={{media}}"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="m265 56c-109 0-164 78-164 144 0 39 15 74 47 87 5 2 10 0 12-5l4-19c2-6 1-8-3-13-9-11-15-25-15-45 0-58 43-110 113-110 62 0 96 38 96 88 0 67-30 122-73 122-24 0-42-19-36-44 6-29 20-60 20-81 0-19-10-35-31-35-25 0-44 26-44 60 0 21 7 36 7 36l-30 125c-8 37-1 83 0 87 0 3 4 4 5 2 2-3 32-39 42-75l16-64c8 16 31 29 56 29 74 0 124-67 124-157 0-69-58-132-146-132z" fill="#fff"/></svg><span>Pinterest</span></a></p><p><input class="fancybox-share__input" type="text" value="{{url_raw}}" onclick="select()" /></p></div>'
-    }
-  });
-  function escapeHtml(string) {
-    var entityMap = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-      "/": "&#x2F;",
-      "`": "&#x60;",
-      "=": "&#x3D;"
-    };
-    return String(string).replace(/[&<>"'`=\/]/g, function(s) {
-      return entityMap[s];
-    });
-  }
-  $2(document2).on("click", "[data-fancybox-share]", function() {
-    var instance = $2.fancybox.getInstance(), current = instance.current || null, url, tpl;
-    if (!current) {
-      return;
-    }
-    if ($2.type(current.opts.share.url) === "function") {
-      url = current.opts.share.url.apply(current, [instance, current]);
-    }
-    tpl = current.opts.share.tpl.replace(/\{\{media\}\}/g, current.type === "image" ? encodeURIComponent(current.src) : "").replace(/\{\{url\}\}/g, encodeURIComponent(url)).replace(/\{\{url_raw\}\}/g, escapeHtml(url)).replace(/\{\{descr\}\}/g, instance.$caption ? encodeURIComponent(instance.$caption.text()) : "");
-    $2.fancybox.open({
-      src: instance.translate(instance, tpl),
-      type: "html",
-      opts: {
-        touch: false,
-        animationEffect: false,
-        afterLoad: function(shareInstance, shareCurrent) {
-          instance.$refs.container.one("beforeClose.fb", function() {
-            shareInstance.close(null, 0);
-          });
-          shareCurrent.$content.find(".fancybox-share__button").click(function() {
-            window.open(this.href, "Share", "width=550, height=450");
-            return false;
-          });
-        },
-        mobile: {
-          autoFocus: false
-        }
-      }
-    });
-  });
-})(document, jQuery);
-(function(window2, document2, $2) {
-  "use strict";
-  if (!$2.escapeSelector) {
-    $2.escapeSelector = function(sel) {
-      var rcssescape = /([\0-\x1f\x7f]|^-?\d)|^-$|[^\x80-\uFFFF\w-]/g;
-      var fcssescape = function(ch, asCodePoint) {
-        if (asCodePoint) {
-          if (ch === "\0") {
-            return "\uFFFD";
-          }
-          return ch.slice(0, -1) + "\\" + ch.charCodeAt(ch.length - 1).toString(16) + " ";
-        }
-        return "\\" + ch;
-      };
-      return (sel + "").replace(rcssescape, fcssescape);
-    };
-  }
-  function parseUrl() {
-    var hash3 = window2.location.hash.substr(1), rez = hash3.split("-"), index = rez.length > 1 && /^\+?\d+$/.test(rez[rez.length - 1]) ? parseInt(rez.pop(-1), 10) || 1 : 1, gallery = rez.join("-");
-    return {
-      hash: hash3,
-      /* Index is starting from 1 */
-      index: index < 1 ? 1 : index,
-      gallery
-    };
-  }
-  function triggerFromUrl(url) {
-    if (url.gallery !== "") {
-      $2("[data-fancybox='" + $2.escapeSelector(url.gallery) + "']").eq(url.index - 1).focus().trigger("click.fb-start");
-    }
-  }
-  function getGalleryID(instance) {
-    var opts, ret;
-    if (!instance) {
-      return false;
-    }
-    opts = instance.current ? instance.current.opts : instance.opts;
-    ret = opts.hash || (opts.$orig ? opts.$orig.data("fancybox") || opts.$orig.data("fancybox-trigger") : "");
-    return ret === "" ? false : ret;
-  }
-  $2(function() {
-    if ($2.fancybox.defaults.hash === false) {
-      return;
-    }
-    $2(document2).on({
-      "onInit.fb": function(e, instance) {
-        var url, gallery;
-        if (instance.group[instance.currIndex].opts.hash === false) {
-          return;
-        }
-        url = parseUrl();
-        gallery = getGalleryID(instance);
-        if (gallery && url.gallery && gallery == url.gallery) {
-          instance.currIndex = url.index - 1;
-        }
-      },
-      "beforeShow.fb": function(e, instance, current, firstRun) {
-        var gallery;
-        if (!current || current.opts.hash === false) {
-          return;
-        }
-        gallery = getGalleryID(instance);
-        if (!gallery) {
-          return;
-        }
-        instance.currentHash = gallery + (instance.group.length > 1 ? "-" + (current.index + 1) : "");
-        if (window2.location.hash === "#" + instance.currentHash) {
-          return;
-        }
-        if (firstRun && !instance.origHash) {
-          instance.origHash = window2.location.hash;
-        }
-        if (instance.hashTimer) {
-          clearTimeout(instance.hashTimer);
-        }
-        instance.hashTimer = setTimeout(function() {
-          if ("replaceState" in window2.history) {
-            window2.history[firstRun ? "pushState" : "replaceState"](
-              {},
-              document2.title,
-              window2.location.pathname + window2.location.search + "#" + instance.currentHash
-            );
-            if (firstRun) {
-              instance.hasCreatedHistory = true;
-            }
-          } else {
-            window2.location.hash = instance.currentHash;
-          }
-          instance.hashTimer = null;
-        }, 300);
-      },
-      "beforeClose.fb": function(e, instance, current) {
-        if (!current || current.opts.hash === false) {
-          return;
-        }
-        clearTimeout(instance.hashTimer);
-        if (instance.currentHash && instance.hasCreatedHistory) {
-          window2.history.back();
-        } else if (instance.currentHash) {
-          if ("replaceState" in window2.history) {
-            window2.history.replaceState({}, document2.title, window2.location.pathname + window2.location.search + (instance.origHash || ""));
-          } else {
-            window2.location.hash = instance.origHash;
-          }
-        }
-        instance.currentHash = null;
-      }
-    });
-    $2(window2).on("hashchange.fb", function() {
-      var url = parseUrl(), fb = null;
-      $2.each(
-        $2(".fancybox-container").get().reverse(),
-        function(index, value) {
-          var tmp = $2(value).data("FancyBox");
-          if (tmp && tmp.currentHash) {
-            fb = tmp;
-            return false;
-          }
-        }
-      );
-      if (fb) {
-        if (fb.currentHash !== url.gallery + "-" + url.index && !(url.index === 1 && fb.currentHash == url.gallery)) {
-          fb.currentHash = null;
-          fb.close();
-        }
-      } else if (url.gallery !== "") {
-        triggerFromUrl(url);
-      }
-    });
+    })), i2.animate(g2, { queue: false, duration: s2.duration, easing: s2.easing, complete: function() {
+      var t3 = i2.offset();
+      0 === g2.opacity && i2.css("opacity", f2.opacity), l2 || (i2.css("position", "static" === u2 ? "relative" : u2).offset(t3), V.effects.saveStyle(i2)), e2();
+    } });
+  }), V.effects.define("scale", function(t2, e2) {
+    var i2 = V(this), s2 = t2.mode, s2 = parseInt(t2.percent, 10) || (0 === parseInt(t2.percent, 10) || "effect" !== s2 ? 0 : 100), i2 = V.extend(true, { from: V.effects.scaledDimensions(i2), to: V.effects.scaledDimensions(i2, s2, t2.direction || "both"), origin: t2.origin || ["middle", "center"] }, t2);
+    t2.fade && (i2.from.opacity = 1, i2.to.opacity = 0), V.effects.effect.size.call(this, i2, e2);
+  }), V.effects.define("puff", "hide", function(t2, e2) {
+    t2 = V.extend(true, {}, t2, { fade: true, percent: parseInt(t2.percent, 10) || 150 });
+    V.effects.effect.scale.call(this, t2, e2);
+  }), V.effects.define("pulsate", "show", function(t2, e2) {
+    var i2 = V(this), s2 = t2.mode, n2 = "show" === s2, o2 = 2 * (t2.times || 5) + (n2 || "hide" === s2 ? 1 : 0), a2 = t2.duration / o2, r2 = 0, l2 = 1, s2 = i2.queue().length;
+    for (!n2 && i2.is(":visible") || (i2.css("opacity", 0).show(), r2 = 1); l2 < o2; l2++) i2.animate({ opacity: r2 }, a2, t2.easing), r2 = 1 - r2;
+    i2.animate({ opacity: r2 }, a2, t2.easing), i2.queue(e2), V.effects.unshift(i2, s2, 1 + o2);
+  }), V.effects.define("shake", function(t2, e2) {
+    var i2 = 1, s2 = V(this), n2 = t2.direction || "left", o2 = t2.distance || 20, a2 = t2.times || 3, r2 = 2 * a2 + 1, l2 = Math.round(t2.duration / r2), h2 = "up" === n2 || "down" === n2 ? "top" : "left", n2 = "up" === n2 || "left" === n2, c2 = {}, u2 = {}, d2 = {}, p2 = s2.queue().length;
+    for (V.effects.createPlaceholder(s2), c2[h2] = (n2 ? "-=" : "+=") + o2, u2[h2] = (n2 ? "+=" : "-=") + 2 * o2, d2[h2] = (n2 ? "-=" : "+=") + 2 * o2, s2.animate(c2, l2, t2.easing); i2 < a2; i2++) s2.animate(u2, l2, t2.easing).animate(d2, l2, t2.easing);
+    s2.animate(u2, l2, t2.easing).animate(c2, l2 / 2, t2.easing).queue(e2), V.effects.unshift(s2, p2, 1 + r2);
+  }), V.effects.define("slide", "show", function(t2, e2) {
+    var i2, s2, n2 = V(this), o2 = { up: ["bottom", "top"], down: ["top", "bottom"], left: ["right", "left"], right: ["left", "right"] }, a2 = t2.mode, r2 = t2.direction || "left", l2 = "up" === r2 || "down" === r2 ? "top" : "left", h2 = "up" === r2 || "left" === r2, c2 = t2.distance || n2["top" == l2 ? "outerHeight" : "outerWidth"](true), u2 = {};
+    V.effects.createPlaceholder(n2), i2 = n2.cssClip(), s2 = n2.position()[l2], u2[l2] = (h2 ? -1 : 1) * c2 + s2, u2.clip = n2.cssClip(), u2.clip[o2[r2][1]] = u2.clip[o2[r2][0]], "show" === a2 && (n2.cssClip(u2.clip), n2.css(l2, u2[l2]), u2.clip = i2, u2[l2] = s2), n2.animate(u2, { queue: false, duration: t2.duration, easing: t2.easing, complete: e2 });
+  }), t = false !== V.uiBackCompat ? V.effects.define("transfer", function(t2, e2) {
+    V(this).transfer(t2, e2);
+  }) : t;
+  V.ui.focusable = function(t2, e2) {
+    var i2, s2, n2, o2 = t2.nodeName.toLowerCase();
+    return "area" === o2 ? (n2 = (i2 = t2.parentNode).name, !(!t2.href || !n2 || "map" !== i2.nodeName.toLowerCase()) && 0 < (i2 = V("img[usemap='#" + n2 + "']")).length && i2.is(":visible")) : (/^(input|select|textarea|button|object)$/.test(o2) ? (s2 = !t2.disabled) && (n2 = V(t2).closest("fieldset")[0]) && (s2 = !n2.disabled) : s2 = "a" === o2 && t2.href || e2, s2 && V(t2).is(":visible") && function(t3) {
+      var e3 = t3.css("visibility");
+      for (; "inherit" === e3; ) t3 = t3.parent(), e3 = t3.css("visibility");
+      return "visible" === e3;
+    }(V(t2)));
+  }, V.extend(V.expr.pseudos, { focusable: function(t2) {
+    return V.ui.focusable(t2, null != V.attr(t2, "tabindex"));
+  } });
+  V.ui.focusable, V.fn._form = function() {
+    return "string" == typeof this[0].form ? this.closest("form") : V(this[0].form);
+  }, V.ui.formResetMixin = { _formResetHandler: function() {
+    var e2 = V(this);
     setTimeout(function() {
-      if (!$2.fancybox.getInstance()) {
-        triggerFromUrl(parseUrl());
-      }
-    }, 50);
-  });
-})(window, document, jQuery);
-(function(document2, $2) {
-  "use strict";
-  var prevTime = (/* @__PURE__ */ new Date()).getTime();
-  $2(document2).on({
-    "onInit.fb": function(e, instance, current) {
-      instance.$refs.stage.on("mousewheel DOMMouseScroll wheel MozMousePixelScroll", function(e2) {
-        var current2 = instance.current, currTime = (/* @__PURE__ */ new Date()).getTime();
-        if (instance.group.length < 2 || current2.opts.wheel === false || current2.opts.wheel === "auto" && current2.type !== "image") {
-          return;
-        }
-        e2.preventDefault();
-        e2.stopPropagation();
-        if (current2.$slide.hasClass("fancybox-animated")) {
-          return;
-        }
-        e2 = e2.originalEvent || e2;
-        if (currTime - prevTime < 250) {
-          return;
-        }
-        prevTime = currTime;
-        instance[(-e2.deltaY || -e2.deltaX || e2.wheelDelta || -e2.detail) < 0 ? "next" : "previous"]();
+      var t2 = e2.data("ui-form-reset-instances");
+      V.each(t2, function() {
+        this.refresh();
       });
-    }
-  });
-})(document, jQuery);
-
-// node_modules/jquery-tagcanvas/jquery.tagcanvas.min.js
-(function(ap) {
-  var M, K, L = Math.abs, ah = Math.sin, w = Math.cos, s = Math.max, aE = Math.min, aq = Math.ceil, F = Math.sqrt, au = Math.pow, h = {}, l = {}, m = { 0: "0,", 1: "17,", 2: "34,", 3: "51,", 4: "68,", 5: "85,", 6: "102,", 7: "119,", 8: "136,", 9: "153,", a: "170,", A: "170,", b: "187,", B: "187,", c: "204,", C: "204,", d: "221,", D: "221,", e: "238,", E: "238,", f: "255,", F: "255," }, x, c, Q, aG, H, aH, aa, C = document, p, b = {};
-  for (M = 0; M < 256; ++M) {
-    K = M.toString(16);
-    if (M < 16) {
-      K = "0" + K;
-    }
-    l[K] = l[K.toUpperCase()] = M.toString() + ",";
-  }
-  function ai(i) {
-    return typeof i != "undefined";
-  }
-  function I(i) {
-    return typeof i == "object" && i != null;
-  }
-  function aw(i, j, aI) {
-    return isNaN(i) ? aI : aE(aI, s(j, i));
-  }
-  function aB() {
-    return false;
-  }
-  function G() {
-    return (/* @__PURE__ */ new Date()).valueOf();
-  }
-  function A(aI, aL) {
-    var j = [], aJ = aI.length, aK;
-    for (aK = 0; aK < aJ; ++aK) {
-      j.push(aI[aK]);
-    }
-    j.sort(aL);
-    return j;
-  }
-  function an(j) {
-    var aJ = j.length - 1, aI, aK;
-    while (aJ) {
-      aK = ~~(Math.random() * aJ);
-      aI = j[aJ];
-      j[aJ] = j[aK];
-      j[aK] = aI;
-      --aJ;
-    }
-  }
-  function ae(i, aI, j) {
-    this.x = i;
-    this.y = aI;
-    this.z = j;
-  }
-  H = ae.prototype;
-  H.length = function() {
-    return F(this.x * this.x + this.y * this.y + this.z * this.z);
-  };
-  H.dot = function(i) {
-    return this.x * i.x + this.y * i.y + this.z * i.z;
-  };
-  H.cross = function(j) {
-    var i = this.y * j.z - this.z * j.y, aJ = this.z * j.x - this.x * j.z, aI = this.x * j.y - this.y * j.x;
-    return new ae(i, aJ, aI);
-  };
-  H.angle = function(j) {
-    var i = this.dot(j), aI;
-    if (i == 0) {
-      return Math.PI / 2;
-    }
-    aI = i / (this.length() * j.length());
-    if (aI >= 1) {
-      return 0;
-    }
-    if (aI <= -1) {
-      return Math.PI;
-    }
-    return Math.acos(aI);
-  };
-  H.unit = function() {
-    var i = this.length();
-    return new ae(this.x / i, this.y / i, this.z / i);
-  };
-  function aj(aI, j) {
-    j = j * Math.PI / 180;
-    aI = aI * Math.PI / 180;
-    var i = ah(aI) * w(j), aK = -ah(j), aJ = -w(aI) * w(j);
-    return new ae(i, aK, aJ);
-  }
-  function R(i) {
-    this[1] = { 1: i[0], 2: i[1], 3: i[2] };
-    this[2] = { 1: i[3], 2: i[4], 3: i[5] };
-    this[3] = { 1: i[6], 2: i[7], 3: i[8] };
-  }
-  aG = R.prototype;
-  R.Identity = function() {
-    return new R([1, 0, 0, 0, 1, 0, 0, 0, 1]);
-  };
-  R.Rotation = function(aJ, i) {
-    var j = ah(aJ), aI = w(aJ), aK = 1 - aI;
-    return new R([aI + au(i.x, 2) * aK, i.x * i.y * aK - i.z * j, i.x * i.z * aK + i.y * j, i.y * i.x * aK + i.z * j, aI + au(i.y, 2) * aK, i.y * i.z * aK - i.x * j, i.z * i.x * aK - i.y * j, i.z * i.y * aK + i.x * j, aI + au(i.z, 2) * aK]);
-  };
-  aG.mul = function(aI) {
-    var aJ = [], aM, aL, aK = aI.xform ? 1 : 0;
-    for (aM = 1; aM <= 3; ++aM) {
-      for (aL = 1; aL <= 3; ++aL) {
-        if (aK) {
-          aJ.push(this[aM][1] * aI[1][aL] + this[aM][2] * aI[2][aL] + this[aM][3] * aI[3][aL]);
-        } else {
-          aJ.push(this[aM][aL] * aI);
-        }
-      }
-    }
-    return new R(aJ);
-  };
-  aG.xform = function(aI) {
-    var j = {}, i = aI.x, aK = aI.y, aJ = aI.z;
-    j.x = i * this[1][1] + aK * this[2][1] + aJ * this[3][1];
-    j.y = i * this[1][2] + aK * this[2][2] + aJ * this[3][2];
-    j.z = i * this[1][3] + aK * this[2][3] + aJ * this[3][3];
-    return j;
-  };
-  function q(aJ, aL, aR, aO, aQ) {
-    var aM, aP, j, aN, aS = [], aI = 2 / aJ, aK;
-    aK = Math.PI * (3 - F(5) + (parseFloat(aQ) ? parseFloat(aQ) : 0));
-    for (aM = 0; aM < aJ; ++aM) {
-      aP = aM * aI - 1 + aI / 2;
-      j = F(1 - aP * aP);
-      aN = aM * aK;
-      aS.push([w(aN) * j * aL, aP * aR, ah(aN) * j * aO]);
-    }
-    return aS;
-  }
-  function W(aK, aI, aN, aU, aR, aT) {
-    var aS, aV = [], aJ = 2 / aK, aL, aQ, aP, aO, aM;
-    aL = Math.PI * (3 - F(5) + (parseFloat(aT) ? parseFloat(aT) : 0));
-    for (aQ = 0; aQ < aK; ++aQ) {
-      aP = aQ * aJ - 1 + aJ / 2;
-      aS = aQ * aL;
-      aO = w(aS);
-      aM = ah(aS);
-      aV.push(aI ? [aP * aN, aO * aU, aM * aR] : [aO * aN, aP * aU, aM * aR]);
-    }
-    return aV;
-  }
-  function N(aI, aJ, aM, aS, aQ, aO) {
-    var aR, aT = [], aK = Math.PI * 2 / aJ, aP, aN, aL;
-    for (aP = 0; aP < aJ; ++aP) {
-      aR = aP * aK;
-      aN = w(aR);
-      aL = ah(aR);
-      aT.push(aI ? [aO * aM, aN * aS, aL * aQ] : [aN * aM, aO * aS, aL * aQ]);
-    }
-    return aT;
-  }
-  function am(aK, j, aI, aJ, i) {
-    return W(aK, 0, j, aI, aJ, i);
-  }
-  function av(aK, j, aI, aJ, i) {
-    return W(aK, 1, j, aI, aJ, i);
-  }
-  function d(aK, i, j, aI, aJ) {
-    aJ = isNaN(aJ) ? 0 : aJ * 1;
-    return N(0, aK, i, j, aI, aJ);
-  }
-  function n(aK, i, j, aI, aJ) {
-    aJ = isNaN(aJ) ? 0 : aJ * 1;
-    return N(1, aK, i, j, aI, aJ);
-  }
-  function ao(aI) {
-    var j = new Image();
-    j.onload = function() {
-      var aJ = j.width / 2, i = j.height / 2;
-      aI.centreFunc = function(aO, aL, aM, aK, aN) {
-        aO.setTransform(1, 0, 0, 1, 0, 0);
-        aO.globalAlpha = 1;
-        aO.drawImage(j, aK - aJ, aN - i);
-      };
-    };
-    j.src = aI.centreImage;
-  }
-  function U(aL, i) {
-    var aK = aL, aJ, aI, j = (i * 1).toPrecision(3) + ")";
-    if (aL[0] === "#") {
-      if (!h[aL]) {
-        if (aL.length === 4) {
-          h[aL] = "rgba(" + m[aL[1]] + m[aL[2]] + m[aL[3]];
-        } else {
-          h[aL] = "rgba(" + l[aL.substr(1, 2)] + l[aL.substr(3, 2)] + l[aL.substr(5, 2)];
-        }
-      }
-      aK = h[aL] + j;
-    } else {
-      if (aL.substr(0, 4) === "rgb(" || aL.substr(0, 4) === "hsl(") {
-        aK = aL.replace("(", "a(").replace(")", "," + j);
-      } else {
-        if (aL.substr(0, 5) === "rgba(" || aL.substr(0, 5) === "hsla(") {
-          aJ = aL.lastIndexOf(",") + 1, aI = aL.indexOf(")");
-          i *= parseFloat(aL.substring(aJ, aI));
-          aK = aL.substr(0, aJ) + i.toPrecision(3) + ")";
-        }
-      }
-    }
-    return aK;
-  }
-  function P(i, j) {
-    if (window.G_vmlCanvasManager) {
-      return null;
-    }
-    var aI = C.createElement("canvas");
-    aI.width = i;
-    aI.height = j;
-    return aI;
-  }
-  function al() {
-    var j = P(3, 3), aJ, aI;
-    if (!j) {
-      return false;
-    }
-    aJ = j.getContext("2d");
-    aJ.strokeStyle = "#000";
-    aJ.shadowColor = "#fff";
-    aJ.shadowBlur = 3;
-    aJ.globalAlpha = 0;
-    aJ.strokeRect(2, 2, 2, 2);
-    aJ.globalAlpha = 1;
-    aI = aJ.getImageData(2, 2, 1, 1);
-    j = null;
-    return aI.data[0] > 0;
-  }
-  function ak(aM, j, aL, aK) {
-    var aJ = aM.createLinearGradient(0, 0, j, 0), aI;
-    for (aI in aK) {
-      aJ.addColorStop(1 - aI, aK[aI]);
-    }
-    aM.fillStyle = aJ;
-    aM.fillRect(0, aL, j, 1);
-  }
-  function k(aK, aI, j) {
-    var aJ = 1024, aO = 1, aN = aK.weightGradient, aM, aQ, aL, aP;
-    if (aK.gCanvas) {
-      aQ = aK.gCanvas.getContext("2d");
-      aO = aK.gCanvas.height;
-    } else {
-      if (I(aN[0])) {
-        aO = aN.length;
-      } else {
-        aN = [aN];
-      }
-      aK.gCanvas = aM = P(aJ, aO);
-      if (!aM) {
-        return null;
-      }
-      aQ = aM.getContext("2d");
-      for (aL = 0; aL < aO; ++aL) {
-        ak(aQ, aJ, aL, aN[aL]);
-      }
-    }
-    j = s(aE(j || 0, aO - 1), 0);
-    aP = aQ.getImageData(~~((aJ - 1) * aI), j, 1, 1).data;
-    return "rgba(" + aP[0] + "," + aP[1] + "," + aP[2] + "," + aP[3] / 255 + ")";
-  }
-  function X(aR, aK, j, aV, aU, aS, aQ, aM, aJ, aT, aL, aP) {
-    var aO = aU + (aM || 0) + (aJ.length && aJ[0] < 0 ? L(aJ[0]) : 0), aI = aS + (aM || 0) + (aJ.length && aJ[1] < 0 ? L(aJ[1]) : 0), aN, aW;
-    aR.font = aK;
-    aR.textBaseline = "top";
-    aR.fillStyle = j;
-    aQ && (aR.shadowColor = aQ);
-    aM && (aR.shadowBlur = aM);
-    aJ.length && (aR.shadowOffsetX = aJ[0], aR.shadowOffsetY = aJ[1]);
-    for (aN = 0; aN < aV.length; ++aN) {
-      aW = 0;
-      if (aL) {
-        if ("right" == aP) {
-          aW = aT - aL[aN];
-        } else {
-          if ("centre" == aP) {
-            aW = (aT - aL[aN]) / 2;
-          }
-        }
-      }
-      aR.fillText(aV[aN], aO + aW, aI);
-      aI += parseInt(aK);
-    }
-  }
-  function at(aM, i, aL, j, aJ, aK, aI) {
-    if (aK) {
-      aM.beginPath();
-      aM.moveTo(i, aL + aJ - aK);
-      aM.arcTo(i, aL, i + aK, aL, aK);
-      aM.arcTo(i + j, aL, i + j, aL + aK, aK);
-      aM.arcTo(i + j, aL + aJ, i + j - aK, aL + aJ, aK);
-      aM.arcTo(i, aL + aJ, i, aL + aJ - aK, aK);
-      aM.closePath();
-      aM[aI ? "stroke" : "fill"]();
-    } else {
-      aM[aI ? "strokeRect" : "fillRect"](i, aL, j, aJ);
-    }
-  }
-  function g(aO, i, aM, aJ, aN, aI, aK, aL, j) {
-    this.strings = aO;
-    this.font = i;
-    this.width = aM;
-    this.height = aJ;
-    this.maxWidth = aN;
-    this.stringWidths = aI;
-    this.align = aK;
-    this.valign = aL;
-    this.scale = j;
-  }
-  aa = g.prototype;
-  aa.SetImage = function(aL, j, aJ, i, aK, aN, aI, aM) {
-    this.image = aL;
-    this.iwidth = j * this.scale;
-    this.iheight = aJ * this.scale;
-    this.ipos = i;
-    this.ipad = aK * this.scale;
-    this.iscale = aM;
-    this.ialign = aN;
-    this.ivalign = aI;
-  };
-  aa.Align = function(j, aI, i) {
-    var aJ = 0;
-    if (i == "right" || i == "bottom") {
-      aJ = aI - j;
-    } else {
-      if (i != "left" && i != "top") {
-        aJ = (aI - j) / 2;
-      }
-    }
-    return aJ;
-  };
-  aa.Create = function(aV, a1, aU, a2, a0, aZ, i, aY, aQ) {
-    var aO, aM, aW, a7, a4, a3, aK, aJ, aI, j, aN, aL, aP, aX, aT, a6 = L(i[0]), a5 = L(i[1]), aR, aS;
-    aY = s(aY, a6 + aZ, a5 + aZ);
-    a4 = 2 * (aY + a2);
-    aK = 2 * (aY + a2);
-    aM = this.width + a4;
-    aW = this.height + aK;
-    aI = j = aY + a2;
-    if (this.image) {
-      aN = aL = aY + a2;
-      aP = this.iwidth;
-      aX = this.iheight;
-      if (this.ipos == "top" || this.ipos == "bottom") {
-        if (aP < this.width) {
-          aN += this.Align(aP, this.width, this.ialign);
-        } else {
-          aI += this.Align(this.width, aP, this.align);
-        }
-        if (this.ipos == "top") {
-          j += aX + this.ipad;
-        } else {
-          aL += this.height + this.ipad;
-        }
-        aM = s(aM, aP + a4);
-        aW += aX + this.ipad;
-      } else {
-        if (aX < this.height) {
-          aL += this.Align(aX, this.height, this.ivalign);
-        } else {
-          j += this.Align(this.height, aX, this.valign);
-        }
-        if (this.ipos == "right") {
-          aN += this.width + this.ipad;
-        } else {
-          aI += aP + this.ipad;
-        }
-        aM += aP + this.ipad;
-        aW = s(aW, aX + aK);
-      }
-    }
-    aO = P(aM, aW);
-    if (!aO) {
-      return null;
-    }
-    a4 = aK = a2 / 2;
-    a3 = aM - a2;
-    aJ = aW - a2;
-    aT = aE(aQ, a3 / 2, aJ / 2);
-    a7 = aO.getContext("2d");
-    if (a1) {
-      a7.fillStyle = a1;
-      at(a7, a4, aK, a3, aJ, aT);
-    }
-    if (a2) {
-      a7.strokeStyle = aU;
-      a7.lineWidth = a2;
-      at(a7, a4, aK, a3, aJ, aT, true);
-    }
-    if (aZ || a6 || a5) {
-      aR = P(aM, aW);
-      if (aR) {
-        aS = a7;
-        a7 = aR.getContext("2d");
-      }
-    }
-    X(a7, this.font, aV, this.strings, aI, j, 0, 0, [], this.maxWidth, this.stringWidths, this.align);
-    if (this.image) {
-      a7.drawImage(this.image, aN, aL, aP, aX);
-    }
-    if (aS) {
-      a7 = aS;
-      a0 && (a7.shadowColor = a0);
-      aZ && (a7.shadowBlur = aZ);
-      a7.shadowOffsetX = i[0];
-      a7.shadowOffsetY = i[1];
-      a7.drawImage(aR, 0, 0);
-    }
-    return aO;
-  };
-  function v(aJ, j, aK) {
-    var aI = P(j, aK), aL;
-    if (!aI) {
-      return null;
-    }
-    aL = aI.getContext("2d");
-    aL.drawImage(aJ, (j - aJ.width) / 2, (aK - aJ.height) / 2);
-    return aI;
-  }
-  function ay(aJ, j, aK) {
-    var aI = P(j, aK), aL;
-    if (!aI) {
-      return null;
-    }
-    aL = aI.getContext("2d");
-    aL.drawImage(aJ, 0, 0, j, aK);
-    return aI;
-  }
-  function aD(aV, aQ, aW, a0, aR, aP, aN, aT, aL, aM) {
-    var aJ = aQ + (2 * aT + aP) * a0, aS = aW + (2 * aT + aP) * a0, aK = P(aJ, aS), aZ, aY, aI, aX, j, a1, aU, aO;
-    if (!aK) {
-      return null;
-    }
-    aP *= a0;
-    aL *= a0;
-    aY = aI = aP / 2;
-    aX = aJ - aP;
-    j = aS - aP;
-    aT = aT * a0 + aY;
-    aZ = aK.getContext("2d");
-    aO = aE(aL, aX / 2, j / 2);
-    if (aR) {
-      aZ.fillStyle = aR;
-      at(aZ, aY, aI, aX, j, aO);
-    }
-    if (aP) {
-      aZ.strokeStyle = aN;
-      aZ.lineWidth = aP;
-      at(aZ, aY, aI, aX, j, aO, true);
-    }
-    if (aM) {
-      a1 = P(aJ, aS);
-      aU = a1.getContext("2d");
-      aU.drawImage(aV, aT, aT, aQ, aW);
-      aU.globalCompositeOperation = "source-in";
-      aU.fillStyle = aN;
-      aU.fillRect(0, 0, aJ, aS);
-      aU.globalCompositeOperation = "destination-over";
-      aU.drawImage(aK, 0, 0);
-      aU.globalCompositeOperation = "source-over";
-      aZ.drawImage(a1, 0, 0);
-    } else {
-      aZ.drawImage(aV, aT, aT, aV.width, aV.height);
-    }
-    return { image: aK, width: aJ / a0, height: aS / a0 };
-  }
-  function ar(aL, j, aK, aO, aP) {
-    var aM, aN, aI = parseFloat(j), aJ = s(aK, aO);
-    aM = P(aK, aO);
-    if (!aM) {
-      return null;
-    }
-    if (j.indexOf("%") > 0) {
-      aI = aJ * aI / 100;
-    } else {
-      aI = aI * aP;
-    }
-    aN = aM.getContext("2d");
-    aN.globalCompositeOperation = "source-over";
-    aN.fillStyle = "#fff";
-    if (aI >= aJ / 2) {
-      aI = aE(aK, aO) / 2;
-      aN.beginPath();
-      aN.moveTo(aK / 2, aO / 2);
-      aN.arc(aK / 2, aO / 2, aI, 0, 2 * Math.PI, false);
-      aN.fill();
-      aN.closePath();
-    } else {
-      aI = aE(aK / 2, aO / 2, aI);
-      at(aN, 0, 0, aK, aO, aI, true);
-      aN.fill();
-    }
-    aN.globalCompositeOperation = "source-in";
-    aN.drawImage(aL, 0, 0, aK, aO);
-    return aM;
-  }
-  function Z(aO, aU, aQ, aK, aS, aT, aJ) {
-    var aV = L(aJ[0]), aP = L(aJ[1]), aL = aU + (aV > aT ? aV + aT : aT * 2) * aK, j = aQ + (aP > aT ? aP + aT : aT * 2) * aK, aN = aK * ((aT || 0) + (aJ[0] < 0 ? aV : 0)), aI = aK * ((aT || 0) + (aJ[1] < 0 ? aP : 0)), aM, aR;
-    aM = P(aL, j);
-    if (!aM) {
-      return null;
-    }
-    aR = aM.getContext("2d");
-    aS && (aR.shadowColor = aS);
-    aT && (aR.shadowBlur = aT * aK);
-    aJ && (aR.shadowOffsetX = aJ[0] * aK, aR.shadowOffsetY = aJ[1] * aK);
-    aR.drawImage(aO, aN, aI, aU, aQ);
-    return { image: aM, width: aL / aK, height: j / aK };
-  }
-  function t(aU, aM, aS) {
-    var aT = parseInt(aU.toString().length * aS), aL = parseInt(aS * 2 * aU.length), aJ = P(aT, aL), aP, j, aK, aO, aR, aQ, aI, aN;
-    if (!aJ) {
-      return null;
-    }
-    aP = aJ.getContext("2d");
-    aP.fillStyle = "#000";
-    aP.fillRect(0, 0, aT, aL);
-    X(aP, aS + "px " + aM, "#fff", aU, 0, 0, 0, 0, [], "centre");
-    j = aP.getImageData(0, 0, aT, aL);
-    aK = j.width;
-    aO = j.height;
-    aN = { min: { x: aK, y: aO }, max: { x: -1, y: -1 } };
-    for (aQ = 0; aQ < aO; ++aQ) {
-      for (aR = 0; aR < aK; ++aR) {
-        aI = (aQ * aK + aR) * 4;
-        if (j.data[aI + 1] > 0) {
-          if (aR < aN.min.x) {
-            aN.min.x = aR;
-          }
-          if (aR > aN.max.x) {
-            aN.max.x = aR;
-          }
-          if (aQ < aN.min.y) {
-            aN.min.y = aQ;
-          }
-          if (aQ > aN.max.y) {
-            aN.max.y = aQ;
-          }
-        }
-      }
-    }
-    if (aK != aT) {
-      aN.min.x *= aT / aK;
-      aN.max.x *= aT / aK;
-    }
-    if (aO != aL) {
-      aN.min.y *= aT / aO;
-      aN.max.y *= aT / aO;
-    }
-    aJ = null;
-    return aN;
-  }
-  function o(i) {
-    return "'" + i.replace(/(\'|\")/g, "").replace(/\s*,\s*/g, "', '") + "'";
-  }
-  function ad(i, j, aI) {
-    aI = aI || C;
-    if (aI.addEventListener) {
-      aI.addEventListener(i, j, false);
-    } else {
-      aI.attachEvent("on" + i, j);
-    }
-  }
-  function a(i, j, aI) {
-    aI = aI || C;
-    if (aI.removeEventListener) {
-      aI.removeEventListener(i, j);
-    } else {
-      aI.detachEvent("on" + i, j);
-    }
-  }
-  function ax(aM, aI, aQ, aL) {
-    var aR = aL.imageScale, aO, aJ, aN, j, aK, aP;
-    if (!aI.complete) {
-      return ad("load", function() {
-        ax(aM, aI, aQ, aL);
-      }, aI);
-    }
-    if (!aM.complete) {
-      return ad("load", function() {
-        ax(aM, aI, aQ, aL);
-      }, aM);
-    }
-    aI.width = aI.width;
-    aI.height = aI.height;
-    if (aR) {
-      aM.width = aI.width * aR;
-      aM.height = aI.height * aR;
-    }
-    aQ.iw = aM.width;
-    aQ.ih = aM.height;
-    if (aL.txtOpt) {
-      aJ = aM;
-      aO = aL.zoomMax * aL.txtScale;
-      aK = aQ.iw * aO;
-      aP = aQ.ih * aO;
-      if (aK < aI.naturalWidth || aP < aI.naturalHeight) {
-        aJ = ay(aM, aK, aP);
-        if (aJ) {
-          aQ.fimage = aJ;
-        }
-      } else {
-        aK = aQ.iw;
-        aP = aQ.ih;
-        aO = 1;
-      }
-      if (parseFloat(aL.imageRadius)) {
-        aQ.image = aQ.fimage = aM = ar(aQ.image, aL.imageRadius, aK, aP, aO);
-      }
-      if (!aQ.HasText()) {
-        if (aL.shadow) {
-          aJ = Z(aQ.image, aK, aP, aO, aL.shadow, aL.shadowBlur, aL.shadowOffset);
-          if (aJ) {
-            aQ.fimage = aJ.image;
-            aQ.w = aJ.width;
-            aQ.h = aJ.height;
-          }
-        }
-        if (aL.bgColour || aL.bgOutlineThickness) {
-          aN = aL.bgColour == "tag" ? Y(aQ.a, "background-color") : aL.bgColour;
-          j = aL.bgOutline == "tag" ? Y(aQ.a, "color") : aL.bgOutline || aL.textColour;
-          aK = aQ.fimage.width;
-          aP = aQ.fimage.height;
-          if (aL.outlineMethod == "colour") {
-            aJ = aD(aQ.fimage, aK, aP, aO, aN, aL.bgOutlineThickness, aQ.outline.colour, aL.padding, aL.bgRadius, 1);
-            if (aJ) {
-              aQ.oimage = aJ.image;
-            }
-          }
-          aJ = aD(aQ.fimage, aK, aP, aO, aN, aL.bgOutlineThickness, j, aL.padding, aL.bgRadius);
-          if (aJ) {
-            aQ.fimage = aJ.image;
-            aQ.w = aJ.width;
-            aQ.h = aJ.height;
-          }
-        }
-        if (aL.outlineMethod == "size") {
-          if (aL.outlineIncrease > 0) {
-            aQ.iw += 2 * aL.outlineIncrease;
-            aQ.ih += 2 * aL.outlineIncrease;
-            aK = aO * aQ.iw;
-            aP = aO * aQ.ih;
-            aJ = ay(aQ.fimage, aK, aP);
-            aQ.oimage = aJ;
-            aQ.fimage = v(aQ.fimage, aQ.oimage.width, aQ.oimage.height);
-          } else {
-            aK = aO * (aQ.iw + 2 * aL.outlineIncrease);
-            aP = aO * (aQ.ih + 2 * aL.outlineIncrease);
-            aJ = ay(aQ.fimage, aK, aP);
-            aQ.oimage = v(aJ, aQ.fimage.width, aQ.fimage.height);
-          }
-        }
-      }
-    }
-    aQ.Init();
-  }
-  function Y(aJ, aI) {
-    var j = C.defaultView, i = aI.replace(/\-([a-z])/g, function(aK) {
-      return aK.charAt(1).toUpperCase();
     });
-    return j && j.getComputedStyle && j.getComputedStyle(aJ, null).getPropertyValue(aI) || aJ.currentStyle && aJ.currentStyle[i];
-  }
-  function u(j, aJ, aI) {
-    var i = 1, aK;
-    if (aJ) {
-      i = 1 * (j.getAttribute(aJ) || aI);
-    } else {
-      if (aK = Y(j, "font-size")) {
-        i = aK.indexOf("px") > -1 && aK.replace("px", "") * 1 || aK.indexOf("pt") > -1 && aK.replace("pt", "") * 1.25 || aK * 3.3;
+  }, _bindFormResetHandler: function() {
+    var t2;
+    this.form = this.element._form(), this.form.length && ((t2 = this.form.data("ui-form-reset-instances") || []).length || this.form.on("reset.ui-form-reset", this._formResetHandler), t2.push(this), this.form.data("ui-form-reset-instances", t2));
+  }, _unbindFormResetHandler: function() {
+    var t2;
+    this.form.length && ((t2 = this.form.data("ui-form-reset-instances")).splice(V.inArray(this, t2), 1), t2.length ? this.form.data("ui-form-reset-instances", t2) : this.form.removeData("ui-form-reset-instances").off("reset.ui-form-reset"));
+  } }, V.expr.pseudos || (V.expr.pseudos = V.expr[":"]), V.uniqueSort || (V.uniqueSort = V.unique), V.escapeSelector || (it = /([\0-\x1f\x7f]|^-?\d)|^-$|[^\x80-\uFFFF\w-]/g, st = function(t2, e2) {
+    return e2 ? "\0" === t2 ? "\uFFFD" : t2.slice(0, -1) + "\\" + t2.charCodeAt(t2.length - 1).toString(16) + " " : "\\" + t2;
+  }, V.escapeSelector = function(t2) {
+    return (t2 + "").replace(it, st);
+  }), V.fn.even && V.fn.odd || V.fn.extend({ even: function() {
+    return this.filter(function(t2) {
+      return t2 % 2 == 0;
+    });
+  }, odd: function() {
+    return this.filter(function(t2) {
+      return t2 % 2 == 1;
+    });
+  } }), V.ui.keyCode = { BACKSPACE: 8, COMMA: 188, DELETE: 46, DOWN: 40, END: 35, ENTER: 13, ESCAPE: 27, HOME: 36, LEFT: 37, PAGE_DOWN: 34, PAGE_UP: 33, PERIOD: 190, RIGHT: 39, SPACE: 32, TAB: 9, UP: 38 }, V.fn.labels = function() {
+    var t2, e2, i2;
+    return this.length ? this[0].labels && this[0].labels.length ? this.pushStack(this[0].labels) : (e2 = this.eq(0).parents("label"), (t2 = this.attr("id")) && (i2 = (i2 = this.eq(0).parents().last()).add((i2.length ? i2 : this).siblings()), t2 = "label[for='" + V.escapeSelector(t2) + "']", e2 = e2.add(i2.find(t2).addBack(t2))), this.pushStack(e2)) : this.pushStack([]);
+  }, V.fn.scrollParent = function(t2) {
+    var e2 = this.css("position"), i2 = "absolute" === e2, s2 = t2 ? /(auto|scroll|hidden)/ : /(auto|scroll)/, t2 = this.parents().filter(function() {
+      var t3 = V(this);
+      return (!i2 || "static" !== t3.css("position")) && s2.test(t3.css("overflow") + t3.css("overflow-y") + t3.css("overflow-x"));
+    }).eq(0);
+    return "fixed" !== e2 && t2.length ? t2 : V(this[0].ownerDocument || document);
+  }, V.extend(V.expr.pseudos, { tabbable: function(t2) {
+    var e2 = V.attr(t2, "tabindex"), i2 = null != e2;
+    return (!i2 || 0 <= e2) && V.ui.focusable(t2, i2);
+  } }), V.fn.extend({ uniqueId: (nt = 0, function() {
+    return this.each(function() {
+      this.id || (this.id = "ui-id-" + ++nt);
+    });
+  }), removeUniqueId: function() {
+    return this.each(function() {
+      /^ui-id-\d+$/.test(this.id) && V(this).removeAttr("id");
+    });
+  } }), V.widget("ui.accordion", { version: "1.13.3", options: { active: 0, animate: {}, classes: { "ui-accordion-header": "ui-corner-top", "ui-accordion-header-collapsed": "ui-corner-all", "ui-accordion-content": "ui-corner-bottom" }, collapsible: false, event: "click", header: function(t2) {
+    return t2.find("> li > :first-child").add(t2.find("> :not(li)").even());
+  }, heightStyle: "auto", icons: { activeHeader: "ui-icon-triangle-1-s", header: "ui-icon-triangle-1-e" }, activate: null, beforeActivate: null }, hideProps: { borderTopWidth: "hide", borderBottomWidth: "hide", paddingTop: "hide", paddingBottom: "hide", height: "hide" }, showProps: { borderTopWidth: "show", borderBottomWidth: "show", paddingTop: "show", paddingBottom: "show", height: "show" }, _create: function() {
+    var t2 = this.options;
+    this.prevShow = this.prevHide = V(), this._addClass("ui-accordion", "ui-widget ui-helper-reset"), this.element.attr("role", "tablist"), t2.collapsible || false !== t2.active && null != t2.active || (t2.active = 0), this._processPanels(), t2.active < 0 && (t2.active += this.headers.length), this._refresh();
+  }, _getCreateEventData: function() {
+    return { header: this.active, panel: this.active.length ? this.active.next() : V() };
+  }, _createIcons: function() {
+    var t2, e2 = this.options.icons;
+    e2 && (t2 = V("<span>"), this._addClass(t2, "ui-accordion-header-icon", "ui-icon " + e2.header), t2.prependTo(this.headers), t2 = this.active.children(".ui-accordion-header-icon"), this._removeClass(t2, e2.header)._addClass(t2, null, e2.activeHeader)._addClass(this.headers, "ui-accordion-icons"));
+  }, _destroyIcons: function() {
+    this._removeClass(this.headers, "ui-accordion-icons"), this.headers.children(".ui-accordion-header-icon").remove();
+  }, _destroy: function() {
+    var t2;
+    this.element.removeAttr("role"), this.headers.removeAttr("role aria-expanded aria-selected aria-controls tabIndex").removeUniqueId(), this._destroyIcons(), t2 = this.headers.next().css("display", "").removeAttr("role aria-hidden aria-labelledby").removeUniqueId(), "content" !== this.options.heightStyle && t2.css("height", "");
+  }, _setOption: function(t2, e2) {
+    "active" === t2 ? this._activate(e2) : ("event" === t2 && (this.options.event && this._off(this.headers, this.options.event), this._setupEvents(e2)), this._super(t2, e2), "collapsible" !== t2 || e2 || false !== this.options.active || this._activate(0), "icons" === t2 && (this._destroyIcons(), e2) && this._createIcons());
+  }, _setOptionDisabled: function(t2) {
+    this._super(t2), this.element.attr("aria-disabled", t2), this._toggleClass(null, "ui-state-disabled", !!t2), this._toggleClass(this.headers.add(this.headers.next()), null, "ui-state-disabled", !!t2);
+  }, _keydown: function(t2) {
+    if (!t2.altKey && !t2.ctrlKey) {
+      var e2 = V.ui.keyCode, i2 = this.headers.length, s2 = this.headers.index(t2.target), n2 = false;
+      switch (t2.keyCode) {
+        case e2.RIGHT:
+        case e2.DOWN:
+          n2 = this.headers[(s2 + 1) % i2];
+          break;
+        case e2.LEFT:
+        case e2.UP:
+          n2 = this.headers[(s2 - 1 + i2) % i2];
+          break;
+        case e2.SPACE:
+        case e2.ENTER:
+          this._eventHandler(t2);
+          break;
+        case e2.HOME:
+          n2 = this.headers[0];
+          break;
+        case e2.END:
+          n2 = this.headers[i2 - 1];
       }
+      n2 && (V(t2.target).attr("tabIndex", -1), V(n2).attr("tabIndex", 0), V(n2).trigger("focus"), t2.preventDefault());
     }
-    return i;
-  }
-  function f(i) {
-    return i.target && ai(i.target.id) ? i.target.id : i.srcElement.parentNode.id;
-  }
-  function S(aK, aL) {
-    var aJ, aI, i = parseInt(Y(aL, "width")) / aL.width, j = parseInt(Y(aL, "height")) / aL.height;
-    if (ai(aK.offsetX)) {
-      aJ = { x: aK.offsetX, y: aK.offsetY };
-    } else {
-      aI = ab(aL.id);
-      if (ai(aK.changedTouches)) {
-        aK = aK.changedTouches[0];
-      }
-      if (aK.pageX) {
-        aJ = { x: aK.pageX - aI.x, y: aK.pageY - aI.y };
-      }
+  }, _panelKeyDown: function(t2) {
+    t2.keyCode === V.ui.keyCode.UP && t2.ctrlKey && V(t2.currentTarget).prev().trigger("focus");
+  }, refresh: function() {
+    var t2 = this.options;
+    this._processPanels(), false === t2.active && true === t2.collapsible || !this.headers.length ? (t2.active = false, this.active = V()) : false === t2.active ? this._activate(0) : this.active.length && !V.contains(this.element[0], this.active[0]) ? this.headers.length === this.headers.find(".ui-state-disabled").length ? (t2.active = false, this.active = V()) : this._activate(Math.max(0, t2.active - 1)) : t2.active = this.headers.index(this.active), this._destroyIcons(), this._refresh();
+  }, _processPanels: function() {
+    var t2 = this.headers, e2 = this.panels;
+    "function" == typeof this.options.header ? this.headers = this.options.header(this.element) : this.headers = this.element.find(this.options.header), this._addClass(this.headers, "ui-accordion-header ui-accordion-header-collapsed", "ui-state-default"), this.panels = this.headers.next().filter(":not(.ui-accordion-content-active)").hide(), this._addClass(this.panels, "ui-accordion-content", "ui-helper-reset ui-widget-content"), e2 && (this._off(t2.not(this.headers)), this._off(e2.not(this.panels)));
+  }, _refresh: function() {
+    var i2, t2 = this.options, e2 = t2.heightStyle, s2 = this.element.parent();
+    this.active = this._findActive(t2.active), this._addClass(this.active, "ui-accordion-header-active", "ui-state-active")._removeClass(this.active, "ui-accordion-header-collapsed"), this._addClass(this.active.next(), "ui-accordion-content-active"), this.active.next().show(), this.headers.attr("role", "tab").each(function() {
+      var t3 = V(this), e3 = t3.uniqueId().attr("id"), i3 = t3.next(), s3 = i3.uniqueId().attr("id");
+      t3.attr("aria-controls", s3), i3.attr("aria-labelledby", e3);
+    }).next().attr("role", "tabpanel"), this.headers.not(this.active).attr({ "aria-selected": "false", "aria-expanded": "false", tabIndex: -1 }).next().attr({ "aria-hidden": "true" }).hide(), this.active.length ? this.active.attr({ "aria-selected": "true", "aria-expanded": "true", tabIndex: 0 }).next().attr({ "aria-hidden": "false" }) : this.headers.eq(0).attr("tabIndex", 0), this._createIcons(), this._setupEvents(t2.event), "fill" === e2 ? (i2 = s2.height(), this.element.siblings(":visible").each(function() {
+      var t3 = V(this), e3 = t3.css("position");
+      "absolute" !== e3 && "fixed" !== e3 && (i2 -= t3.outerHeight(true));
+    }), this.headers.each(function() {
+      i2 -= V(this).outerHeight(true);
+    }), this.headers.next().each(function() {
+      V(this).height(Math.max(0, i2 - V(this).innerHeight() + V(this).height()));
+    }).css("overflow", "auto")) : "auto" === e2 && (i2 = 0, this.headers.next().each(function() {
+      var t3 = V(this).is(":visible");
+      t3 || V(this).show(), i2 = Math.max(i2, V(this).css("height", "").height()), t3 || V(this).hide();
+    }).height(i2));
+  }, _activate: function(t2) {
+    t2 = this._findActive(t2)[0];
+    t2 !== this.active[0] && (t2 = t2 || this.active[0], this._eventHandler({ target: t2, currentTarget: t2, preventDefault: V.noop }));
+  }, _findActive: function(t2) {
+    return "number" == typeof t2 ? this.headers.eq(t2) : V();
+  }, _setupEvents: function(t2) {
+    var i2 = { keydown: "_keydown" };
+    t2 && V.each(t2.split(" "), function(t3, e2) {
+      i2[e2] = "_eventHandler";
+    }), this._off(this.headers.add(this.headers.next())), this._on(this.headers, i2), this._on(this.headers.next(), { keydown: "_panelKeyDown" }), this._hoverable(this.headers), this._focusable(this.headers);
+  }, _eventHandler: function(t2) {
+    var e2 = this.options, i2 = this.active, s2 = V(t2.currentTarget), n2 = s2[0] === i2[0], o2 = n2 && e2.collapsible, a2 = o2 ? V() : s2.next(), r2 = i2.next(), r2 = { oldHeader: i2, oldPanel: r2, newHeader: o2 ? V() : s2, newPanel: a2 };
+    t2.preventDefault(), n2 && !e2.collapsible || false === this._trigger("beforeActivate", t2, r2) || (e2.active = !o2 && this.headers.index(s2), this.active = n2 ? V() : s2, this._toggle(r2), this._removeClass(i2, "ui-accordion-header-active", "ui-state-active"), e2.icons && (a2 = i2.children(".ui-accordion-header-icon"), this._removeClass(a2, null, e2.icons.activeHeader)._addClass(a2, null, e2.icons.header)), n2) || (this._removeClass(s2, "ui-accordion-header-collapsed")._addClass(s2, "ui-accordion-header-active", "ui-state-active"), e2.icons && (t2 = s2.children(".ui-accordion-header-icon"), this._removeClass(t2, null, e2.icons.header)._addClass(t2, null, e2.icons.activeHeader)), this._addClass(s2.next(), "ui-accordion-content-active"));
+  }, _toggle: function(t2) {
+    var e2 = t2.newPanel, i2 = this.prevShow.length ? this.prevShow : t2.oldPanel;
+    this.prevShow.add(this.prevHide).stop(true, true), this.prevShow = e2, this.prevHide = i2, this.options.animate ? this._animate(e2, i2, t2) : (i2.hide(), e2.show(), this._toggleComplete(t2)), i2.attr({ "aria-hidden": "true" }), i2.prev().attr({ "aria-selected": "false", "aria-expanded": "false" }), e2.length && i2.length ? i2.prev().attr({ tabIndex: -1, "aria-expanded": "false" }) : e2.length && this.headers.filter(function() {
+      return 0 === parseInt(V(this).attr("tabIndex"), 10);
+    }).attr("tabIndex", -1), e2.attr("aria-hidden", "false").prev().attr({ "aria-selected": "true", "aria-expanded": "true", tabIndex: 0 });
+  }, _animate: function(t2, i2, e2) {
+    function s2() {
+      o2._toggleComplete(e2);
     }
-    if (aJ && i && j) {
-      aJ.x /= i;
-      aJ.y /= j;
+    var n2, o2 = this, a2 = 0, r2 = t2.css("box-sizing"), l2 = t2.length && (!i2.length || t2.index() < i2.index()), h2 = this.options.animate || {}, l2 = l2 && h2.down || h2, c2 = (c2 = "string" == typeof l2 ? l2 : c2) || l2.easing || h2.easing, u2 = (u2 = "number" == typeof l2 ? l2 : u2) || l2.duration || h2.duration;
+    return i2.length ? t2.length ? (n2 = t2.show().outerHeight(), i2.animate(this.hideProps, { duration: u2, easing: c2, step: function(t3, e3) {
+      e3.now = Math.round(t3);
+    } }), void t2.hide().animate(this.showProps, { duration: u2, easing: c2, complete: s2, step: function(t3, e3) {
+      e3.now = Math.round(t3), "height" !== e3.prop ? "content-box" === r2 && (a2 += e3.now) : "content" !== o2.options.heightStyle && (e3.now = Math.round(n2 - i2.outerHeight() - a2), a2 = 0);
+    } })) : i2.animate(this.hideProps, u2, c2, s2) : t2.animate(this.showProps, u2, c2, s2);
+  }, _toggleComplete: function(t2) {
+    var e2 = t2.oldPanel, i2 = e2.prev();
+    this._removeClass(e2, "ui-accordion-content-active"), this._removeClass(i2, "ui-accordion-header-active")._addClass(i2, "ui-accordion-header-collapsed"), e2.length && (e2.parent()[0].className = e2.parent()[0].className), this._trigger("activate", null, t2);
+  } }), V.ui.safeActiveElement = function(e2) {
+    var i2;
+    try {
+      i2 = e2.activeElement;
+    } catch (t2) {
+      i2 = e2.body;
     }
-    return aJ;
-  }
-  function B(aI) {
-    var j = aI.target || aI.fromElement.parentNode, i = y.tc[j.id];
-    if (i) {
-      i.mx = i.my = -1;
-      i.UnFreeze();
-      i.EndDrag();
+    return i2 = (i2 = i2 || e2.body).nodeName ? i2 : e2.body;
+  }, V.widget("ui.menu", { version: "1.13.3", defaultElement: "<ul>", delay: 300, options: { icons: { submenu: "ui-icon-caret-1-e" }, items: "> *", menus: "ul", position: { my: "left top", at: "right top" }, role: "menu", blur: null, focus: null, select: null }, _create: function() {
+    this.activeMenu = this.element, this.mouseHandled = false, this.lastMousePosition = { x: null, y: null }, this.element.uniqueId().attr({ role: this.options.role, tabIndex: 0 }), this._addClass("ui-menu", "ui-widget ui-widget-content"), this._on({ "mousedown .ui-menu-item": function(t2) {
+      t2.preventDefault(), this._activateItem(t2);
+    }, "click .ui-menu-item": function(t2) {
+      var e2 = V(t2.target), i2 = V(V.ui.safeActiveElement(this.document[0]));
+      !this.mouseHandled && e2.not(".ui-state-disabled").length && (this.select(t2), t2.isPropagationStopped() || (this.mouseHandled = true), e2.has(".ui-menu").length ? this.expand(t2) : !this.element.is(":focus") && i2.closest(".ui-menu").length && (this.element.trigger("focus", [true]), this.active) && 1 === this.active.parents(".ui-menu").length && clearTimeout(this.timer));
+    }, "mouseenter .ui-menu-item": "_activateItem", "mousemove .ui-menu-item": "_activateItem", mouseleave: "collapseAll", "mouseleave .ui-menu": "collapseAll", focus: function(t2, e2) {
+      var i2 = this.active || this._menuItems().first();
+      e2 || this.focus(t2, i2);
+    }, blur: function(t2) {
+      this._delay(function() {
+        V.contains(this.element[0], V.ui.safeActiveElement(this.document[0])) || this.collapseAll(t2);
+      });
+    }, keydown: "_keydown" }), this.refresh(), this._on(this.document, { click: function(t2) {
+      this._closeOnDocumentClick(t2) && this.collapseAll(t2, true), this.mouseHandled = false;
+    } });
+  }, _activateItem: function(t2) {
+    var e2, i2;
+    this.previousFilter || t2.clientX === this.lastMousePosition.x && t2.clientY === this.lastMousePosition.y || (this.lastMousePosition = { x: t2.clientX, y: t2.clientY }, e2 = V(t2.target).closest(".ui-menu-item"), i2 = V(t2.currentTarget), e2[0] !== i2[0]) || i2.is(".ui-state-active") || (this._removeClass(i2.siblings().children(".ui-state-active"), null, "ui-state-active"), this.focus(t2, i2));
+  }, _destroy: function() {
+    var t2 = this.element.find(".ui-menu-item").removeAttr("role aria-disabled").children(".ui-menu-item-wrapper").removeUniqueId().removeAttr("tabIndex role aria-haspopup");
+    this.element.removeAttr("aria-activedescendant").find(".ui-menu").addBack().removeAttr("role aria-labelledby aria-expanded aria-hidden aria-disabled tabIndex").removeUniqueId().show(), t2.children().each(function() {
+      var t3 = V(this);
+      t3.data("ui-menu-submenu-caret") && t3.remove();
+    });
+  }, _keydown: function(t2) {
+    var e2, i2, s2, n2 = true;
+    switch (t2.keyCode) {
+      case V.ui.keyCode.PAGE_UP:
+        this.previousPage(t2);
+        break;
+      case V.ui.keyCode.PAGE_DOWN:
+        this.nextPage(t2);
+        break;
+      case V.ui.keyCode.HOME:
+        this._move("first", "first", t2);
+        break;
+      case V.ui.keyCode.END:
+        this._move("last", "last", t2);
+        break;
+      case V.ui.keyCode.UP:
+        this.previous(t2);
+        break;
+      case V.ui.keyCode.DOWN:
+        this.next(t2);
+        break;
+      case V.ui.keyCode.LEFT:
+        this.collapse(t2);
+        break;
+      case V.ui.keyCode.RIGHT:
+        this.active && !this.active.is(".ui-state-disabled") && this.expand(t2);
+        break;
+      case V.ui.keyCode.ENTER:
+      case V.ui.keyCode.SPACE:
+        this._activate(t2);
+        break;
+      case V.ui.keyCode.ESCAPE:
+        this.collapse(t2);
+        break;
+      default:
+        e2 = this.previousFilter || "", s2 = n2 = false, i2 = 96 <= t2.keyCode && t2.keyCode <= 105 ? (t2.keyCode - 96).toString() : String.fromCharCode(t2.keyCode), clearTimeout(this.filterTimer), i2 === e2 ? s2 = true : i2 = e2 + i2, e2 = this._filterMenuItems(i2), (e2 = s2 && -1 !== e2.index(this.active.next()) ? this.active.nextAll(".ui-menu-item") : e2).length || (i2 = String.fromCharCode(t2.keyCode), e2 = this._filterMenuItems(i2)), e2.length ? (this.focus(t2, e2), this.previousFilter = i2, this.filterTimer = this._delay(function() {
+          delete this.previousFilter;
+        }, 1e3)) : delete this.previousFilter;
     }
-  }
-  function af(aM) {
-    var aJ, aI = y, j, aL, aK = f(aM);
-    for (aJ in aI.tc) {
-      j = aI.tc[aJ];
-      if (j.tttimer) {
-        clearTimeout(j.tttimer);
-        j.tttimer = null;
-      }
-    }
-    if (aK && aI.tc[aK]) {
-      j = aI.tc[aK];
-      if (aL = S(aM, j.canvas)) {
-        j.mx = aL.x;
-        j.my = aL.y;
-        j.Drag(aM, aL);
-      }
-      j.drawn = 0;
-    }
-  }
-  function z(aJ) {
-    var j = y, i = C.addEventListener ? 0 : 1, aI = f(aJ);
-    if (aI && aJ.button == i && j.tc[aI]) {
-      j.tc[aI].BeginDrag(aJ);
-    }
-  }
-  function aF(aK) {
-    var aI = y, j = C.addEventListener ? 0 : 1, aJ = f(aK), i;
-    if (aJ && aK.button == j && aI.tc[aJ]) {
-      i = aI.tc[aJ];
-      af(aK);
-      if (!i.EndDrag() && !i.touchState) {
-        i.Clicked(aK);
-      }
-    }
-  }
-  function T(aJ) {
-    var j = f(aJ), i = j && y.tc[j], aI;
-    if (i && aJ.changedTouches) {
-      if (aJ.touches.length == 1 && i.touchState == 0) {
-        i.touchState = 1;
-        i.BeginDrag(aJ);
-        if (aI = S(aJ, i.canvas)) {
-          i.mx = aI.x;
-          i.my = aI.y;
-          i.drawn = 0;
+    n2 && t2.preventDefault();
+  }, _activate: function(t2) {
+    this.active && !this.active.is(".ui-state-disabled") && (this.active.children("[aria-haspopup='true']").length ? this.expand(t2) : this.select(t2));
+  }, refresh: function() {
+    var t2, e2, s2 = this, n2 = this.options.icons.submenu, i2 = this.element.find(this.options.menus);
+    this._toggleClass("ui-menu-icons", null, !!this.element.find(".ui-icon").length), t2 = i2.filter(":not(.ui-menu)").hide().attr({ role: this.options.role, "aria-hidden": "true", "aria-expanded": "false" }).each(function() {
+      var t3 = V(this), e3 = t3.prev(), i3 = V("<span>").data("ui-menu-submenu-caret", true);
+      s2._addClass(i3, "ui-menu-icon", "ui-icon " + n2), e3.attr("aria-haspopup", "true").prepend(i3), t3.attr("aria-labelledby", e3.attr("id"));
+    }), this._addClass(t2, "ui-menu", "ui-widget ui-widget-content ui-front"), (t2 = i2.add(this.element).find(this.options.items)).not(".ui-menu-item").each(function() {
+      var t3 = V(this);
+      s2._isDivider(t3) && s2._addClass(t3, "ui-menu-divider", "ui-widget-content");
+    }), e2 = (i2 = t2.not(".ui-menu-item, .ui-menu-divider")).children().not(".ui-menu").uniqueId().attr({ tabIndex: -1, role: this._itemRole() }), this._addClass(i2, "ui-menu-item")._addClass(e2, "ui-menu-item-wrapper"), t2.filter(".ui-state-disabled").attr("aria-disabled", "true"), this.active && !V.contains(this.element[0], this.active[0]) && this.blur();
+  }, _itemRole: function() {
+    return { menu: "menuitem", listbox: "option" }[this.options.role];
+  }, _setOption: function(t2, e2) {
+    var i2;
+    "icons" === t2 && (i2 = this.element.find(".ui-menu-icon"), this._removeClass(i2, null, this.options.icons.submenu)._addClass(i2, null, e2.submenu)), this._super(t2, e2);
+  }, _setOptionDisabled: function(t2) {
+    this._super(t2), this.element.attr("aria-disabled", String(t2)), this._toggleClass(null, "ui-state-disabled", !!t2);
+  }, focus: function(t2, e2) {
+    var i2;
+    this.blur(t2, t2 && "focus" === t2.type), this._scrollIntoView(e2), this.active = e2.first(), i2 = this.active.children(".ui-menu-item-wrapper"), this._addClass(i2, null, "ui-state-active"), this.options.role && this.element.attr("aria-activedescendant", i2.attr("id")), i2 = this.active.parent().closest(".ui-menu-item").children(".ui-menu-item-wrapper"), this._addClass(i2, null, "ui-state-active"), t2 && "keydown" === t2.type ? this._close() : this.timer = this._delay(function() {
+      this._close();
+    }, this.delay), (i2 = e2.children(".ui-menu")).length && t2 && /^mouse/.test(t2.type) && this._startOpening(i2), this.activeMenu = e2.parent(), this._trigger("focus", t2, { item: e2 });
+  }, _scrollIntoView: function(t2) {
+    var e2, i2, s2;
+    this._hasScroll() && (e2 = parseFloat(V.css(this.activeMenu[0], "borderTopWidth")) || 0, i2 = parseFloat(V.css(this.activeMenu[0], "paddingTop")) || 0, e2 = t2.offset().top - this.activeMenu.offset().top - e2 - i2, i2 = this.activeMenu.scrollTop(), s2 = this.activeMenu.height(), t2 = t2.outerHeight(), e2 < 0 ? this.activeMenu.scrollTop(i2 + e2) : s2 < e2 + t2 && this.activeMenu.scrollTop(i2 + e2 - s2 + t2));
+  }, blur: function(t2, e2) {
+    e2 || clearTimeout(this.timer), this.active && (this._removeClass(this.active.children(".ui-menu-item-wrapper"), null, "ui-state-active"), this._trigger("blur", t2, { item: this.active }), this.active = null);
+  }, _startOpening: function(t2) {
+    clearTimeout(this.timer), "true" === t2.attr("aria-hidden") && (this.timer = this._delay(function() {
+      this._close(), this._open(t2);
+    }, this.delay));
+  }, _open: function(t2) {
+    var e2 = V.extend({ of: this.active }, this.options.position);
+    clearTimeout(this.timer), this.element.find(".ui-menu").not(t2.parents(".ui-menu")).hide().attr("aria-hidden", "true"), t2.show().removeAttr("aria-hidden").attr("aria-expanded", "true").position(e2);
+  }, collapseAll: function(e2, i2) {
+    clearTimeout(this.timer), this.timer = this._delay(function() {
+      var t2 = i2 ? this.element : V(e2 && e2.target).closest(this.element.find(".ui-menu"));
+      t2.length || (t2 = this.element), this._close(t2), this.blur(e2), this._removeClass(t2.find(".ui-state-active"), null, "ui-state-active"), this.activeMenu = t2;
+    }, i2 ? 0 : this.delay);
+  }, _close: function(t2) {
+    (t2 = t2 || (this.active ? this.active.parent() : this.element)).find(".ui-menu").hide().attr("aria-hidden", "true").attr("aria-expanded", "false");
+  }, _closeOnDocumentClick: function(t2) {
+    return !V(t2.target).closest(".ui-menu").length;
+  }, _isDivider: function(t2) {
+    return !/[^\-\u2014\u2013\s]/.test(t2.text());
+  }, collapse: function(t2) {
+    var e2 = this.active && this.active.parent().closest(".ui-menu-item", this.element);
+    e2 && e2.length && (this._close(), this.focus(t2, e2));
+  }, expand: function(t2) {
+    var e2 = this.active && this._menuItems(this.active.children(".ui-menu")).first();
+    e2 && e2.length && (this._open(e2.parent()), this._delay(function() {
+      this.focus(t2, e2);
+    }));
+  }, next: function(t2) {
+    this._move("next", "first", t2);
+  }, previous: function(t2) {
+    this._move("prev", "last", t2);
+  }, isFirstItem: function() {
+    return this.active && !this.active.prevAll(".ui-menu-item").length;
+  }, isLastItem: function() {
+    return this.active && !this.active.nextAll(".ui-menu-item").length;
+  }, _menuItems: function(t2) {
+    return (t2 || this.element).find(this.options.items).filter(".ui-menu-item");
+  }, _move: function(t2, e2, i2) {
+    var s2;
+    (s2 = this.active ? "first" === t2 || "last" === t2 ? this.active["first" === t2 ? "prevAll" : "nextAll"](".ui-menu-item").last() : this.active[t2 + "All"](".ui-menu-item").first() : s2) && s2.length && this.active || (s2 = this._menuItems(this.activeMenu)[e2]()), this.focus(i2, s2);
+  }, nextPage: function(t2) {
+    var e2, i2, s2;
+    this.active ? this.isLastItem() || (this._hasScroll() ? (i2 = this.active.offset().top, s2 = this.element.innerHeight(), 0 === V.fn.jquery.indexOf("3.2.") && (s2 += this.element[0].offsetHeight - this.element.outerHeight()), this.active.nextAll(".ui-menu-item").each(function() {
+      return (e2 = V(this)).offset().top - i2 - s2 < 0;
+    }), this.focus(t2, e2)) : this.focus(t2, this._menuItems(this.activeMenu)[this.active ? "last" : "first"]())) : this.next(t2);
+  }, previousPage: function(t2) {
+    var e2, i2, s2;
+    this.active ? this.isFirstItem() || (this._hasScroll() ? (i2 = this.active.offset().top, s2 = this.element.innerHeight(), 0 === V.fn.jquery.indexOf("3.2.") && (s2 += this.element[0].offsetHeight - this.element.outerHeight()), this.active.prevAll(".ui-menu-item").each(function() {
+      return 0 < (e2 = V(this)).offset().top - i2 + s2;
+    }), this.focus(t2, e2)) : this.focus(t2, this._menuItems(this.activeMenu).first())) : this.next(t2);
+  }, _hasScroll: function() {
+    return this.element.outerHeight() < this.element.prop("scrollHeight");
+  }, select: function(t2) {
+    this.active = this.active || V(t2.target).closest(".ui-menu-item");
+    var e2 = { item: this.active };
+    this.active.has(".ui-menu").length || this.collapseAll(t2, true), this._trigger("select", t2, e2);
+  }, _filterMenuItems: function(t2) {
+    var t2 = t2.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, "\\$&"), e2 = new RegExp("^" + t2, "i");
+    return this.activeMenu.find(this.options.items).filter(".ui-menu-item").filter(function() {
+      return e2.test(String.prototype.trim.call(V(this).children(".ui-menu-item-wrapper").text()));
+    });
+  } }), V.widget("ui.autocomplete", { version: "1.13.3", defaultElement: "<input>", options: { appendTo: null, autoFocus: false, delay: 300, minLength: 1, position: { my: "left top", at: "left bottom", collision: "none" }, source: null, change: null, close: null, focus: null, open: null, response: null, search: null, select: null }, requestIndex: 0, pending: 0, liveRegionTimer: null, _create: function() {
+    var i2, s2, n2, t2 = this.element[0].nodeName.toLowerCase(), e2 = "textarea" === t2, t2 = "input" === t2;
+    this.isMultiLine = e2 || !t2 && this._isContentEditable(this.element), this.valueMethod = this.element[e2 || t2 ? "val" : "text"], this.isNewMenu = true, this._addClass("ui-autocomplete-input"), this.element.attr("autocomplete", "off"), this._on(this.element, { keydown: function(t3) {
+      if (this.element.prop("readOnly")) s2 = n2 = i2 = true;
+      else {
+        s2 = n2 = i2 = false;
+        var e3 = V.ui.keyCode;
+        switch (t3.keyCode) {
+          case e3.PAGE_UP:
+            i2 = true, this._move("previousPage", t3);
+            break;
+          case e3.PAGE_DOWN:
+            i2 = true, this._move("nextPage", t3);
+            break;
+          case e3.UP:
+            i2 = true, this._keyEvent("previous", t3);
+            break;
+          case e3.DOWN:
+            i2 = true, this._keyEvent("next", t3);
+            break;
+          case e3.ENTER:
+            this.menu.active && (i2 = true, t3.preventDefault(), this.menu.select(t3));
+            break;
+          case e3.TAB:
+            this.menu.active && this.menu.select(t3);
+            break;
+          case e3.ESCAPE:
+            this.menu.element.is(":visible") && (this.isMultiLine || this._value(this.term), this.close(t3), t3.preventDefault());
+            break;
+          default:
+            s2 = true, this._searchTimeout(t3);
         }
-      } else {
-        if (aJ.targetTouches.length == 2 && i.pinchZoom) {
-          i.touchState = 3;
-          i.EndDrag();
-          i.BeginPinch(aJ);
-        } else {
-          i.EndDrag();
-          i.EndPinch();
-          i.touchState = 0;
+      }
+    }, keypress: function(t3) {
+      if (i2) i2 = false, this.isMultiLine && !this.menu.element.is(":visible") || t3.preventDefault();
+      else if (!s2) {
+        var e3 = V.ui.keyCode;
+        switch (t3.keyCode) {
+          case e3.PAGE_UP:
+            this._move("previousPage", t3);
+            break;
+          case e3.PAGE_DOWN:
+            this._move("nextPage", t3);
+            break;
+          case e3.UP:
+            this._keyEvent("previous", t3);
+            break;
+          case e3.DOWN:
+            this._keyEvent("next", t3);
         }
       }
+    }, input: function(t3) {
+      n2 ? (n2 = false, t3.preventDefault()) : this._searchTimeout(t3);
+    }, focus: function() {
+      this.selectedItem = null, this.previous = this._value();
+    }, blur: function(t3) {
+      clearTimeout(this.searching), this.close(t3), this._change(t3);
+    } }), this._initSource(), this.menu = V("<ul>").appendTo(this._appendTo()).menu({ role: null }).hide().attr({ unselectable: "on" }).menu("instance"), this._addClass(this.menu.element, "ui-autocomplete", "ui-front"), this._on(this.menu.element, { mousedown: function(t3) {
+      t3.preventDefault();
+    }, menufocus: function(t3, e3) {
+      var i3, s3;
+      this.isNewMenu && (this.isNewMenu = false, t3.originalEvent) && /^mouse/.test(t3.originalEvent.type) ? (this.menu.blur(), this.document.one("mousemove", function() {
+        V(t3.target).trigger(t3.originalEvent);
+      })) : (s3 = e3.item.data("ui-autocomplete-item"), false !== this._trigger("focus", t3, { item: s3 }) && t3.originalEvent && /^key/.test(t3.originalEvent.type) && this._value(s3.value), (i3 = e3.item.attr("aria-label") || s3.value) && String.prototype.trim.call(i3).length && (clearTimeout(this.liveRegionTimer), this.liveRegionTimer = this._delay(function() {
+        this.liveRegion.html(V("<div>").text(i3));
+      }, 100)));
+    }, menuselect: function(t3, e3) {
+      var i3 = e3.item.data("ui-autocomplete-item"), s3 = this.previous;
+      this.element[0] !== V.ui.safeActiveElement(this.document[0]) && (this.element.trigger("focus"), this.previous = s3, this._delay(function() {
+        this.previous = s3, this.selectedItem = i3;
+      })), false !== this._trigger("select", t3, { item: i3 }) && this._value(i3.value), this.term = this._value(), this.close(t3), this.selectedItem = i3;
+    } }), this.liveRegion = V("<div>", { role: "status", "aria-live": "assertive", "aria-relevant": "additions" }).appendTo(this.document[0].body), this._addClass(this.liveRegion, null, "ui-helper-hidden-accessible"), this._on(this.window, { beforeunload: function() {
+      this.element.removeAttr("autocomplete");
+    } });
+  }, _destroy: function() {
+    clearTimeout(this.searching), this.element.removeAttr("autocomplete"), this.menu.element.remove(), this.liveRegion.remove();
+  }, _setOption: function(t2, e2) {
+    this._super(t2, e2), "source" === t2 && this._initSource(), "appendTo" === t2 && this.menu.element.appendTo(this._appendTo()), "disabled" === t2 && e2 && this.xhr && this.xhr.abort();
+  }, _isEventTargetInWidget: function(t2) {
+    var e2 = this.menu.element[0];
+    return t2.target === this.element[0] || t2.target === e2 || V.contains(e2, t2.target);
+  }, _closeOnClickOutside: function(t2) {
+    this._isEventTargetInWidget(t2) || this.close();
+  }, _appendTo: function() {
+    var t2 = this.options.appendTo;
+    return t2 = (t2 = (t2 = t2 && (t2.jquery || t2.nodeType ? V(t2) : this.document.find(t2).eq(0))) && t2[0] ? t2 : this.element.closest(".ui-front, dialog")).length ? t2 : this.document[0].body;
+  }, _initSource: function() {
+    var i2, s2, n2 = this;
+    Array.isArray(this.options.source) ? (i2 = this.options.source, this.source = function(t2, e2) {
+      e2(V.ui.autocomplete.filter(i2, t2.term));
+    }) : "string" == typeof this.options.source ? (s2 = this.options.source, this.source = function(t2, e2) {
+      n2.xhr && n2.xhr.abort(), n2.xhr = V.ajax({ url: s2, data: t2, dataType: "json", success: function(t3) {
+        e2(t3);
+      }, error: function() {
+        e2([]);
+      } });
+    }) : this.source = this.options.source;
+  }, _searchTimeout: function(s2) {
+    clearTimeout(this.searching), this.searching = this._delay(function() {
+      var t2 = this.term === this._value(), e2 = this.menu.element.is(":visible"), i2 = s2.altKey || s2.ctrlKey || s2.metaKey || s2.shiftKey;
+      t2 && (e2 || i2) || (this.selectedItem = null, this.search(null, s2));
+    }, this.options.delay);
+  }, search: function(t2, e2) {
+    return t2 = null != t2 ? t2 : this._value(), this.term = this._value(), t2.length < this.options.minLength ? this.close(e2) : false !== this._trigger("search", e2) ? this._search(t2) : void 0;
+  }, _search: function(t2) {
+    this.pending++, this._addClass("ui-autocomplete-loading"), this.cancelSearch = false, this.source({ term: t2 }, this._response());
+  }, _response: function() {
+    var e2 = ++this.requestIndex;
+    return function(t2) {
+      e2 === this.requestIndex && this.__response(t2), this.pending--, this.pending || this._removeClass("ui-autocomplete-loading");
+    }.bind(this);
+  }, __response: function(t2) {
+    t2 = t2 && this._normalize(t2), this._trigger("response", null, { content: t2 }), !this.options.disabled && t2 && t2.length && !this.cancelSearch ? (this._suggest(t2), this._trigger("open")) : this._close();
+  }, close: function(t2) {
+    this.cancelSearch = true, this._close(t2);
+  }, _close: function(t2) {
+    this._off(this.document, "mousedown"), this.menu.element.is(":visible") && (this.menu.element.hide(), this.menu.blur(), this.isNewMenu = true, this._trigger("close", t2));
+  }, _change: function(t2) {
+    this.previous !== this._value() && this._trigger("change", t2, { item: this.selectedItem });
+  }, _normalize: function(t2) {
+    return t2.length && t2[0].label && t2[0].value ? t2 : V.map(t2, function(t3) {
+      return "string" == typeof t3 ? { label: t3, value: t3 } : V.extend({}, t3, { label: t3.label || t3.value, value: t3.value || t3.label });
+    });
+  }, _suggest: function(t2) {
+    var e2 = this.menu.element.empty();
+    this._renderMenu(e2, t2), this.isNewMenu = true, this.menu.refresh(), e2.show(), this._resizeMenu(), e2.position(V.extend({ of: this.element }, this.options.position)), this.options.autoFocus && this.menu.next(), this._on(this.document, { mousedown: "_closeOnClickOutside" });
+  }, _resizeMenu: function() {
+    var t2 = this.menu.element;
+    t2.outerWidth(Math.max(t2.width("").outerWidth() + 1, this.element.outerWidth()));
+  }, _renderMenu: function(i2, t2) {
+    var s2 = this;
+    V.each(t2, function(t3, e2) {
+      s2._renderItemData(i2, e2);
+    });
+  }, _renderItemData: function(t2, e2) {
+    return this._renderItem(t2, e2).data("ui-autocomplete-item", e2);
+  }, _renderItem: function(t2, e2) {
+    return V("<li>").append(V("<div>").text(e2.label)).appendTo(t2);
+  }, _move: function(t2, e2) {
+    this.menu.element.is(":visible") ? this.menu.isFirstItem() && /^previous/.test(t2) || this.menu.isLastItem() && /^next/.test(t2) ? (this.isMultiLine || this._value(this.term), this.menu.blur()) : this.menu[t2](e2) : this.search(null, e2);
+  }, widget: function() {
+    return this.menu.element;
+  }, _value: function() {
+    return this.valueMethod.apply(this.element, arguments);
+  }, _keyEvent: function(t2, e2) {
+    this.isMultiLine && !this.menu.element.is(":visible") || (this._move(t2, e2), e2.preventDefault());
+  }, _isContentEditable: function(t2) {
+    var e2;
+    return !!t2.length && ("inherit" === (e2 = t2.prop("contentEditable")) ? this._isContentEditable(t2.parent()) : "true" === e2);
+  } }), V.extend(V.ui.autocomplete, { escapeRegex: function(t2) {
+    return t2.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, "\\$&");
+  }, filter: function(t2, e2) {
+    var i2 = new RegExp(V.ui.autocomplete.escapeRegex(e2), "i");
+    return V.grep(t2, function(t3) {
+      return i2.test(t3.label || t3.value || t3);
+    });
+  } }), V.widget("ui.autocomplete", V.ui.autocomplete, { options: { messages: { noResults: "No search results.", results: function(t2) {
+    return t2 + (1 < t2 ? " results are" : " result is") + " available, use up and down arrow keys to navigate.";
+  } } }, __response: function(t2) {
+    var e2;
+    this._superApply(arguments), this.options.disabled || this.cancelSearch || (e2 = t2 && t2.length ? this.options.messages.results(t2.length) : this.options.messages.noResults, clearTimeout(this.liveRegionTimer), this.liveRegionTimer = this._delay(function() {
+      this.liveRegion.html(V("<div>").text(e2));
+    }, 100));
+  } }), V.ui.autocomplete;
+  var it, st, nt, ot, S, at = /ui-corner-([a-z]){2,6}/g;
+  V.widget("ui.controlgroup", { version: "1.13.3", defaultElement: "<div>", options: { direction: "horizontal", disabled: null, onlyVisible: true, items: { button: "input[type=button], input[type=submit], input[type=reset], button, a", controlgroupLabel: ".ui-controlgroup-label", checkboxradio: "input[type='checkbox'], input[type='radio']", selectmenu: "select", spinner: ".ui-spinner-input" } }, _create: function() {
+    this._enhance();
+  }, _enhance: function() {
+    this.element.attr("role", "toolbar"), this.refresh();
+  }, _destroy: function() {
+    this._callChildMethod("destroy"), this.childWidgets.removeData("ui-controlgroup-data"), this.element.removeAttr("role"), this.options.items.controlgroupLabel && this.element.find(this.options.items.controlgroupLabel).find(".ui-controlgroup-label-contents").contents().unwrap();
+  }, _initWidgets: function() {
+    var o2 = this, a2 = [];
+    V.each(this.options.items, function(s2, t2) {
+      var e2, n2 = {};
+      t2 && ("controlgroupLabel" === s2 ? ((e2 = o2.element.find(t2)).each(function() {
+        var t3 = V(this);
+        t3.children(".ui-controlgroup-label-contents").length || t3.contents().wrapAll("<span class='ui-controlgroup-label-contents'></span>");
+      }), o2._addClass(e2, null, "ui-widget ui-widget-content ui-state-default"), a2 = a2.concat(e2.get())) : V.fn[s2] && (n2 = o2["_" + s2 + "Options"] ? o2["_" + s2 + "Options"]("middle") : { classes: {} }, o2.element.find(t2).each(function() {
+        var t3 = V(this), e3 = t3[s2]("instance"), i2 = V.widget.extend({}, n2);
+        "button" === s2 && t3.parent(".ui-spinner").length || ((e3 = e3 || t3[s2]()[s2]("instance")) && (i2.classes = o2._resolveClassesValues(i2.classes, e3)), t3[s2](i2), i2 = t3[s2]("widget"), V.data(i2[0], "ui-controlgroup-data", e3 || t3[s2]("instance")), a2.push(i2[0]));
+      })));
+    }), this.childWidgets = V(V.uniqueSort(a2)), this._addClass(this.childWidgets, "ui-controlgroup-item");
+  }, _callChildMethod: function(e2) {
+    this.childWidgets.each(function() {
+      var t2 = V(this).data("ui-controlgroup-data");
+      t2 && t2[e2] && t2[e2]();
+    });
+  }, _updateCornerClass: function(t2, e2) {
+    e2 = this._buildSimpleOptions(e2, "label").classes.label;
+    this._removeClass(t2, null, "ui-corner-top ui-corner-bottom ui-corner-left ui-corner-right ui-corner-all"), this._addClass(t2, null, e2);
+  }, _buildSimpleOptions: function(t2, e2) {
+    var i2 = "vertical" === this.options.direction, s2 = { classes: {} };
+    return s2.classes[e2] = { middle: "", first: "ui-corner-" + (i2 ? "top" : "left"), last: "ui-corner-" + (i2 ? "bottom" : "right"), only: "ui-corner-all" }[t2], s2;
+  }, _spinnerOptions: function(t2) {
+    t2 = this._buildSimpleOptions(t2, "ui-spinner");
+    return t2.classes["ui-spinner-up"] = "", t2.classes["ui-spinner-down"] = "", t2;
+  }, _buttonOptions: function(t2) {
+    return this._buildSimpleOptions(t2, "ui-button");
+  }, _checkboxradioOptions: function(t2) {
+    return this._buildSimpleOptions(t2, "ui-checkboxradio-label");
+  }, _selectmenuOptions: function(t2) {
+    var e2 = "vertical" === this.options.direction;
+    return { width: e2 && "auto", classes: { middle: { "ui-selectmenu-button-open": "", "ui-selectmenu-button-closed": "" }, first: { "ui-selectmenu-button-open": "ui-corner-" + (e2 ? "top" : "tl"), "ui-selectmenu-button-closed": "ui-corner-" + (e2 ? "top" : "left") }, last: { "ui-selectmenu-button-open": e2 ? "" : "ui-corner-tr", "ui-selectmenu-button-closed": "ui-corner-" + (e2 ? "bottom" : "right") }, only: { "ui-selectmenu-button-open": "ui-corner-top", "ui-selectmenu-button-closed": "ui-corner-all" } }[t2] };
+  }, _resolveClassesValues: function(i2, s2) {
+    var n2 = {};
+    return V.each(i2, function(t2) {
+      var e2 = s2.options.classes[t2] || "", e2 = String.prototype.trim.call(e2.replace(at, ""));
+      n2[t2] = (e2 + " " + i2[t2]).replace(/\s+/g, " ");
+    }), n2;
+  }, _setOption: function(t2, e2) {
+    "direction" === t2 && this._removeClass("ui-controlgroup-" + this.options.direction), this._super(t2, e2), "disabled" === t2 ? this._callChildMethod(e2 ? "disable" : "enable") : this.refresh();
+  }, refresh: function() {
+    var n2, o2 = this;
+    this._addClass("ui-controlgroup ui-controlgroup-" + this.options.direction), "horizontal" === this.options.direction && this._addClass(null, "ui-helper-clearfix"), this._initWidgets(), n2 = this.childWidgets, (n2 = this.options.onlyVisible ? n2.filter(":visible") : n2).length && (V.each(["first", "last"], function(t2, e2) {
+      var i2, s2 = n2[e2]().data("ui-controlgroup-data");
+      s2 && o2["_" + s2.widgetName + "Options"] ? ((i2 = o2["_" + s2.widgetName + "Options"](1 === n2.length ? "only" : e2)).classes = o2._resolveClassesValues(i2.classes, s2), s2.element[s2.widgetName](i2)) : o2._updateCornerClass(n2[e2](), e2);
+    }), this._callChildMethod("refresh"));
+  } }), V.widget("ui.checkboxradio", [V.ui.formResetMixin, { version: "1.13.3", options: { disabled: null, label: null, icon: true, classes: { "ui-checkboxradio-label": "ui-corner-all", "ui-checkboxradio-icon": "ui-corner-all" } }, _getCreateOptions: function() {
+    var t2, e2 = this._super() || {};
+    return this._readType(), t2 = this.element.labels(), this.label = V(t2[t2.length - 1]), this.label.length || V.error("No label found for checkboxradio widget"), this.originalLabel = "", (t2 = this.label.contents().not(this.element[0])).length && (this.originalLabel += t2.clone().wrapAll("<div></div>").parent().html()), this.originalLabel && (e2.label = this.originalLabel), null != (t2 = this.element[0].disabled) && (e2.disabled = t2), e2;
+  }, _create: function() {
+    var t2 = this.element[0].checked;
+    this._bindFormResetHandler(), null == this.options.disabled && (this.options.disabled = this.element[0].disabled), this._setOption("disabled", this.options.disabled), this._addClass("ui-checkboxradio", "ui-helper-hidden-accessible"), this._addClass(this.label, "ui-checkboxradio-label", "ui-button ui-widget"), "radio" === this.type && this._addClass(this.label, "ui-checkboxradio-radio-label"), this.options.label && this.options.label !== this.originalLabel ? this._updateLabel() : this.originalLabel && (this.options.label = this.originalLabel), this._enhance(), t2 && this._addClass(this.label, "ui-checkboxradio-checked", "ui-state-active"), this._on({ change: "_toggleClasses", focus: function() {
+      this._addClass(this.label, null, "ui-state-focus ui-visual-focus");
+    }, blur: function() {
+      this._removeClass(this.label, null, "ui-state-focus ui-visual-focus");
+    } });
+  }, _readType: function() {
+    var t2 = this.element[0].nodeName.toLowerCase();
+    this.type = this.element[0].type, "input" === t2 && /radio|checkbox/.test(this.type) || V.error("Can't create checkboxradio on element.nodeName=" + t2 + " and element.type=" + this.type);
+  }, _enhance: function() {
+    this._updateIcon(this.element[0].checked);
+  }, widget: function() {
+    return this.label;
+  }, _getRadioGroup: function() {
+    var t2 = this.element[0].name, e2 = "input[name='" + V.escapeSelector(t2) + "']";
+    return t2 ? (this.form.length ? V(this.form[0].elements).filter(e2) : V(e2).filter(function() {
+      return 0 === V(this)._form().length;
+    })).not(this.element) : V([]);
+  }, _toggleClasses: function() {
+    var t2 = this.element[0].checked;
+    this._toggleClass(this.label, "ui-checkboxradio-checked", "ui-state-active", t2), this.options.icon && "checkbox" === this.type && this._toggleClass(this.icon, null, "ui-icon-check ui-state-checked", t2)._toggleClass(this.icon, null, "ui-icon-blank", !t2), "radio" === this.type && this._getRadioGroup().each(function() {
+      var t3 = V(this).checkboxradio("instance");
+      t3 && t3._removeClass(t3.label, "ui-checkboxradio-checked", "ui-state-active");
+    });
+  }, _destroy: function() {
+    this._unbindFormResetHandler(), this.icon && (this.icon.remove(), this.iconSpace.remove());
+  }, _setOption: function(t2, e2) {
+    "label" === t2 && !e2 || (this._super(t2, e2), "disabled" === t2 ? (this._toggleClass(this.label, null, "ui-state-disabled", e2), this.element[0].disabled = e2) : this.refresh());
+  }, _updateIcon: function(t2) {
+    var e2 = "ui-icon ui-icon-background ";
+    this.options.icon ? (this.icon || (this.icon = V("<span>"), this.iconSpace = V("<span> </span>"), this._addClass(this.iconSpace, "ui-checkboxradio-icon-space")), "checkbox" === this.type ? (e2 += t2 ? "ui-icon-check ui-state-checked" : "ui-icon-blank", this._removeClass(this.icon, null, t2 ? "ui-icon-blank" : "ui-icon-check")) : e2 += "ui-icon-blank", this._addClass(this.icon, "ui-checkboxradio-icon", e2), t2 || this._removeClass(this.icon, null, "ui-icon-check ui-state-checked"), this.icon.prependTo(this.label).after(this.iconSpace)) : void 0 !== this.icon && (this.icon.remove(), this.iconSpace.remove(), delete this.icon);
+  }, _updateLabel: function() {
+    var t2 = this.label.contents().not(this.element[0]);
+    this.icon && (t2 = t2.not(this.icon[0])), (t2 = this.iconSpace ? t2.not(this.iconSpace[0]) : t2).remove(), this.label.append(this.options.label);
+  }, refresh: function() {
+    var t2 = this.element[0].checked, e2 = this.element[0].disabled;
+    this._updateIcon(t2), this._toggleClass(this.label, "ui-checkboxradio-checked", "ui-state-active", t2), null !== this.options.label && this._updateLabel(), e2 !== this.options.disabled && this._setOptions({ disabled: e2 });
+  } }]), V.ui.checkboxradio, V.widget("ui.button", { version: "1.13.3", defaultElement: "<button>", options: { classes: { "ui-button": "ui-corner-all" }, disabled: null, icon: null, iconPosition: "beginning", label: null, showLabel: true }, _getCreateOptions: function() {
+    var t2, e2 = this._super() || {};
+    return this.isInput = this.element.is("input"), null != (t2 = this.element[0].disabled) && (e2.disabled = t2), this.originalLabel = this.isInput ? this.element.val() : this.element.html(), this.originalLabel && (e2.label = this.originalLabel), e2;
+  }, _create: function() {
+    !this.option.showLabel & !this.options.icon && (this.options.showLabel = true), null == this.options.disabled && (this.options.disabled = this.element[0].disabled || false), this.hasTitle = !!this.element.attr("title"), this.options.label && this.options.label !== this.originalLabel && (this.isInput ? this.element.val(this.options.label) : this.element.html(this.options.label)), this._addClass("ui-button", "ui-widget"), this._setOption("disabled", this.options.disabled), this._enhance(), this.element.is("a") && this._on({ keyup: function(t2) {
+      t2.keyCode === V.ui.keyCode.SPACE && (t2.preventDefault(), this.element[0].click ? this.element[0].click() : this.element.trigger("click"));
+    } });
+  }, _enhance: function() {
+    this.element.is("button") || this.element.attr("role", "button"), this.options.icon && (this._updateIcon("icon", this.options.icon), this._updateTooltip());
+  }, _updateTooltip: function() {
+    this.title = this.element.attr("title"), this.options.showLabel || this.title || this.element.attr("title", this.options.label);
+  }, _updateIcon: function(t2, e2) {
+    var t2 = "iconPosition" !== t2, i2 = t2 ? this.options.iconPosition : e2, s2 = "top" === i2 || "bottom" === i2;
+    this.icon ? t2 && this._removeClass(this.icon, null, this.options.icon) : (this.icon = V("<span>"), this._addClass(this.icon, "ui-button-icon", "ui-icon"), this.options.showLabel || this._addClass("ui-button-icon-only")), t2 && this._addClass(this.icon, null, e2), this._attachIcon(i2), s2 ? (this._addClass(this.icon, null, "ui-widget-icon-block"), this.iconSpace && this.iconSpace.remove()) : (this.iconSpace || (this.iconSpace = V("<span> </span>"), this._addClass(this.iconSpace, "ui-button-icon-space")), this._removeClass(this.icon, null, "ui-wiget-icon-block"), this._attachIconSpace(i2));
+  }, _destroy: function() {
+    this.element.removeAttr("role"), this.icon && this.icon.remove(), this.iconSpace && this.iconSpace.remove(), this.hasTitle || this.element.removeAttr("title");
+  }, _attachIconSpace: function(t2) {
+    this.icon[/^(?:end|bottom)/.test(t2) ? "before" : "after"](this.iconSpace);
+  }, _attachIcon: function(t2) {
+    this.element[/^(?:end|bottom)/.test(t2) ? "append" : "prepend"](this.icon);
+  }, _setOptions: function(t2) {
+    var e2 = (void 0 === t2.showLabel ? this.options : t2).showLabel, i2 = (void 0 === t2.icon ? this.options : t2).icon;
+    e2 || i2 || (t2.showLabel = true), this._super(t2);
+  }, _setOption: function(t2, e2) {
+    "icon" === t2 && (e2 ? this._updateIcon(t2, e2) : this.icon && (this.icon.remove(), this.iconSpace) && this.iconSpace.remove()), "iconPosition" === t2 && this._updateIcon(t2, e2), "showLabel" === t2 && (this._toggleClass("ui-button-icon-only", null, !e2), this._updateTooltip()), "label" === t2 && (this.isInput ? this.element.val(e2) : (this.element.html(e2), this.icon && (this._attachIcon(this.options.iconPosition), this._attachIconSpace(this.options.iconPosition)))), this._super(t2, e2), "disabled" === t2 && (this._toggleClass(null, "ui-state-disabled", e2), this.element[0].disabled = e2) && this.element.trigger("blur");
+  }, refresh: function() {
+    var t2 = this.element.is("input, button") ? this.element[0].disabled : this.element.hasClass("ui-button-disabled");
+    t2 !== this.options.disabled && this._setOptions({ disabled: t2 }), this._updateTooltip();
+  } }), false !== V.uiBackCompat && (V.widget("ui.button", V.ui.button, { options: { text: true, icons: { primary: null, secondary: null } }, _create: function() {
+    this.options.showLabel && !this.options.text && (this.options.showLabel = this.options.text), !this.options.showLabel && this.options.text && (this.options.text = this.options.showLabel), this.options.icon || !this.options.icons.primary && !this.options.icons.secondary ? this.options.icon && (this.options.icons.primary = this.options.icon) : this.options.icons.primary ? this.options.icon = this.options.icons.primary : (this.options.icon = this.options.icons.secondary, this.options.iconPosition = "end"), this._super();
+  }, _setOption: function(t2, e2) {
+    "text" === t2 ? this._super("showLabel", e2) : ("showLabel" === t2 && (this.options.text = e2), "icon" === t2 && (this.options.icons.primary = e2), "icons" === t2 && (e2.primary ? (this._super("icon", e2.primary), this._super("iconPosition", "beginning")) : e2.secondary && (this._super("icon", e2.secondary), this._super("iconPosition", "end"))), this._superApply(arguments));
+  } }), V.fn.button = (ot = V.fn.button, function(i2) {
+    var t2 = "string" == typeof i2, s2 = Array.prototype.slice.call(arguments, 1), n2 = this;
+    return t2 ? this.length || "instance" !== i2 ? this.each(function() {
+      var t3, e2 = V(this).attr("type"), e2 = V.data(this, "ui-" + ("checkbox" !== e2 && "radio" !== e2 ? "button" : "checkboxradio"));
+      return "instance" === i2 ? (n2 = e2, false) : e2 ? "function" != typeof e2[i2] || "_" === i2.charAt(0) ? V.error("no such method '" + i2 + "' for button widget instance") : (t3 = e2[i2].apply(e2, s2)) !== e2 && void 0 !== t3 ? (n2 = t3 && t3.jquery ? n2.pushStack(t3.get()) : t3, false) : void 0 : V.error("cannot call methods on button prior to initialization; attempted to call method '" + i2 + "'");
+    }) : n2 = void 0 : (s2.length && (i2 = V.widget.extend.apply(null, [i2].concat(s2))), this.each(function() {
+      var t3 = V(this).attr("type"), t3 = "checkbox" !== t3 && "radio" !== t3 ? "button" : "checkboxradio", e2 = V.data(this, "ui-" + t3);
+      e2 ? (e2.option(i2 || {}), e2._init && e2._init()) : "button" == t3 ? ot.call(V(this), i2) : V(this).checkboxradio(V.extend({ icon: false }, i2));
+    })), n2;
+  }), V.fn.buttonset = function() {
+    return V.ui.controlgroup || V.error("Controlgroup widget missing"), "option" === arguments[0] && "items" === arguments[1] && arguments[2] ? this.controlgroup.apply(this, [arguments[0], "items.button", arguments[2]]) : "option" === arguments[0] && "items" === arguments[1] ? this.controlgroup.apply(this, [arguments[0], "items.button"]) : ("object" == typeof arguments[0] && arguments[0].items && (arguments[0].items = { button: arguments[0].items }), this.controlgroup.apply(this, arguments));
+  }), V.ui.button;
+  function rt() {
+    this._curInst = null, this._keyEvent = false, this._disabledInputs = [], this._datepickerShowing = false, this._inDialog = false, this._mainDivId = "ui-datepicker-div", this._inlineClass = "ui-datepicker-inline", this._appendClass = "ui-datepicker-append", this._triggerClass = "ui-datepicker-trigger", this._dialogClass = "ui-datepicker-dialog", this._disableClass = "ui-datepicker-disabled", this._unselectableClass = "ui-datepicker-unselectable", this._currentClass = "ui-datepicker-current-day", this._dayOverClass = "ui-datepicker-days-cell-over", this.regional = [], this.regional[""] = { closeText: "Done", prevText: "Prev", nextText: "Next", currentText: "Today", monthNames: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], dayNames: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], dayNamesShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], dayNamesMin: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"], weekHeader: "Wk", dateFormat: "mm/dd/yy", firstDay: 0, isRTL: false, showMonthAfterYear: false, yearSuffix: "", selectMonthLabel: "Select month", selectYearLabel: "Select year" }, this._defaults = { showOn: "focus", showAnim: "fadeIn", showOptions: {}, defaultDate: null, appendText: "", buttonText: "...", buttonImage: "", buttonImageOnly: false, hideIfNoPrevNext: false, navigationAsDateFormat: false, gotoCurrent: false, changeMonth: false, changeYear: false, yearRange: "c-10:c+10", showOtherMonths: false, selectOtherMonths: false, showWeek: false, calculateWeek: this.iso8601Week, shortYearCutoff: "+10", minDate: null, maxDate: null, duration: "fast", beforeShowDay: null, beforeShow: null, onSelect: null, onChangeMonthYear: null, onClose: null, onUpdateDatepicker: null, numberOfMonths: 1, showCurrentAtPos: 0, stepMonths: 1, stepBigMonths: 12, altField: "", altFormat: "", constrainInput: true, showButtonPanel: false, autoSize: false, disabled: false }, V.extend(this._defaults, this.regional[""]), this.regional.en = V.extend(true, {}, this.regional[""]), this.regional["en-US"] = V.extend(true, {}, this.regional.en), this.dpDiv = lt(V("<div id='" + this._mainDivId + "' class='ui-datepicker ui-widget ui-widget-content ui-helper-clearfix ui-corner-all'></div>"));
+  }
+  function lt(t2) {
+    var e2 = "button, .ui-datepicker-prev, .ui-datepicker-next, .ui-datepicker-calendar td a";
+    return t2.on("mouseout", e2, function() {
+      V(this).removeClass("ui-state-hover"), -1 !== this.className.indexOf("ui-datepicker-prev") && V(this).removeClass("ui-datepicker-prev-hover"), -1 !== this.className.indexOf("ui-datepicker-next") && V(this).removeClass("ui-datepicker-next-hover");
+    }).on("mouseover", e2, ht);
+  }
+  function ht() {
+    V.datepicker._isDisabledDatepicker((S.inline ? S.dpDiv.parent() : S.input)[0]) || (V(this).parents(".ui-datepicker-calendar").find("a").removeClass("ui-state-hover"), V(this).addClass("ui-state-hover"), -1 !== this.className.indexOf("ui-datepicker-prev") && V(this).addClass("ui-datepicker-prev-hover"), -1 !== this.className.indexOf("ui-datepicker-next") && V(this).addClass("ui-datepicker-next-hover"));
+  }
+  function H(t2, e2) {
+    for (var i2 in V.extend(t2, e2), e2) null == e2[i2] && (t2[i2] = e2[i2]);
+  }
+  V.extend(V.ui, { datepicker: { version: "1.13.3" } }), V.extend(rt.prototype, { markerClassName: "hasDatepicker", maxRows: 4, _widgetDatepicker: function() {
+    return this.dpDiv;
+  }, setDefaults: function(t2) {
+    return H(this._defaults, t2 || {}), this;
+  }, _attachDatepicker: function(t2, e2) {
+    var i2, s2 = t2.nodeName.toLowerCase(), n2 = "div" === s2 || "span" === s2;
+    t2.id || (this.uuid += 1, t2.id = "dp" + this.uuid), (i2 = this._newInst(V(t2), n2)).settings = V.extend({}, e2 || {}), "input" === s2 ? this._connectDatepicker(t2, i2) : n2 && this._inlineDatepicker(t2, i2);
+  }, _newInst: function(t2, e2) {
+    return { id: t2[0].id.replace(/([^A-Za-z0-9_\-])/g, "\\\\$1"), input: t2, selectedDay: 0, selectedMonth: 0, selectedYear: 0, drawMonth: 0, drawYear: 0, inline: e2, dpDiv: e2 ? lt(V("<div class='" + this._inlineClass + " ui-datepicker ui-widget ui-widget-content ui-helper-clearfix ui-corner-all'></div>")) : this.dpDiv };
+  }, _connectDatepicker: function(t2, e2) {
+    var i2 = V(t2);
+    e2.append = V([]), e2.trigger = V([]), i2.hasClass(this.markerClassName) || (this._attachments(i2, e2), i2.addClass(this.markerClassName).on("keydown", this._doKeyDown).on("keypress", this._doKeyPress).on("keyup", this._doKeyUp), this._autoSize(e2), V.data(t2, "datepicker", e2), e2.settings.disabled && this._disableDatepicker(t2));
+  }, _attachments: function(t2, e2) {
+    var i2, s2 = this._get(e2, "appendText"), n2 = this._get(e2, "isRTL");
+    e2.append && e2.append.remove(), s2 && (e2.append = V("<span>").addClass(this._appendClass).text(s2), t2[n2 ? "before" : "after"](e2.append)), t2.off("focus", this._showDatepicker), e2.trigger && e2.trigger.remove(), "focus" !== (s2 = this._get(e2, "showOn")) && "both" !== s2 || t2.on("focus", this._showDatepicker), "button" !== s2 && "both" !== s2 || (s2 = this._get(e2, "buttonText"), i2 = this._get(e2, "buttonImage"), this._get(e2, "buttonImageOnly") ? e2.trigger = V("<img>").addClass(this._triggerClass).attr({ src: i2, alt: s2, title: s2 }) : (e2.trigger = V("<button type='button'>").addClass(this._triggerClass), i2 ? e2.trigger.html(V("<img>").attr({ src: i2, alt: s2, title: s2 })) : e2.trigger.text(s2)), t2[n2 ? "before" : "after"](e2.trigger), e2.trigger.on("click", function() {
+      return V.datepicker._datepickerShowing && V.datepicker._lastInput === t2[0] ? V.datepicker._hideDatepicker() : (V.datepicker._datepickerShowing && V.datepicker._lastInput !== t2[0] && V.datepicker._hideDatepicker(), V.datepicker._showDatepicker(t2[0])), false;
+    }));
+  }, _autoSize: function(t2) {
+    var e2, i2, s2, n2, o2, a2;
+    this._get(t2, "autoSize") && !t2.inline && (o2 = new Date(2009, 11, 20), (a2 = this._get(t2, "dateFormat")).match(/[DM]/) && (o2.setMonth((e2 = function(t3) {
+      for (n2 = s2 = i2 = 0; n2 < t3.length; n2++) t3[n2].length > i2 && (i2 = t3[n2].length, s2 = n2);
+      return s2;
+    })(this._get(t2, a2.match(/MM/) ? "monthNames" : "monthNamesShort"))), o2.setDate(e2(this._get(t2, a2.match(/DD/) ? "dayNames" : "dayNamesShort")) + 20 - o2.getDay())), t2.input.attr("size", this._formatDate(t2, o2).length));
+  }, _inlineDatepicker: function(t2, e2) {
+    var i2 = V(t2);
+    i2.hasClass(this.markerClassName) || (i2.addClass(this.markerClassName).append(e2.dpDiv), V.data(t2, "datepicker", e2), this._setDate(e2, this._getDefaultDate(e2), true), this._updateDatepicker(e2), this._updateAlternate(e2), e2.settings.disabled && this._disableDatepicker(t2), e2.dpDiv.css("display", "block"));
+  }, _dialogDatepicker: function(t2, e2, i2, s2, n2) {
+    var o2, a2 = this._dialogInst;
+    return a2 || (this.uuid += 1, o2 = "dp" + this.uuid, this._dialogInput = V("<input type='text' id='" + o2 + "' style='position: absolute; top: -100px; width: 0px;'/>"), this._dialogInput.on("keydown", this._doKeyDown), V("body").append(this._dialogInput), (a2 = this._dialogInst = this._newInst(this._dialogInput, false)).settings = {}, V.data(this._dialogInput[0], "datepicker", a2)), H(a2.settings, s2 || {}), e2 = e2 && e2.constructor === Date ? this._formatDate(a2, e2) : e2, this._dialogInput.val(e2), this._pos = n2 ? n2.length ? n2 : [n2.pageX, n2.pageY] : null, this._pos || (o2 = document.documentElement.clientWidth, s2 = document.documentElement.clientHeight, e2 = document.documentElement.scrollLeft || document.body.scrollLeft, n2 = document.documentElement.scrollTop || document.body.scrollTop, this._pos = [o2 / 2 - 100 + e2, s2 / 2 - 150 + n2]), this._dialogInput.css("left", this._pos[0] + 20 + "px").css("top", this._pos[1] + "px"), a2.settings.onSelect = i2, this._inDialog = true, this.dpDiv.addClass(this._dialogClass), this._showDatepicker(this._dialogInput[0]), V.blockUI && V.blockUI(this.dpDiv), V.data(this._dialogInput[0], "datepicker", a2), this;
+  }, _destroyDatepicker: function(t2) {
+    var e2, i2 = V(t2), s2 = V.data(t2, "datepicker");
+    i2.hasClass(this.markerClassName) && (e2 = t2.nodeName.toLowerCase(), V.removeData(t2, "datepicker"), "input" === e2 ? (s2.append.remove(), s2.trigger.remove(), i2.removeClass(this.markerClassName).off("focus", this._showDatepicker).off("keydown", this._doKeyDown).off("keypress", this._doKeyPress).off("keyup", this._doKeyUp)) : "div" !== e2 && "span" !== e2 || i2.removeClass(this.markerClassName).empty(), S === s2) && (S = null, this._curInst = null);
+  }, _enableDatepicker: function(e2) {
+    var t2, i2 = V(e2), s2 = V.data(e2, "datepicker");
+    i2.hasClass(this.markerClassName) && ("input" === (t2 = e2.nodeName.toLowerCase()) ? (e2.disabled = false, s2.trigger.filter("button").each(function() {
+      this.disabled = false;
+    }).end().filter("img").css({ opacity: "1.0", cursor: "" })) : "div" !== t2 && "span" !== t2 || ((s2 = i2.children("." + this._inlineClass)).children().removeClass("ui-state-disabled"), s2.find("select.ui-datepicker-month, select.ui-datepicker-year").prop("disabled", false)), this._disabledInputs = V.map(this._disabledInputs, function(t3) {
+      return t3 === e2 ? null : t3;
+    }));
+  }, _disableDatepicker: function(e2) {
+    var t2, i2 = V(e2), s2 = V.data(e2, "datepicker");
+    i2.hasClass(this.markerClassName) && ("input" === (t2 = e2.nodeName.toLowerCase()) ? (e2.disabled = true, s2.trigger.filter("button").each(function() {
+      this.disabled = true;
+    }).end().filter("img").css({ opacity: "0.5", cursor: "default" })) : "div" !== t2 && "span" !== t2 || ((s2 = i2.children("." + this._inlineClass)).children().addClass("ui-state-disabled"), s2.find("select.ui-datepicker-month, select.ui-datepicker-year").prop("disabled", true)), this._disabledInputs = V.map(this._disabledInputs, function(t3) {
+      return t3 === e2 ? null : t3;
+    }), this._disabledInputs[this._disabledInputs.length] = e2);
+  }, _isDisabledDatepicker: function(t2) {
+    if (t2) {
+      for (var e2 = 0; e2 < this._disabledInputs.length; e2++) if (this._disabledInputs[e2] === t2) return true;
     }
-  }
-  function r(aI) {
-    var j = f(aI), i = j && y.tc[j];
-    if (i && aI.changedTouches) {
-      switch (i.touchState) {
-        case 1:
-          i.Draw();
-          i.Clicked();
-          break;
-        case 2:
-          i.EndDrag();
-          break;
-        case 3:
-          i.EndPinch();
-      }
-      i.touchState = 0;
+    return false;
+  }, _getInst: function(t2) {
+    try {
+      return V.data(t2, "datepicker");
+    } catch (t3) {
+      throw "Missing instance data for this datepicker";
     }
-  }
-  function aA(aM) {
-    var aJ, aI = y, j, aL, aK = f(aM);
-    for (aJ in aI.tc) {
-      j = aI.tc[aJ];
-      if (j.tttimer) {
-        clearTimeout(j.tttimer);
-        j.tttimer = null;
-      }
+  }, _optionDatepicker: function(t2, e2, i2) {
+    var s2, n2, o2 = this._getInst(t2);
+    if (2 === arguments.length && "string" == typeof e2) return "defaults" === e2 ? V.extend({}, V.datepicker._defaults) : o2 ? "all" === e2 ? V.extend({}, o2.settings) : this._get(o2, e2) : null;
+    s2 = e2 || {}, "string" == typeof e2 && ((s2 = {})[e2] = i2), o2 && (this._curInst === o2 && this._hideDatepicker(), e2 = this._getDateDatepicker(t2, true), i2 = this._getMinMaxDate(o2, "min"), n2 = this._getMinMaxDate(o2, "max"), H(o2.settings, s2), null !== i2 && void 0 !== s2.dateFormat && void 0 === s2.minDate && (o2.settings.minDate = this._formatDate(o2, i2)), null !== n2 && void 0 !== s2.dateFormat && void 0 === s2.maxDate && (o2.settings.maxDate = this._formatDate(o2, n2)), "disabled" in s2 && (s2.disabled ? this._disableDatepicker(t2) : this._enableDatepicker(t2)), this._attachments(V(t2), o2), this._autoSize(o2), this._setDate(o2, e2), this._updateAlternate(o2), this._updateDatepicker(o2));
+  }, _changeDatepicker: function(t2, e2, i2) {
+    this._optionDatepicker(t2, e2, i2);
+  }, _refreshDatepicker: function(t2) {
+    t2 = this._getInst(t2);
+    t2 && this._updateDatepicker(t2);
+  }, _setDateDatepicker: function(t2, e2) {
+    t2 = this._getInst(t2);
+    t2 && (this._setDate(t2, e2), this._updateDatepicker(t2), this._updateAlternate(t2));
+  }, _getDateDatepicker: function(t2, e2) {
+    t2 = this._getInst(t2);
+    return t2 && !t2.inline && this._setDateFromField(t2, e2), t2 ? this._getDate(t2) : null;
+  }, _doKeyDown: function(t2) {
+    var e2, i2, s2 = V.datepicker._getInst(t2.target), n2 = true, o2 = s2.dpDiv.is(".ui-datepicker-rtl");
+    if (s2._keyEvent = true, V.datepicker._datepickerShowing) switch (t2.keyCode) {
+      case 9:
+        V.datepicker._hideDatepicker(), n2 = false;
+        break;
+      case 13:
+        return (i2 = V("td." + V.datepicker._dayOverClass + ":not(." + V.datepicker._currentClass + ")", s2.dpDiv))[0] && V.datepicker._selectDay(t2.target, s2.selectedMonth, s2.selectedYear, i2[0]), (i2 = V.datepicker._get(s2, "onSelect")) ? (e2 = V.datepicker._formatDate(s2), i2.apply(s2.input ? s2.input[0] : null, [e2, s2])) : V.datepicker._hideDatepicker(), false;
+      case 27:
+        V.datepicker._hideDatepicker();
+        break;
+      case 33:
+        V.datepicker._adjustDate(t2.target, t2.ctrlKey ? -V.datepicker._get(s2, "stepBigMonths") : -V.datepicker._get(s2, "stepMonths"), "M");
+        break;
+      case 34:
+        V.datepicker._adjustDate(t2.target, t2.ctrlKey ? +V.datepicker._get(s2, "stepBigMonths") : +V.datepicker._get(s2, "stepMonths"), "M");
+        break;
+      case 35:
+        (t2.ctrlKey || t2.metaKey) && V.datepicker._clearDate(t2.target), n2 = t2.ctrlKey || t2.metaKey;
+        break;
+      case 36:
+        (t2.ctrlKey || t2.metaKey) && V.datepicker._gotoToday(t2.target), n2 = t2.ctrlKey || t2.metaKey;
+        break;
+      case 37:
+        (t2.ctrlKey || t2.metaKey) && V.datepicker._adjustDate(t2.target, o2 ? 1 : -1, "D"), n2 = t2.ctrlKey || t2.metaKey, t2.originalEvent.altKey && V.datepicker._adjustDate(t2.target, t2.ctrlKey ? -V.datepicker._get(s2, "stepBigMonths") : -V.datepicker._get(s2, "stepMonths"), "M");
+        break;
+      case 38:
+        (t2.ctrlKey || t2.metaKey) && V.datepicker._adjustDate(t2.target, -7, "D"), n2 = t2.ctrlKey || t2.metaKey;
+        break;
+      case 39:
+        (t2.ctrlKey || t2.metaKey) && V.datepicker._adjustDate(t2.target, o2 ? -1 : 1, "D"), n2 = t2.ctrlKey || t2.metaKey, t2.originalEvent.altKey && V.datepicker._adjustDate(t2.target, t2.ctrlKey ? +V.datepicker._get(s2, "stepBigMonths") : +V.datepicker._get(s2, "stepMonths"), "M");
+        break;
+      case 40:
+        (t2.ctrlKey || t2.metaKey) && V.datepicker._adjustDate(t2.target, 7, "D"), n2 = t2.ctrlKey || t2.metaKey;
+        break;
+      default:
+        n2 = false;
     }
-    j = aK && aI.tc[aK];
-    if (j && aM.changedTouches && j.touchState) {
-      switch (j.touchState) {
-        case 1:
-        case 2:
-          if (aL = S(aM, j.canvas)) {
-            j.mx = aL.x;
-            j.my = aL.y;
-            if (j.Drag(aM, aL)) {
-              j.touchState = 2;
-            }
-          }
-          break;
-        case 3:
-          j.Pinch(aM);
-      }
-      j.drawn = 0;
-    }
-  }
-  function ag(aI) {
-    var i = y, j = f(aI);
-    if (j && i.tc[j]) {
-      aI.cancelBubble = true;
-      aI.returnValue = false;
-      aI.preventDefault && aI.preventDefault();
-      i.tc[j].Wheel((aI.wheelDelta || aI.detail) > 0);
-    }
-  }
-  function ac(aJ) {
-    var aI, j = y;
-    clearTimeout(j.scrollTimer);
-    for (aI in j.tc) {
-      j.tc[aI].Pause();
-    }
-    j.scrollTimer = setTimeout(function() {
-      var aL, aK = y;
-      for (aL in aK.tc) {
-        aK.tc[aL].Resume();
-      }
-    }, j.scrollPause);
-  }
-  function O() {
-    E(G());
-  }
-  function E(aJ) {
-    var j = y.tc, aI;
-    y.NextFrame(y.interval);
-    aJ = aJ || G();
-    for (aI in j) {
-      j[aI].Draw(aJ);
-    }
-  }
-  function ab(aI) {
-    var aL = C.getElementById(aI), i = aL.getBoundingClientRect(), aO = C.documentElement, aM = C.body, aN = window, aJ = aN.pageXOffset || aO.scrollLeft, aP = aN.pageYOffset || aO.scrollTop, aK = aO.clientLeft || aM.clientLeft, j = aO.clientTop || aM.clientTop;
-    return { x: i.left + aJ - aK, y: i.top + aP - j };
-  }
-  function V(j, aJ, aK, aI) {
-    var i = j.radius * j.z1 / (j.z1 + j.z2 + aJ.z);
-    return { x: aJ.x * i * aK, y: aJ.y * i * aI, z: aJ.z, w: (j.z1 - aJ.z) / j.z2 };
-  }
-  function aC(i) {
-    this.e = i;
-    this.br = 0;
-    this.line = [];
-    this.text = [];
-    this.original = i.innerText || i.textContent;
-  }
-  aH = aC.prototype;
-  aH.Empty = function() {
-    for (var j = 0; j < this.text.length; ++j) {
-      if (this.text[j].length) {
-        return false;
-      }
+    else 36 === t2.keyCode && t2.ctrlKey ? V.datepicker._showDatepicker(this) : n2 = false;
+    n2 && (t2.preventDefault(), t2.stopPropagation());
+  }, _doKeyPress: function(t2) {
+    var e2, i2 = V.datepicker._getInst(t2.target);
+    if (V.datepicker._get(i2, "constrainInput")) return i2 = V.datepicker._possibleChars(V.datepicker._get(i2, "dateFormat")), e2 = String.fromCharCode(null == t2.charCode ? t2.keyCode : t2.charCode), t2.ctrlKey || t2.metaKey || e2 < " " || !i2 || -1 < i2.indexOf(e2);
+  }, _doKeyUp: function(t2) {
+    t2 = V.datepicker._getInst(t2.target);
+    if (t2.input.val() !== t2.lastVal) try {
+      V.datepicker.parseDate(V.datepicker._get(t2, "dateFormat"), t2.input ? t2.input.val() : null, V.datepicker._getFormatConfig(t2)) && (V.datepicker._setDateFromField(t2), V.datepicker._updateAlternate(t2), V.datepicker._updateDatepicker(t2));
+    } catch (t3) {
     }
     return true;
-  };
-  aH.Lines = function(aK) {
-    var aJ = aK ? 1 : 0, aL, j, aI;
-    aK = aK || this.e;
-    aL = aK.childNodes;
-    j = aL.length;
-    for (aI = 0; aI < j; ++aI) {
-      if (aL[aI].nodeName == "BR") {
-        this.text.push(this.line.join(" "));
-        this.br = 1;
-      } else {
-        if (aL[aI].nodeType == 3) {
-          if (this.br) {
-            this.line = [aL[aI].nodeValue];
-            this.br = 0;
-          } else {
-            this.line.push(aL[aI].nodeValue);
-          }
-        } else {
-          this.Lines(aL[aI]);
-        }
+  }, _showDatepicker: function(t2) {
+    var e2, i2, s2, n2;
+    "input" !== (t2 = t2.target || t2).nodeName.toLowerCase() && (t2 = V("input", t2.parentNode)[0]), V.datepicker._isDisabledDatepicker(t2) || V.datepicker._lastInput === t2 || (n2 = V.datepicker._getInst(t2), V.datepicker._curInst && V.datepicker._curInst !== n2 && (V.datepicker._curInst.dpDiv.stop(true, true), n2) && V.datepicker._datepickerShowing && V.datepicker._hideDatepicker(V.datepicker._curInst.input[0]), false === (i2 = (i2 = V.datepicker._get(n2, "beforeShow")) ? i2.apply(t2, [t2, n2]) : {})) || (H(n2.settings, i2), n2.lastVal = null, V.datepicker._lastInput = t2, V.datepicker._setDateFromField(n2), V.datepicker._inDialog && (t2.value = ""), V.datepicker._pos || (V.datepicker._pos = V.datepicker._findPos(t2), V.datepicker._pos[1] += t2.offsetHeight), e2 = false, V(t2).parents().each(function() {
+      return !(e2 |= "fixed" === V(this).css("position"));
+    }), i2 = { left: V.datepicker._pos[0], top: V.datepicker._pos[1] }, V.datepicker._pos = null, n2.dpDiv.empty(), n2.dpDiv.css({ position: "absolute", display: "block", top: "-1000px" }), V.datepicker._updateDatepicker(n2), i2 = V.datepicker._checkOffset(n2, i2, e2), n2.dpDiv.css({ position: V.datepicker._inDialog && V.blockUI ? "static" : e2 ? "fixed" : "absolute", display: "none", left: i2.left + "px", top: i2.top + "px" }), n2.inline) || (i2 = V.datepicker._get(n2, "showAnim"), s2 = V.datepicker._get(n2, "duration"), n2.dpDiv.css("z-index", function(t3) {
+      for (var e3; t3.length && t3[0] !== document; ) {
+        if (("absolute" === (e3 = t3.css("position")) || "relative" === e3 || "fixed" === e3) && (e3 = parseInt(t3.css("zIndex"), 10), !isNaN(e3)) && 0 !== e3) return e3;
+        t3 = t3.parent();
       }
-    }
-    aJ || this.br || this.text.push(this.line.join(" "));
-    return this.text;
-  };
-  aH.SplitWidth = function(aI, aP, aM, aL) {
-    var aK, aJ, aO, aN = [];
-    aP.font = aL + "px " + aM;
-    for (aK = 0; aK < this.text.length; ++aK) {
-      aO = this.text[aK].split(/\s+/);
-      this.line = [aO[0]];
-      for (aJ = 1; aJ < aO.length; ++aJ) {
-        if (aP.measureText(this.line.join(" ") + " " + aO[aJ]).width > aI) {
-          aN.push(this.line.join(" "));
-          this.line = [aO[aJ]];
-        } else {
-          this.line.push(aO[aJ]);
-        }
-      }
-      aN.push(this.line.join(" "));
-    }
-    return this.text = aN;
-  };
-  function J(i, j) {
-    this.ts = null;
-    this.tc = i;
-    this.tag = j;
-    this.x = this.y = this.w = this.h = this.sc = 1;
-    this.z = 0;
-    this.pulse = 1;
-    this.pulsate = i.pulsateTo < 1;
-    this.colour = i.outlineColour;
-    this.adash = ~~i.outlineDash;
-    this.agap = ~~i.outlineDashSpace || this.adash;
-    this.aspeed = i.outlineDashSpeed * 1;
-    if (this.colour == "tag") {
-      this.colour = Y(j.a, "color");
-    } else {
-      if (this.colour == "tagbg") {
-        this.colour = Y(j.a, "background-color");
-      }
-    }
-    this.Draw = this.pulsate ? this.DrawPulsate : this.DrawSimple;
-    this.radius = i.outlineRadius | 0;
-    this.SetMethod(i.outlineMethod);
-  }
-  x = J.prototype;
-  x.SetMethod = function(aI) {
-    var j = { block: ["PreDraw", "DrawBlock"], colour: ["PreDraw", "DrawColour"], outline: ["PostDraw", "DrawOutline"], classic: ["LastDraw", "DrawOutline"], size: ["PreDraw", "DrawSize"], none: ["LastDraw"] }, i = j[aI] || j.outline;
-    if (aI == "none") {
-      this.Draw = function() {
-        return 1;
-      };
-    } else {
-      this.drawFunc = this[i[1]];
-    }
-    this[i[0]] = this.Draw;
-  };
-  x.Update = function(aO, aN, aP, aK, aL, aM, aJ, i) {
-    var j = this.tc.outlineOffset, aI = 2 * j;
-    this.x = aL * aO + aJ - j;
-    this.y = aL * aN + i - j;
-    this.w = aL * aP + aI;
-    this.h = aL * aK + aI;
-    this.sc = aL;
-    this.z = aM;
-  };
-  x.Ants = function(aN) {
-    if (!this.adash) {
-      return;
-    }
-    var aK = this.adash, aM = this.agap, aQ = this.aspeed, j = aK + aM, aL = 0, aJ = aK, i = aM, aP = 0, aO = 0, aI;
-    if (aQ) {
-      aO = L(aQ) * (G() - this.ts) / 50;
-      if (aQ < 0) {
-        aO = 864e4 - aO;
-      }
-      aQ = ~~aO % j;
-    }
-    if (aQ) {
-      if (aK >= aQ) {
-        aL = aK - aQ;
-        aJ = aQ;
-      } else {
-        i = j - aQ;
-        aP = aM - i;
-      }
-      aI = [aL, i, aJ, aP];
-    } else {
-      aI = [aK, aM];
-    }
-    aN.setLineDash(aI);
-  };
-  x.DrawOutline = function(aM, i, aL, j, aI, aK) {
-    var aJ = aE(this.radius, aI / 2, j / 2);
-    aM.strokeStyle = aK;
-    this.Ants(aM);
-    at(aM, i, aL, j, aI, aJ, true);
-  };
-  x.DrawSize = function(aP, aS, aQ, aT, aN, j, aU, aJ, aR) {
-    var aM = aU.w, aI = aU.h, aK, aL, aO;
-    if (this.pulsate) {
-      if (aU.image) {
-        aO = (aU.image.height + this.tc.outlineIncrease) / aU.image.height;
-      } else {
-        aO = aU.oscale;
-      }
-      aL = aU.fimage || aU.image;
-      aK = 1 + (aO - 1) * (1 - this.pulse);
-      aU.h *= aK;
-      aU.w *= aK;
-    } else {
-      aL = aU.oimage;
-    }
-    aU.alpha = 1;
-    aU.Draw(aP, aJ, aR, aL);
-    aU.h = aI;
-    aU.w = aM;
-    return 1;
-  };
-  x.DrawColour = function(aJ, aM, aK, aN, aI, i, aO, j, aL) {
-    if (aO.oimage) {
-      if (this.pulse < 1) {
-        aO.alpha = 1 - au(this.pulse, 2);
-        aO.Draw(aJ, j, aL, aO.fimage);
-        aO.alpha = this.pulse;
-      } else {
-        aO.alpha = 1;
-      }
-      aO.Draw(aJ, j, aL, aO.oimage);
-      return 1;
-    }
-    return this[aO.image ? "DrawColourImage" : "DrawColourText"](aJ, aM, aK, aN, aI, i, aO, j, aL);
-  };
-  x.DrawColourText = function(aK, aN, aL, aO, aI, i, aP, j, aM) {
-    var aJ = aP.colour;
-    aP.colour = i;
-    aP.alpha = 1;
-    aP.Draw(aK, j, aM);
-    aP.colour = aJ;
-    return 1;
-  };
-  x.DrawColourImage = function(aN, aQ, aO, aR, aM, i, aU, j, aP) {
-    var aS = aN.canvas, aK = ~~s(aQ, 0), aJ = ~~s(aO, 0), aL = aE(aS.width - aK, aR) + 0.5 | 0, aT = aE(aS.height - aJ, aM) + 0.5 | 0, aI;
-    if (p) {
-      p.width = aL, p.height = aT;
-    } else {
-      p = P(aL, aT);
-    }
-    if (!p) {
-      return this.SetMethod("outline");
-    }
-    aI = p.getContext("2d");
-    aI.drawImage(aS, aK, aJ, aL, aT, 0, 0, aL, aT);
-    aN.clearRect(aK, aJ, aL, aT);
-    if (this.pulsate) {
-      aU.alpha = 1 - au(this.pulse, 2);
-    } else {
-      aU.alpha = 1;
-    }
-    aU.Draw(aN, j, aP);
-    aN.setTransform(1, 0, 0, 1, 0, 0);
-    aN.save();
-    aN.beginPath();
-    aN.rect(aK, aJ, aL, aT);
-    aN.clip();
-    aN.globalCompositeOperation = "source-in";
-    aN.fillStyle = i;
-    aN.fillRect(aK, aJ, aL, aT);
-    aN.restore();
-    aN.globalAlpha = 1;
-    aN.globalCompositeOperation = "destination-over";
-    aN.drawImage(p, 0, 0, aL, aT, aK, aJ, aL, aT);
-    aN.globalCompositeOperation = "source-over";
-    return 1;
-  };
-  x.DrawBlock = function(aM, i, aL, j, aI, aK) {
-    var aJ = aE(this.radius, aI / 2, j / 2);
-    aM.fillStyle = aK;
-    at(aM, i, aL, j, aI, aJ);
-  };
-  x.DrawSimple = function(aM, i, j, aJ, aL, aK) {
-    var aI = this.tc;
-    aM.setTransform(1, 0, 0, 1, 0, 0);
-    aM.strokeStyle = this.colour;
-    aM.lineWidth = aI.outlineThickness;
-    aM.shadowBlur = aM.shadowOffsetX = aM.shadowOffsetY = 0;
-    aM.globalAlpha = aK ? aL : 1;
-    return this.drawFunc(aM, this.x, this.y, this.w, this.h, this.colour, i, j, aJ);
-  };
-  x.DrawPulsate = function(aM, i, j, aJ) {
-    var aK = G() - this.ts, aI = this.tc, aL = aI.pulsateTo + (1 - aI.pulsateTo) * (0.5 + w(2 * Math.PI * aK / (1e3 * aI.pulsateTime)) / 2);
-    this.pulse = aL = y.Smooth(1, aL);
-    return this.DrawSimple(aM, i, j, aJ, aL, 1);
-  };
-  x.Active = function(aJ, i, aI) {
-    var j = i >= this.x && aI >= this.y && i <= this.x + this.w && aI <= this.y + this.h;
-    if (j) {
-      this.ts = this.ts || G();
-    } else {
-      this.ts = null;
-    }
-    return j;
-  };
-  x.PreDraw = x.PostDraw = x.LastDraw = aB;
-  function e(aJ, aT, aP, aS, aQ, aK, aI, aM, aR, aL, aO, j, aN, i) {
-    this.tc = aJ;
-    this.image = null;
-    this.text = aT;
-    this.text_original = i;
-    this.line_widths = [];
-    this.title = aP.title || null;
-    this.a = aP;
-    this.position = new ae(aS[0], aS[1], aS[2]);
-    this.x = this.y = this.z = 0;
-    this.w = aQ;
-    this.h = aK;
-    this.colour = aI || aJ.textColour;
-    this.bgColour = aM || aJ.bgColour;
-    this.bgRadius = aR | 0;
-    this.bgOutline = aL || this.colour;
-    this.bgOutlineThickness = aO | 0;
-    this.textFont = j || aJ.textFont;
-    this.padding = aN | 0;
-    this.sc = this.alpha = 1;
-    this.weighted = !aJ.weight;
-    this.outline = new J(aJ, this);
-  }
-  c = e.prototype;
-  c.Init = function(j) {
-    var i = this.tc;
-    this.textHeight = i.textHeight;
-    if (this.HasText()) {
-      this.Measure(i.ctxt, i);
-    } else {
-      this.w = this.iw;
-      this.h = this.ih;
-    }
-    this.SetShadowColour = i.shadowAlpha ? this.SetShadowColourAlpha : this.SetShadowColourFixed;
-    this.SetDraw(i);
-  };
-  c.Draw = aB;
-  c.HasText = function() {
-    return this.text && this.text[0].length > 0;
-  };
-  c.EqualTo = function(aI) {
-    var j = aI.getElementsByTagName("img");
-    if (this.a.href != aI.href) {
       return 0;
+    }(V(t2)) + 1), V.datepicker._datepickerShowing = true, V.effects && V.effects.effect[i2] ? n2.dpDiv.show(i2, V.datepicker._get(n2, "showOptions"), s2) : n2.dpDiv[i2 || "show"](i2 ? s2 : null), V.datepicker._shouldFocusInput(n2) && n2.input.trigger("focus"), V.datepicker._curInst = n2);
+  }, _updateDatepicker: function(t2) {
+    this.maxRows = 4, (S = t2).dpDiv.empty().append(this._generateHTML(t2)), this._attachHandlers(t2);
+    var e2, i2 = this._getNumberOfMonths(t2), s2 = i2[1], n2 = t2.dpDiv.find("." + this._dayOverClass + " a"), o2 = V.datepicker._get(t2, "onUpdateDatepicker");
+    0 < n2.length && ht.apply(n2.get(0)), t2.dpDiv.removeClass("ui-datepicker-multi-2 ui-datepicker-multi-3 ui-datepicker-multi-4").width(""), 1 < s2 && t2.dpDiv.addClass("ui-datepicker-multi-" + s2).css("width", 17 * s2 + "em"), t2.dpDiv[(1 !== i2[0] || 1 !== i2[1] ? "add" : "remove") + "Class"]("ui-datepicker-multi"), t2.dpDiv[(this._get(t2, "isRTL") ? "add" : "remove") + "Class"]("ui-datepicker-rtl"), t2 === V.datepicker._curInst && V.datepicker._datepickerShowing && V.datepicker._shouldFocusInput(t2) && t2.input.trigger("focus"), t2.yearshtml && (e2 = t2.yearshtml, setTimeout(function() {
+      e2 === t2.yearshtml && t2.yearshtml && t2.dpDiv.find("select.ui-datepicker-year").first().replaceWith(t2.yearshtml), e2 = t2.yearshtml = null;
+    }, 0)), o2 && o2.apply(t2.input ? t2.input[0] : null, [t2]);
+  }, _shouldFocusInput: function(t2) {
+    return t2.input && t2.input.is(":visible") && !t2.input.is(":disabled") && !t2.input.is(":focus");
+  }, _checkOffset: function(t2, e2, i2) {
+    var s2 = t2.dpDiv.outerWidth(), n2 = t2.dpDiv.outerHeight(), o2 = t2.input ? t2.input.outerWidth() : 0, a2 = t2.input ? t2.input.outerHeight() : 0, r2 = document.documentElement.clientWidth + (i2 ? 0 : V(document).scrollLeft()), l2 = document.documentElement.clientHeight + (i2 ? 0 : V(document).scrollTop());
+    return e2.left -= this._get(t2, "isRTL") ? s2 - o2 : 0, e2.left -= i2 && e2.left === t2.input.offset().left ? V(document).scrollLeft() : 0, e2.top -= i2 && e2.top === t2.input.offset().top + a2 ? V(document).scrollTop() : 0, e2.left -= Math.min(e2.left, e2.left + s2 > r2 && s2 < r2 ? Math.abs(e2.left + s2 - r2) : 0), e2.top -= Math.min(e2.top, e2.top + n2 > l2 && n2 < l2 ? Math.abs(n2 + a2) : 0), e2;
+  }, _findPos: function(t2) {
+    for (var e2 = this._getInst(t2), i2 = this._get(e2, "isRTL"); t2 && ("hidden" === t2.type || 1 !== t2.nodeType || V.expr.pseudos.hidden(t2)); ) t2 = t2[i2 ? "previousSibling" : "nextSibling"];
+    return [(e2 = V(t2).offset()).left, e2.top];
+  }, _hideDatepicker: function(t2) {
+    var e2, i2, s2 = this._curInst;
+    !s2 || t2 && s2 !== V.data(t2, "datepicker") || this._datepickerShowing && (t2 = this._get(s2, "showAnim"), i2 = this._get(s2, "duration"), e2 = function() {
+      V.datepicker._tidyDialog(s2);
+    }, V.effects && (V.effects.effect[t2] || V.effects[t2]) ? s2.dpDiv.hide(t2, V.datepicker._get(s2, "showOptions"), i2, e2) : s2.dpDiv["slideDown" === t2 ? "slideUp" : "fadeIn" === t2 ? "fadeOut" : "hide"](t2 ? i2 : null, e2), t2 || e2(), this._datepickerShowing = false, (i2 = this._get(s2, "onClose")) && i2.apply(s2.input ? s2.input[0] : null, [s2.input ? s2.input.val() : "", s2]), this._lastInput = null, this._inDialog && (this._dialogInput.css({ position: "absolute", left: "0", top: "-100px" }), V.blockUI) && (V.unblockUI(), V("body").append(this.dpDiv)), this._inDialog = false);
+  }, _tidyDialog: function(t2) {
+    t2.dpDiv.removeClass(this._dialogClass).off(".ui-datepicker-calendar");
+  }, _checkExternalClick: function(t2) {
+    var e2;
+    V.datepicker._curInst && (t2 = V(t2.target), e2 = V.datepicker._getInst(t2[0]), !(t2[0].id === V.datepicker._mainDivId || 0 !== t2.parents("#" + V.datepicker._mainDivId).length || t2.hasClass(V.datepicker.markerClassName) || t2.closest("." + V.datepicker._triggerClass).length || !V.datepicker._datepickerShowing || V.datepicker._inDialog && V.blockUI) || t2.hasClass(V.datepicker.markerClassName) && V.datepicker._curInst !== e2) && V.datepicker._hideDatepicker();
+  }, _adjustDate: function(t2, e2, i2) {
+    var t2 = V(t2), s2 = this._getInst(t2[0]);
+    this._isDisabledDatepicker(t2[0]) || (this._adjustInstDate(s2, e2, i2), this._updateDatepicker(s2));
+  }, _gotoToday: function(t2) {
+    var e2, t2 = V(t2), i2 = this._getInst(t2[0]);
+    this._get(i2, "gotoCurrent") && i2.currentDay ? (i2.selectedDay = i2.currentDay, i2.drawMonth = i2.selectedMonth = i2.currentMonth, i2.drawYear = i2.selectedYear = i2.currentYear) : (e2 = /* @__PURE__ */ new Date(), i2.selectedDay = e2.getDate(), i2.drawMonth = i2.selectedMonth = e2.getMonth(), i2.drawYear = i2.selectedYear = e2.getFullYear()), this._notifyChange(i2), this._adjustDate(t2);
+  }, _selectMonthYear: function(t2, e2, i2) {
+    var t2 = V(t2), s2 = this._getInst(t2[0]);
+    s2["selected" + ("M" === i2 ? "Month" : "Year")] = s2["draw" + ("M" === i2 ? "Month" : "Year")] = parseInt(e2.options[e2.selectedIndex].value, 10), this._notifyChange(s2), this._adjustDate(t2);
+  }, _selectDay: function(t2, e2, i2, s2) {
+    var n2 = V(t2);
+    V(s2).hasClass(this._unselectableClass) || this._isDisabledDatepicker(n2[0]) || ((n2 = this._getInst(n2[0])).selectedDay = n2.currentDay = parseInt(V("a", s2).attr("data-date")), n2.selectedMonth = n2.currentMonth = e2, n2.selectedYear = n2.currentYear = i2, this._selectDate(t2, this._formatDate(n2, n2.currentDay, n2.currentMonth, n2.currentYear)));
+  }, _clearDate: function(t2) {
+    t2 = V(t2);
+    this._selectDate(t2, "");
+  }, _selectDate: function(t2, e2) {
+    var i2, t2 = V(t2), t2 = this._getInst(t2[0]);
+    e2 = null != e2 ? e2 : this._formatDate(t2), t2.input && t2.input.val(e2), this._updateAlternate(t2), (i2 = this._get(t2, "onSelect")) ? i2.apply(t2.input ? t2.input[0] : null, [e2, t2]) : t2.input && t2.input.trigger("change"), t2.inline ? this._updateDatepicker(t2) : (this._hideDatepicker(), this._lastInput = t2.input[0], "object" != typeof t2.input[0] && t2.input.trigger("focus"), this._lastInput = null);
+  }, _updateAlternate: function(t2) {
+    var e2, i2, s2 = this._get(t2, "altField");
+    s2 && (i2 = this._get(t2, "altFormat") || this._get(t2, "dateFormat"), e2 = this._getDate(t2), i2 = this.formatDate(i2, e2, this._getFormatConfig(t2)), V(document).find(s2).val(i2));
+  }, noWeekends: function(t2) {
+    t2 = t2.getDay();
+    return [0 < t2 && t2 < 6, ""];
+  }, iso8601Week: function(t2) {
+    var e2, t2 = new Date(t2.getTime());
+    return t2.setDate(t2.getDate() + 4 - (t2.getDay() || 7)), e2 = t2.getTime(), t2.setMonth(0), t2.setDate(1), Math.floor(Math.round((e2 - t2) / 864e5) / 7) + 1;
+  }, parseDate: function(e2, n2, t2) {
+    if (null == e2 || null == n2) throw "Invalid arguments";
+    if ("" === (n2 = "object" == typeof n2 ? n2.toString() : n2 + "")) return null;
+    for (var i2, s2, o2 = 0, a2 = (t2 ? t2.shortYearCutoff : null) || this._defaults.shortYearCutoff, a2 = "string" != typeof a2 ? a2 : (/* @__PURE__ */ new Date()).getFullYear() % 100 + parseInt(a2, 10), r2 = (t2 ? t2.dayNamesShort : null) || this._defaults.dayNamesShort, l2 = (t2 ? t2.dayNames : null) || this._defaults.dayNames, h2 = (t2 ? t2.monthNamesShort : null) || this._defaults.monthNamesShort, c2 = (t2 ? t2.monthNames : null) || this._defaults.monthNames, u2 = -1, d2 = -1, p2 = -1, f2 = -1, g2 = false, m3 = function(t3) {
+      t3 = y2 + 1 < e2.length && e2.charAt(y2 + 1) === t3;
+      return t3 && y2++, t3;
+    }, _2 = function(t3) {
+      var e3 = m3(t3), e3 = "@" === t3 ? 14 : "!" === t3 ? 20 : "y" === t3 && e3 ? 4 : "o" === t3 ? 3 : 2, t3 = new RegExp("^\\d{" + ("y" === t3 ? e3 : 1) + "," + e3 + "}"), e3 = n2.substring(o2).match(t3);
+      if (e3) return o2 += e3[0].length, parseInt(e3[0], 10);
+      throw "Missing number at position " + o2;
+    }, v2 = function(t3, e3, i3) {
+      var s3 = -1, t3 = V.map(m3(t3) ? i3 : e3, function(t4, e4) {
+        return [[e4, t4]];
+      }).sort(function(t4, e4) {
+        return -(t4[1].length - e4[1].length);
+      });
+      if (V.each(t3, function(t4, e4) {
+        var i4 = e4[1];
+        if (n2.substr(o2, i4.length).toLowerCase() === i4.toLowerCase()) return s3 = e4[0], o2 += i4.length, false;
+      }), -1 !== s3) return s3 + 1;
+      throw "Unknown name at position " + o2;
+    }, b2 = function() {
+      if (n2.charAt(o2) !== e2.charAt(y2)) throw "Unexpected literal at position " + o2;
+      o2++;
+    }, y2 = 0; y2 < e2.length; y2++) if (g2) "'" !== e2.charAt(y2) || m3("'") ? b2() : g2 = false;
+    else switch (e2.charAt(y2)) {
+      case "d":
+        p2 = _2("d");
+        break;
+      case "D":
+        v2("D", r2, l2);
+        break;
+      case "o":
+        f2 = _2("o");
+        break;
+      case "m":
+        d2 = _2("m");
+        break;
+      case "M":
+        d2 = v2("M", h2, c2);
+        break;
+      case "y":
+        u2 = _2("y");
+        break;
+      case "@":
+        u2 = (s2 = new Date(_2("@"))).getFullYear(), d2 = s2.getMonth() + 1, p2 = s2.getDate();
+        break;
+      case "!":
+        u2 = (s2 = new Date((_2("!") - this._ticksTo1970) / 1e4)).getFullYear(), d2 = s2.getMonth() + 1, p2 = s2.getDate();
+        break;
+      case "'":
+        m3("'") ? b2() : g2 = true;
+        break;
+      default:
+        b2();
     }
-    if (j.length) {
-      return this.image.src == j[0].src;
+    if (o2 < n2.length && (t2 = n2.substr(o2), !/^\s+/.test(t2))) throw "Extra/unparsed characters found in date: " + t2;
+    if (-1 === u2 ? u2 = (/* @__PURE__ */ new Date()).getFullYear() : u2 < 100 && (u2 += (/* @__PURE__ */ new Date()).getFullYear() - (/* @__PURE__ */ new Date()).getFullYear() % 100 + (u2 <= a2 ? 0 : -100)), -1 < f2) for (d2 = 1, p2 = f2; ; ) {
+      if (p2 <= (i2 = this._getDaysInMonth(u2, d2 - 1))) break;
+      d2++, p2 -= i2;
     }
-    return (aI.innerText || aI.textContent) == this.text_original;
-  };
-  c.SetImage = function(j) {
-    this.image = this.fimage = j;
-  };
-  c.SetDraw = function(i) {
-    this.Draw = this.fimage ? i.ie > 7 ? this.DrawImageIE : this.DrawImage : this.DrawText;
-    i.noSelect && (this.CheckActive = aB);
-  };
-  c.MeasureText = function(aL) {
-    var aJ, aI = this.text.length, j = 0, aK;
-    for (aJ = 0; aJ < aI; ++aJ) {
-      this.line_widths[aJ] = aK = aL.measureText(this.text[aJ]).width;
-      j = s(j, aK);
+    if ((s2 = this._daylightSavingAdjust(new Date(u2, d2 - 1, p2))).getFullYear() !== u2 || s2.getMonth() + 1 !== d2 || s2.getDate() !== p2) throw "Invalid date";
+    return s2;
+  }, ATOM: "yy-mm-dd", COOKIE: "D, dd M yy", ISO_8601: "yy-mm-dd", RFC_822: "D, d M y", RFC_850: "DD, dd-M-y", RFC_1036: "D, d M y", RFC_1123: "D, d M yy", RFC_2822: "D, d M yy", RSS: "D, d M y", TICKS: "!", TIMESTAMP: "@", W3C: "yy-mm-dd", _ticksTo1970: 24 * (718685 + Math.floor(492.5) - Math.floor(19.7) + Math.floor(4.925)) * 60 * 60 * 1e7, formatDate: function(e2, t2, i2) {
+    if (!t2) return "";
+    function s2(t3, e3, i3) {
+      var s3 = "" + e3;
+      if (c2(t3)) for (; s3.length < i3; ) s3 = "0" + s3;
+      return s3;
     }
-    return j;
-  };
-  c.Measure = function(aN, aQ) {
-    var aO = t(this.text, this.textFont, this.textHeight), aR, i, aK, j, aI, aM, aP, aJ, aL;
-    aP = aO ? aO.max.y + aO.min.y : this.textHeight;
-    aN.font = this.font = this.textHeight + "px " + this.textFont;
-    aM = this.MeasureText(aN);
-    if (aQ.txtOpt) {
-      aR = aQ.txtScale;
-      i = aR * this.textHeight;
-      aK = i + "px " + this.textFont;
-      j = [aR * aQ.shadowOffset[0], aR * aQ.shadowOffset[1]];
-      aN.font = aK;
-      aI = this.MeasureText(aN);
-      aL = new g(this.text, aK, aI + aR, aR * aP + aR, aI, this.line_widths, aQ.textAlign, aQ.textVAlign, aR);
-      if (this.image) {
-        aL.SetImage(this.image, this.iw, this.ih, aQ.imagePosition, aQ.imagePadding, aQ.imageAlign, aQ.imageVAlign, aQ.imageScale);
+    function n2(t3, e3, i3, s3) {
+      return (c2(t3) ? s3 : i3)[e3];
+    }
+    var o2, a2 = (i2 ? i2.dayNamesShort : null) || this._defaults.dayNamesShort, r2 = (i2 ? i2.dayNames : null) || this._defaults.dayNames, l2 = (i2 ? i2.monthNamesShort : null) || this._defaults.monthNamesShort, h2 = (i2 ? i2.monthNames : null) || this._defaults.monthNames, c2 = function(t3) {
+      t3 = o2 + 1 < e2.length && e2.charAt(o2 + 1) === t3;
+      return t3 && o2++, t3;
+    }, u2 = "", d2 = false;
+    if (t2) for (o2 = 0; o2 < e2.length; o2++) if (d2) "'" !== e2.charAt(o2) || c2("'") ? u2 += e2.charAt(o2) : d2 = false;
+    else switch (e2.charAt(o2)) {
+      case "d":
+        u2 += s2("d", t2.getDate(), 2);
+        break;
+      case "D":
+        u2 += n2("D", t2.getDay(), a2, r2);
+        break;
+      case "o":
+        u2 += s2("o", Math.round((new Date(t2.getFullYear(), t2.getMonth(), t2.getDate()).getTime() - new Date(t2.getFullYear(), 0, 0).getTime()) / 864e5), 3);
+        break;
+      case "m":
+        u2 += s2("m", t2.getMonth() + 1, 2);
+        break;
+      case "M":
+        u2 += n2("M", t2.getMonth(), l2, h2);
+        break;
+      case "y":
+        u2 += c2("y") ? t2.getFullYear() : (t2.getFullYear() % 100 < 10 ? "0" : "") + t2.getFullYear() % 100;
+        break;
+      case "@":
+        u2 += t2.getTime();
+        break;
+      case "!":
+        u2 += 1e4 * t2.getTime() + this._ticksTo1970;
+        break;
+      case "'":
+        c2("'") ? u2 += "'" : d2 = true;
+        break;
+      default:
+        u2 += e2.charAt(o2);
+    }
+    return u2;
+  }, _possibleChars: function(e2) {
+    for (var t2 = "", i2 = false, s2 = function(t3) {
+      t3 = n2 + 1 < e2.length && e2.charAt(n2 + 1) === t3;
+      return t3 && n2++, t3;
+    }, n2 = 0; n2 < e2.length; n2++) if (i2) "'" !== e2.charAt(n2) || s2("'") ? t2 += e2.charAt(n2) : i2 = false;
+    else switch (e2.charAt(n2)) {
+      case "d":
+      case "m":
+      case "y":
+      case "@":
+        t2 += "0123456789";
+        break;
+      case "D":
+      case "M":
+        return null;
+      case "'":
+        s2("'") ? t2 += "'" : i2 = true;
+        break;
+      default:
+        t2 += e2.charAt(n2);
+    }
+    return t2;
+  }, _get: function(t2, e2) {
+    return (void 0 !== t2.settings[e2] ? t2.settings : this._defaults)[e2];
+  }, _setDateFromField: function(t2, e2) {
+    if (t2.input.val() !== t2.lastVal) {
+      var i2 = this._get(t2, "dateFormat"), s2 = t2.lastVal = t2.input ? t2.input.val() : null, n2 = this._getDefaultDate(t2), o2 = n2, a2 = this._getFormatConfig(t2);
+      try {
+        o2 = this.parseDate(i2, s2, a2) || n2;
+      } catch (t3) {
+        s2 = e2 ? "" : s2;
       }
-      aJ = aL.Create(this.colour, this.bgColour, this.bgOutline, aR * this.bgOutlineThickness, aQ.shadow, aR * aQ.shadowBlur, j, aR * this.padding, aR * this.bgRadius);
-      if (aQ.outlineMethod == "colour") {
-        this.oimage = aL.Create(this.outline.colour, this.bgColour, this.outline.colour, aR * this.bgOutlineThickness, aQ.shadow, aR * aQ.shadowBlur, j, aR * this.padding, aR * this.bgRadius);
-      } else {
-        if (aQ.outlineMethod == "size") {
-          aO = t(this.text, this.textFont, this.textHeight + aQ.outlineIncrease);
-          i = aO.max.y + aO.min.y;
-          aK = aR * (this.textHeight + aQ.outlineIncrease) + "px " + this.textFont;
-          aN.font = aK;
-          aI = this.MeasureText(aN);
-          aL = new g(this.text, aK, aI + aR, aR * i + aR, aI, this.line_widths, aQ.textAlign, aQ.textVAlign, aR);
-          if (this.image) {
-            aL.SetImage(this.image, this.iw + aQ.outlineIncrease, this.ih + aQ.outlineIncrease, aQ.imagePosition, aQ.imagePadding, aQ.imageAlign, aQ.imageVAlign, aQ.imageScale);
-          }
-          this.oimage = aL.Create(this.colour, this.bgColour, this.bgOutline, aR * this.bgOutlineThickness, aQ.shadow, aR * aQ.shadowBlur, j, aR * this.padding, aR * this.bgRadius);
-          this.oscale = this.oimage.width / aJ.width;
-          if (aQ.outlineIncrease > 0) {
-            aJ = v(aJ, this.oimage.width, this.oimage.height);
-          } else {
-            this.oimage = v(this.oimage, aJ.width, aJ.height);
-          }
+      t2.selectedDay = o2.getDate(), t2.drawMonth = t2.selectedMonth = o2.getMonth(), t2.drawYear = t2.selectedYear = o2.getFullYear(), t2.currentDay = s2 ? o2.getDate() : 0, t2.currentMonth = s2 ? o2.getMonth() : 0, t2.currentYear = s2 ? o2.getFullYear() : 0, this._adjustInstDate(t2);
+    }
+  }, _getDefaultDate: function(t2) {
+    return this._restrictMinMax(t2, this._determineDate(t2, this._get(t2, "defaultDate"), /* @__PURE__ */ new Date()));
+  }, _determineDate: function(r2, t2, e2) {
+    var i2, s2 = null == t2 || "" === t2 ? e2 : "string" == typeof t2 ? function(t3) {
+      try {
+        return V.datepicker.parseDate(V.datepicker._get(r2, "dateFormat"), t3, V.datepicker._getFormatConfig(r2));
+      } catch (t4) {
+      }
+      for (var e3 = (t3.toLowerCase().match(/^c/) ? V.datepicker._getDate(r2) : null) || /* @__PURE__ */ new Date(), i3 = e3.getFullYear(), s3 = e3.getMonth(), n2 = e3.getDate(), o2 = /([+\-]?[0-9]+)\s*(d|D|w|W|m|M|y|Y)?/g, a2 = o2.exec(t3); a2; ) {
+        switch (a2[2] || "d") {
+          case "d":
+          case "D":
+            n2 += parseInt(a2[1], 10);
+            break;
+          case "w":
+          case "W":
+            n2 += 7 * parseInt(a2[1], 10);
+            break;
+          case "m":
+          case "M":
+            s3 += parseInt(a2[1], 10), n2 = Math.min(n2, V.datepicker._getDaysInMonth(i3, s3));
+            break;
+          case "y":
+          case "Y":
+            i3 += parseInt(a2[1], 10), n2 = Math.min(n2, V.datepicker._getDaysInMonth(i3, s3));
         }
+        a2 = o2.exec(t3);
       }
-      if (aJ) {
-        this.fimage = aJ;
-        aM = this.fimage.width / aR;
-        aP = this.fimage.height / aR;
-      }
-      this.SetDraw(aQ);
-      aQ.txtOpt = !!this.fimage;
-    }
-    this.h = aP;
-    this.w = aM;
-  };
-  c.SetFont = function(j, aJ, aI, i) {
-    this.textFont = j;
-    this.colour = aJ;
-    this.bgColour = aI;
-    this.bgOutline = i;
-    this.Measure(this.tc.ctxt, this.tc);
-  };
-  c.SetWeight = function(aI) {
-    var j = this.tc, aK = j.weightMode.split(/[, ]/), i, aJ, aL = aI.length;
-    if (!this.HasText()) {
-      return;
-    }
-    this.weighted = true;
-    for (aJ = 0; aJ < aL; ++aJ) {
-      i = aK[aJ] || "size";
-      if ("both" == i) {
-        this.Weight(aI[aJ], j.ctxt, j, "size", j.min_weight[aJ], j.max_weight[aJ], aJ);
-        this.Weight(aI[aJ], j.ctxt, j, "colour", j.min_weight[aJ], j.max_weight[aJ], aJ);
-      } else {
-        this.Weight(aI[aJ], j.ctxt, j, i, j.min_weight[aJ], j.max_weight[aJ], aJ);
-      }
-    }
-    this.Measure(j.ctxt, j);
-  };
-  c.Weight = function(aI, aN, aJ, j, aM, aK, aL) {
-    aI = isNaN(aI) ? 1 : aI;
-    var i = (aI - aM) / (aK - aM);
-    if ("colour" == j) {
-      this.colour = k(aJ, i, aL);
-    } else {
-      if ("bgcolour" == j) {
-        this.bgColour = k(aJ, i, aL);
-      } else {
-        if ("bgoutline" == j) {
-          this.bgOutline = k(aJ, i, aL);
-        } else {
-          if ("outline" == j) {
-            this.outline.colour = k(aJ, i, aL);
-          } else {
-            if ("size" == j) {
-              if (aJ.weightSizeMin > 0 && aJ.weightSizeMax > aJ.weightSizeMin) {
-                this.textHeight = aJ.weightSize * (aJ.weightSizeMin + (aJ.weightSizeMax - aJ.weightSizeMin) * i);
-              } else {
-                this.textHeight = s(1, aI * aJ.weightSize);
-              }
-            }
-          }
-        }
-      }
-    }
-  };
-  c.SetShadowColourFixed = function(aI, j, i) {
-    aI.shadowColor = j;
-  };
-  c.SetShadowColourAlpha = function(aI, j, i) {
-    aI.shadowColor = U(j, i);
-  };
-  c.DrawText = function(aK, aN, aJ) {
-    var aO = this.tc, aM = this.x, aL = this.y, aP = this.sc, j, aI;
-    aK.globalAlpha = this.alpha;
-    aK.fillStyle = this.colour;
-    aO.shadow && this.SetShadowColour(aK, aO.shadow, this.alpha);
-    aK.font = this.font;
-    aM += aN / aP;
-    aL += aJ / aP - this.h / 2;
-    for (j = 0; j < this.text.length; ++j) {
-      aI = aM;
-      if ("right" == aO.textAlign) {
-        aI += this.w / 2 - this.line_widths[j];
-      } else {
-        if ("centre" == aO.textAlign) {
-          aI -= this.line_widths[j] / 2;
-        } else {
-          aI -= this.w / 2;
-        }
-      }
-      aK.setTransform(aP, 0, 0, aP, aP * aI, aP * aL);
-      aK.fillText(this.text[j], 0, 0);
-      aL += this.textHeight;
-    }
-  };
-  c.DrawImage = function(aK, aR, aJ, aM) {
-    var aO = this.x, aL = this.y, aS = this.sc, j = aM || this.fimage, aP = this.w, aI = this.h, aN = this.alpha, aQ = this.shadow;
-    aK.globalAlpha = aN;
-    aQ && this.SetShadowColour(aK, aQ, aN);
-    aO += aR / aS - aP / 2;
-    aL += aJ / aS - aI / 2;
-    aK.setTransform(aS, 0, 0, aS, aS * aO, aS * aL);
-    aK.drawImage(j, 0, 0, aP, aI);
-  };
-  c.DrawImageIE = function(aK, aO, aJ) {
-    var j = this.fimage, aP = this.sc, aN = j.width = this.w * aP, aI = j.height = this.h * aP, aM = this.x * aP + aO - aN / 2, aL = this.y * aP + aJ - aI / 2;
-    aK.setTransform(1, 0, 0, 1, 0, 0);
-    aK.globalAlpha = this.alpha;
-    aK.drawImage(j, aM, aL);
-  };
-  c.Calc = function(i, aI) {
-    var j, aL = this.tc, aK = aL.minBrightness, aJ = aL.maxBrightness, aM = aL.max_radius;
-    j = i.xform(this.position);
-    this.xformed = j;
-    j = V(aL, j, aL.stretchX, aL.stretchY);
-    this.x = j.x;
-    this.y = j.y;
-    this.z = j.z;
-    this.sc = j.w;
-    this.alpha = aI * aw(aK + (aJ - aK) * (aM - this.z) / (2 * aM), 0, 1);
-    return this.xformed;
-  };
-  c.UpdateActive = function(aN, aI, aL) {
-    var aK = this.outline, j = this.w, aJ = this.h, i = this.x - j / 2, aM = this.y - aJ / 2;
-    aK.Update(i, aM, j, aJ, this.sc, this.z, aI, aL);
-    return aK;
-  };
-  c.CheckActive = function(aK, i, aJ) {
-    var j = this.tc, aI = this.UpdateActive(aK, i, aJ);
-    return aI.Active(aK, j.mx, j.my) ? aI : null;
-  };
-  c.Clicked = function(aL) {
-    var j = this.a, aI = j.target, aJ = j.href, i;
-    if (aI != "" && aI != "_self") {
-      if (self.frames[aI]) {
-        self.frames[aI].document.location = aJ;
-      } else {
-        try {
-          if (top.frames[aI]) {
-            top.frames[aI].document.location = aJ;
-            return;
-          }
-        } catch (aK) {
-        }
-        window.open(aJ, aI);
-      }
-      return;
-    }
-    if (C.createEvent) {
-      i = C.createEvent("MouseEvents");
-      i.initMouseEvent("click", 1, 1, window, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null);
-      if (!j.dispatchEvent(i)) {
-        return;
-      }
-    } else {
-      if (j.fireEvent) {
-        if (!j.fireEvent("onclick")) {
-          return;
-        }
-      }
-    }
-    C.location = aJ;
-  };
-  function y(aO, j, aJ) {
-    var aI, aL, aN = C.getElementById(aO), aK = ["id", "class", "innerHTML"], aM;
-    if (!aN) {
-      throw 0;
-    }
-    if (ai(window.G_vmlCanvasManager)) {
-      aN = window.G_vmlCanvasManager.initElement(aN);
-      this.ie = parseFloat(navigator.appVersion.split("MSIE")[1]);
-    }
-    if (aN && (!aN.getContext || !aN.getContext("2d").fillText)) {
-      aL = C.createElement("DIV");
-      for (aI = 0; aI < aK.length; ++aI) {
-        aL[aK[aI]] = aN[aK[aI]];
-      }
-      aN.parentNode.insertBefore(aL, aN);
-      aN.parentNode.removeChild(aN);
-      throw 0;
-    }
-    for (aI in y.options) {
-      this[aI] = aJ && ai(aJ[aI]) ? aJ[aI] : ai(y[aI]) ? y[aI] : y.options[aI];
-    }
-    this.canvas = aN;
-    this.ctxt = aN.getContext("2d");
-    this.z1 = 250 / s(this.depth, 1e-3);
-    this.z2 = this.z1 / this.zoom;
-    this.radius = aE(aN.height, aN.width) * 75e-4;
-    this.max_radius = 100;
-    this.max_weight = [];
-    this.min_weight = [];
-    this.textFont = this.textFont && o(this.textFont);
-    this.textHeight *= 1;
-    this.imageRadius = this.imageRadius.toString();
-    this.pulsateTo = aw(this.pulsateTo, 0, 1);
-    this.minBrightness = aw(this.minBrightness, 0, 1);
-    this.maxBrightness = aw(this.maxBrightness, this.minBrightness, 1);
-    this.ctxt.textBaseline = "top";
-    this.lx = (this.lock + "").indexOf("x") + 1;
-    this.ly = (this.lock + "").indexOf("y") + 1;
-    this.frozen = this.dx = this.dy = this.fixedAnim = this.touchState = 0;
-    this.fixedAlpha = 1;
-    this.source = j || aO;
-    this.repeatTags = aE(64, ~~this.repeatTags);
-    this.minTags = aE(200, ~~this.minTags);
-    if (~~this.scrollPause > 0) {
-      y.scrollPause = ~~this.scrollPause;
-    } else {
-      this.scrollPause = 0;
-    }
-    if (this.minTags > 0 && this.repeatTags < 1 && (aI = this.GetTags().length)) {
-      this.repeatTags = aq(this.minTags / aI) - 1;
-    }
-    this.transform = R.Identity();
-    this.startTime = this.time = G();
-    this.mx = this.my = -1;
-    this.centreImage && ao(this);
-    this.Animate = this.dragControl ? this.AnimateDrag : this.AnimatePosition;
-    this.animTiming = typeof y[this.animTiming] == "function" ? y[this.animTiming] : y.Smooth;
-    if (this.shadowBlur || this.shadowOffset[0] || this.shadowOffset[1]) {
-      this.ctxt.shadowColor = this.shadow;
-      this.shadow = this.ctxt.shadowColor;
-      this.shadowAlpha = al();
-    } else {
-      delete this.shadow;
-    }
-    this.Load();
-    if (j && this.hideTags) {
-      (function(i) {
-        if (y.loaded) {
-          i.HideTags();
-        } else {
-          ad("load", function() {
-            i.HideTags();
-          }, window);
-        }
-      })(this);
-    }
-    this.yaw = this.initial ? this.initial[0] * this.maxSpeed : 0;
-    this.pitch = this.initial ? this.initial[1] * this.maxSpeed : 0;
-    if (this.tooltip) {
-      this.ctitle = aN.title;
-      aN.title = "";
-      if (this.tooltip == "native") {
-        this.Tooltip = this.TooltipNative;
-      } else {
-        this.Tooltip = this.TooltipDiv;
-        if (!this.ttdiv) {
-          this.ttdiv = C.createElement("div");
-          this.ttdiv.className = this.tooltipClass;
-          this.ttdiv.style.position = "absolute";
-          this.ttdiv.style.zIndex = aN.style.zIndex + 1;
-          ad("mouseover", function(i) {
-            i.target.style.display = "none";
-          }, this.ttdiv);
-          C.body.appendChild(this.ttdiv);
-        }
-      }
-    } else {
-      this.Tooltip = this.TooltipNone;
-    }
-    if (!this.noMouse && !b[aO]) {
-      b[aO] = [["mousemove", af], ["mouseout", B], ["mouseup", aF], ["touchstart", T], ["touchend", r], ["touchcancel", r], ["touchmove", aA]];
-      if (this.dragControl) {
-        b[aO].push(["mousedown", z]);
-        b[aO].push(["selectstart", aB]);
-      }
-      if (this.wheelZoom) {
-        b[aO].push(["mousewheel", ag]);
-        b[aO].push(["DOMMouseScroll", ag]);
-      }
-      if (this.scrollPause) {
-        b[aO].push(["scroll", ac, window]);
-      }
-      for (aI = 0; aI < b[aO].length; ++aI) {
-        aL = b[aO][aI];
-        ad(aL[0], aL[1], aL[2] ? aL[2] : aN);
-      }
-    }
-    if (!y.started) {
-      aM = window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
-      y.NextFrame = aM ? y.NextFrameRAF : y.NextFrameTimeout;
-      y.interval = this.interval;
-      y.NextFrame(this.interval);
-      y.started = 1;
-    }
-  }
-  Q = y.prototype;
-  Q.SourceElements = function() {
-    if (C.querySelectorAll) {
-      return C.querySelectorAll("#" + this.source);
-    }
-    return [C.getElementById(this.source)];
-  };
-  Q.HideTags = function() {
-    var aI = this.SourceElements(), j;
-    for (j = 0; j < aI.length; ++j) {
-      aI[j].style.display = "none";
-    }
-  };
-  Q.GetTags = function() {
-    var aN = this.SourceElements(), aM, aJ = [], aL, aK, aI;
-    for (aI = 0; aI <= this.repeatTags; ++aI) {
-      for (aL = 0; aL < aN.length; ++aL) {
-        aM = aN[aL].getElementsByTagName("a");
-        for (aK = 0; aK < aM.length; ++aK) {
-          aJ.push(aM[aK]);
-        }
-      }
-    }
-    return aJ;
-  };
-  Q.Message = function(aN) {
-    var aP = [], aJ, j, aI = aN.split(""), aL, aO, aM, aK;
-    for (aJ = 0; aJ < aI.length; ++aJ) {
-      if (aI[aJ] != " ") {
-        j = aJ - aI.length / 2;
-        aL = C.createElement("A");
-        aL.href = "#";
-        aL.innerText = aI[aJ];
-        aM = 100 * ah(j / 9);
-        aK = -100 * w(j / 9);
-        aO = new e(this, aI[aJ], aL, [aM, 0, aK], 2, 18, "#000", "#fff", 0, 0, 0, "monospace", 2, aI[aJ]);
-        aO.Init();
-        aP.push(aO);
-      }
-    }
-    return aP;
-  };
-  Q.CreateTag = function(aM) {
-    var aP, aK, aQ, aL, aO, aI, aN, aJ, j = [0, 0, 0];
-    if ("text" != this.imageMode) {
-      aP = aM.getElementsByTagName("img");
-      if (aP.length) {
-        aK = new Image();
-        aK.src = aP[0].src;
-        if (!this.imageMode) {
-          aQ = new e(this, "", aM, j, 0, 0);
-          aQ.SetImage(aK);
-          ax(aK, aP[0], aQ, this);
-          return aQ;
-        }
-      }
-    }
-    if ("image" != this.imageMode) {
-      aO = new aC(aM);
-      aL = aO.Lines();
-      if (!aO.Empty()) {
-        aI = this.textFont || o(Y(aM, "font-family"));
-        if (this.splitWidth) {
-          aL = aO.SplitWidth(this.splitWidth, this.ctxt, aI, this.textHeight);
-        }
-        aN = this.bgColour == "tag" ? Y(aM, "background-color") : this.bgColour;
-        aJ = this.bgOutline == "tag" ? Y(aM, "color") : this.bgOutline;
-      } else {
-        aO = null;
-      }
-    }
-    if (aO || aK) {
-      aQ = new e(this, aL, aM, j, 2, this.textHeight + 2, this.textColour || Y(aM, "color"), aN, this.bgRadius, aJ, this.bgOutlineThickness, aI, this.padding, aO && aO.original);
-      if (aK) {
-        aQ.SetImage(aK);
-        ax(aK, aP[0], aQ, this);
-      } else {
-        aQ.Init();
-      }
-      return aQ;
-    }
-  };
-  Q.UpdateTag = function(aI, i) {
-    var aL = this.textColour || Y(i, "color"), j = this.textFont || o(Y(i, "font-family")), aK = this.bgColour == "tag" ? Y(i, "background-color") : this.bgColour, aJ = this.bgOutline == "tag" ? Y(i, "color") : this.bgOutline;
-    aI.a = i;
-    aI.title = i.title;
-    if (aI.colour != aL || aI.textFont != j || aI.bgColour != aK || aI.bgOutline != aJ) {
-      aI.SetFont(j, aL, aK, aJ);
-    }
-  };
-  Q.Weight = function(aO) {
-    var aK = aO.length, aM, aI, aP, aL = [], j, aJ = this.weightFrom ? this.weightFrom.split(/[, ]/) : [null], aN = aJ.length;
-    for (aI = 0; aI < aK; ++aI) {
-      aL[aI] = [];
-      for (aP = 0; aP < aN; ++aP) {
-        aM = u(aO[aI].a, aJ[aP], this.textHeight);
-        if (!this.max_weight[aP] || aM > this.max_weight[aP]) {
-          this.max_weight[aP] = aM;
-        }
-        if (!this.min_weight[aP] || aM < this.min_weight[aP]) {
-          this.min_weight[aP] = aM;
-        }
-        aL[aI][aP] = aM;
-      }
-    }
-    for (aP = 0; aP < aN; ++aP) {
-      if (this.max_weight[aP] > this.min_weight[aP]) {
-        j = 1;
-      }
-    }
-    if (j) {
-      for (aI = 0; aI < aK; ++aI) {
-        aO[aI].SetWeight(aL[aI]);
-      }
-    }
-  };
-  Q.Load = function() {
-    var aS = this.GetTags(), aN = [], aQ, aR, aM, aJ, aI, j, aK, aP, aL = [], aO = { sphere: q, vcylinder: am, hcylinder: av, vring: d, hring: n };
-    if (aS.length) {
-      aL.length = aS.length;
-      for (aP = 0; aP < aS.length; ++aP) {
-        aL[aP] = aP;
-      }
-      this.shuffleTags && an(aL);
-      aJ = 100 * this.radiusX;
-      aI = 100 * this.radiusY;
-      j = 100 * this.radiusZ;
-      this.max_radius = s(aJ, s(aI, j));
-      for (aP = 0; aP < aS.length; ++aP) {
-        aR = this.CreateTag(aS[aL[aP]]);
-        if (aR) {
-          aN.push(aR);
-        }
-      }
-      this.weight && this.Weight(aN, true);
-      if (this.shapeArgs) {
-        this.shapeArgs[0] = aN.length;
-      } else {
-        aM = this.shape.toString().split(/[(),]/);
-        aQ = aM.shift();
-        if (typeof window[aQ] === "function") {
-          this.shape = window[aQ];
-        } else {
-          this.shape = aO[aQ] || aO.sphere;
-        }
-        this.shapeArgs = [aN.length, aJ, aI, j].concat(aM);
-      }
-      aK = this.shape.apply(this, this.shapeArgs);
-      this.listLength = aN.length;
-      for (aP = 0; aP < aN.length; ++aP) {
-        aN[aP].position = new ae(aK[aP][0], aK[aP][1], aK[aP][2]);
-      }
-    }
-    if (this.noTagsMessage && !aN.length) {
-      aP = this.imageMode && this.imageMode != "both" ? this.imageMode + " " : "";
-      aN = this.Message("No " + aP + "tags");
-    }
-    this.taglist = aN;
-  };
-  Q.Update = function() {
-    var aR = this.GetTags(), aQ = [], aL = this.taglist, aS, aP = [], aN = [], aJ, aO, aI, aM, aK;
-    if (!this.shapeArgs) {
-      return this.Load();
-    }
-    if (aR.length) {
-      aI = this.listLength = aR.length;
-      aO = aL.length;
-      for (aM = 0; aM < aO; ++aM) {
-        aQ.push(aL[aM]);
-        aN.push(aM);
-      }
-      for (aM = 0; aM < aI; ++aM) {
-        for (aK = 0, aS = 0; aK < aO; ++aK) {
-          if (aL[aK].EqualTo(aR[aM])) {
-            this.UpdateTag(aQ[aK], aR[aM]);
-            aS = aN[aK] = -1;
-          }
-        }
-        if (!aS) {
-          aP.push(aM);
-        }
-      }
-      for (aM = 0, aK = 0; aM < aO; ++aM) {
-        if (aN[aK] == -1) {
-          aN.splice(aK, 1);
-        } else {
-          ++aK;
-        }
-      }
-      if (aN.length) {
-        an(aN);
-        while (aN.length && aP.length) {
-          aM = aN.shift();
-          aK = aP.shift();
-          aQ[aM] = this.CreateTag(aR[aK]);
-        }
-        aN.sort(function(j, i) {
-          return j - i;
-        });
-        while (aN.length) {
-          aQ.splice(aN.pop(), 1);
-        }
-      }
-      aK = aQ.length / (aP.length + 1);
-      aM = 0;
-      while (aP.length) {
-        aQ.splice(aq(++aM * aK), 0, this.CreateTag(aR[aP.shift()]));
-      }
-      this.shapeArgs[0] = aI = aQ.length;
-      aJ = this.shape.apply(this, this.shapeArgs);
-      for (aM = 0; aM < aI; ++aM) {
-        aQ[aM].position = new ae(aJ[aM][0], aJ[aM][1], aJ[aM][2]);
-      }
-      this.weight && this.Weight(aQ);
-    }
-    this.taglist = aQ;
-  };
-  Q.SetShadow = function(i) {
-    i.shadowBlur = this.shadowBlur;
-    i.shadowOffsetX = this.shadowOffset[0];
-    i.shadowOffsetY = this.shadowOffset[1];
-  };
-  Q.Draw = function(aS) {
-    if (this.paused) {
-      return;
-    }
-    var aM = this.canvas, aK = aM.width, aR = aM.height, aU = 0, aJ = (aS - this.time) * y.interval / 1e3, aQ = aK / 2 + this.offsetX, aP = aR / 2 + this.offsetY, aY = this.ctxt, aO, aZ, aW, aI = -1, aL = this.taglist, aV = aL.length, j = this.frontSelect, aT = this.centreFunc == aB, aN;
-    this.time = aS;
-    if (this.frozen && this.drawn) {
-      return this.Animate(aK, aR, aJ);
-    }
-    aN = this.AnimateFixed();
-    aY.setTransform(1, 0, 0, 1, 0, 0);
-    for (aW = 0; aW < aV; ++aW) {
-      aL[aW].Calc(this.transform, this.fixedAlpha);
-    }
-    aL = A(aL, function(a0, i) {
-      return i.z - a0.z;
+      return new Date(i3, s3, n2);
+    }(t2) : "number" == typeof t2 ? isNaN(t2) ? e2 : (s2 = t2, (i2 = /* @__PURE__ */ new Date()).setDate(i2.getDate() + s2), i2) : new Date(t2.getTime());
+    return (s2 = s2 && "Invalid Date" === s2.toString() ? e2 : s2) && (s2.setHours(0), s2.setMinutes(0), s2.setSeconds(0), s2.setMilliseconds(0)), this._daylightSavingAdjust(s2);
+  }, _daylightSavingAdjust: function(t2) {
+    return t2 ? (t2.setHours(12 < t2.getHours() ? t2.getHours() + 2 : 0), t2) : null;
+  }, _setDate: function(t2, e2, i2) {
+    var s2 = !e2, n2 = t2.selectedMonth, o2 = t2.selectedYear, e2 = this._restrictMinMax(t2, this._determineDate(t2, e2, /* @__PURE__ */ new Date()));
+    t2.selectedDay = t2.currentDay = e2.getDate(), t2.drawMonth = t2.selectedMonth = t2.currentMonth = e2.getMonth(), t2.drawYear = t2.selectedYear = t2.currentYear = e2.getFullYear(), n2 === t2.selectedMonth && o2 === t2.selectedYear || i2 || this._notifyChange(t2), this._adjustInstDate(t2), t2.input && t2.input.val(s2 ? "" : this._formatDate(t2));
+  }, _getDate: function(t2) {
+    return !t2.currentYear || t2.input && "" === t2.input.val() ? null : this._daylightSavingAdjust(new Date(t2.currentYear, t2.currentMonth, t2.currentDay));
+  }, _attachHandlers: function(t2) {
+    var e2 = this._get(t2, "stepMonths"), i2 = "#" + t2.id.replace(/\\\\/g, "\\");
+    t2.dpDiv.find("[data-handler]").map(function() {
+      var t3 = { prev: function() {
+        V.datepicker._adjustDate(i2, -e2, "M");
+      }, next: function() {
+        V.datepicker._adjustDate(i2, +e2, "M");
+      }, hide: function() {
+        V.datepicker._hideDatepicker();
+      }, today: function() {
+        V.datepicker._gotoToday(i2);
+      }, selectDay: function() {
+        return V.datepicker._selectDay(i2, +this.getAttribute("data-month"), +this.getAttribute("data-year"), this), false;
+      }, selectMonth: function() {
+        return V.datepicker._selectMonthYear(i2, this, "M"), false;
+      }, selectYear: function() {
+        return V.datepicker._selectMonthYear(i2, this, "Y"), false;
+      } };
+      V(this).on(this.getAttribute("data-event"), t3[this.getAttribute("data-handler")]);
     });
-    if (aN && this.fixedAnim.active) {
-      aO = this.fixedAnim.tag.UpdateActive(aY, aQ, aP);
-    } else {
-      this.active = null;
-      for (aW = 0; aW < aV; ++aW) {
-        aZ = this.mx >= 0 && this.my >= 0 && this.taglist[aW].CheckActive(aY, aQ, aP);
-        if (aZ && aZ.sc > aU && (!j || aZ.z <= 0)) {
-          aO = aZ;
-          aI = aW;
-          aO.tag = this.taglist[aW];
-          aU = aZ.sc;
+  }, _generateHTML: function(t2) {
+    var e2, i2, s2, n2, o2, E2, W2, F2, L2, a2, r2, R2, l2, h2, c2, u2, d2, p2, f2, g2, m3, _2, Y2, v2, b2, B2, y2, j2, q2, w2, x2, k2, C2 = /* @__PURE__ */ new Date(), K2 = this._daylightSavingAdjust(new Date(C2.getFullYear(), C2.getMonth(), C2.getDate())), D2 = this._get(t2, "isRTL"), C2 = this._get(t2, "showButtonPanel"), I2 = this._get(t2, "hideIfNoPrevNext"), T2 = this._get(t2, "navigationAsDateFormat"), P2 = this._getNumberOfMonths(t2), M2 = this._get(t2, "showCurrentAtPos"), S2 = this._get(t2, "stepMonths"), U2 = 1 !== P2[0] || 1 !== P2[1], H2 = this._daylightSavingAdjust(t2.currentDay ? new Date(t2.currentYear, t2.currentMonth, t2.currentDay) : new Date(9999, 9, 9)), z2 = this._getMinMaxDate(t2, "min"), A2 = this._getMinMaxDate(t2, "max"), O2 = t2.drawMonth - M2, N2 = t2.drawYear;
+    if (O2 < 0 && (O2 += 12, N2--), A2) for (e2 = this._daylightSavingAdjust(new Date(A2.getFullYear(), A2.getMonth() - P2[0] * P2[1] + 1, A2.getDate())), e2 = z2 && e2 < z2 ? z2 : e2; this._daylightSavingAdjust(new Date(N2, O2, 1)) > e2; ) --O2 < 0 && (O2 = 11, N2--);
+    for (t2.drawMonth = O2, t2.drawYear = N2, M2 = this._get(t2, "prevText"), M2 = T2 ? this.formatDate(M2, this._daylightSavingAdjust(new Date(N2, O2 - S2, 1)), this._getFormatConfig(t2)) : M2, i2 = this._canAdjustMonth(t2, -1, N2, O2) ? V("<a>").attr({ class: "ui-datepicker-prev ui-corner-all", "data-handler": "prev", "data-event": "click", title: M2 }).append(V("<span>").addClass("ui-icon ui-icon-circle-triangle-" + (D2 ? "e" : "w")).text(M2))[0].outerHTML : I2 ? "" : V("<a>").attr({ class: "ui-datepicker-prev ui-corner-all ui-state-disabled", title: M2 }).append(V("<span>").addClass("ui-icon ui-icon-circle-triangle-" + (D2 ? "e" : "w")).text(M2))[0].outerHTML, M2 = this._get(t2, "nextText"), M2 = T2 ? this.formatDate(M2, this._daylightSavingAdjust(new Date(N2, O2 + S2, 1)), this._getFormatConfig(t2)) : M2, s2 = this._canAdjustMonth(t2, 1, N2, O2) ? V("<a>").attr({ class: "ui-datepicker-next ui-corner-all", "data-handler": "next", "data-event": "click", title: M2 }).append(V("<span>").addClass("ui-icon ui-icon-circle-triangle-" + (D2 ? "w" : "e")).text(M2))[0].outerHTML : I2 ? "" : V("<a>").attr({ class: "ui-datepicker-next ui-corner-all ui-state-disabled", title: M2 }).append(V("<span>").attr("class", "ui-icon ui-icon-circle-triangle-" + (D2 ? "w" : "e")).text(M2))[0].outerHTML, S2 = this._get(t2, "currentText"), I2 = this._get(t2, "gotoCurrent") && t2.currentDay ? H2 : K2, S2 = T2 ? this.formatDate(S2, I2, this._getFormatConfig(t2)) : S2, M2 = "", t2.inline || (M2 = V("<button>").attr({ type: "button", class: "ui-datepicker-close ui-state-default ui-priority-primary ui-corner-all", "data-handler": "hide", "data-event": "click" }).text(this._get(t2, "closeText"))[0].outerHTML), T2 = "", C2 && (T2 = V("<div class='ui-datepicker-buttonpane ui-widget-content'>").append(D2 ? M2 : "").append(this._isInRange(t2, I2) ? V("<button>").attr({ type: "button", class: "ui-datepicker-current ui-state-default ui-priority-secondary ui-corner-all", "data-handler": "today", "data-event": "click" }).text(S2) : "").append(D2 ? "" : M2)[0].outerHTML), n2 = parseInt(this._get(t2, "firstDay"), 10), n2 = isNaN(n2) ? 0 : n2, o2 = this._get(t2, "showWeek"), E2 = this._get(t2, "dayNames"), W2 = this._get(t2, "dayNamesMin"), F2 = this._get(t2, "monthNames"), L2 = this._get(t2, "monthNamesShort"), a2 = this._get(t2, "beforeShowDay"), r2 = this._get(t2, "showOtherMonths"), R2 = this._get(t2, "selectOtherMonths"), l2 = this._getDefaultDate(t2), h2 = "", u2 = 0; u2 < P2[0]; u2++) {
+      for (d2 = "", this.maxRows = 4, p2 = 0; p2 < P2[1]; p2++) {
+        if (f2 = this._daylightSavingAdjust(new Date(N2, O2, t2.selectedDay)), g2 = " ui-corner-all", m3 = "", U2) {
+          if (m3 += "<div class='ui-datepicker-group", 1 < P2[1]) switch (p2) {
+            case 0:
+              m3 += " ui-datepicker-group-first", g2 = " ui-corner-" + (D2 ? "right" : "left");
+              break;
+            case P2[1] - 1:
+              m3 += " ui-datepicker-group-last", g2 = " ui-corner-" + (D2 ? "left" : "right");
+              break;
+            default:
+              m3 += " ui-datepicker-group-middle", g2 = "";
+          }
+          m3 += "'>";
         }
-      }
-      this.active = aO;
-    }
-    this.txtOpt || this.shadow && this.SetShadow(aY);
-    aY.clearRect(0, 0, aK, aR);
-    for (aW = 0; aW < aV; ++aW) {
-      if (!aT && aL[aW].z <= 0) {
-        try {
-          this.centreFunc(aY, aK, aR, aQ, aP);
-        } catch (aX) {
-          alert(aX);
-          this.centreFunc = aB;
+        for (m3 += "<div class='ui-datepicker-header ui-widget-header ui-helper-clearfix" + g2 + "'>" + (/all|left/.test(g2) && 0 === u2 ? D2 ? s2 : i2 : "") + (/all|right/.test(g2) && 0 === u2 ? D2 ? i2 : s2 : "") + this._generateMonthYearHeader(t2, O2, N2, z2, A2, 0 < u2 || 0 < p2, F2, L2) + "</div><table class='ui-datepicker-calendar'><thead><tr>", _2 = o2 ? "<th class='ui-datepicker-week-col'>" + this._get(t2, "weekHeader") + "</th>" : "", c2 = 0; c2 < 7; c2++) _2 += "<th scope='col'" + (5 <= (c2 + n2 + 6) % 7 ? " class='ui-datepicker-week-end'" : "") + "><span title='" + E2[Y2 = (c2 + n2) % 7] + "'>" + W2[Y2] + "</span></th>";
+        for (m3 += _2 + "</tr></thead><tbody>", b2 = this._getDaysInMonth(N2, O2), N2 === t2.selectedYear && O2 === t2.selectedMonth && (t2.selectedDay = Math.min(t2.selectedDay, b2)), v2 = (this._getFirstDayOfMonth(N2, O2) - n2 + 7) % 7, b2 = Math.ceil((v2 + b2) / 7), B2 = U2 && this.maxRows > b2 ? this.maxRows : b2, this.maxRows = B2, y2 = this._daylightSavingAdjust(new Date(N2, O2, 1 - v2)), j2 = 0; j2 < B2; j2++) {
+          for (m3 += "<tr>", q2 = o2 ? "<td class='ui-datepicker-week-col'>" + this._get(t2, "calculateWeek")(y2) + "</td>" : "", c2 = 0; c2 < 7; c2++) w2 = a2 ? a2.apply(t2.input ? t2.input[0] : null, [y2]) : [true, ""], k2 = (x2 = y2.getMonth() !== O2) && !R2 || !w2[0] || z2 && y2 < z2 || A2 && A2 < y2, q2 += "<td class='" + (5 <= (c2 + n2 + 6) % 7 ? " ui-datepicker-week-end" : "") + (x2 ? " ui-datepicker-other-month" : "") + (y2.getTime() === f2.getTime() && O2 === t2.selectedMonth && t2._keyEvent || l2.getTime() === y2.getTime() && l2.getTime() === f2.getTime() ? " " + this._dayOverClass : "") + (k2 ? " " + this._unselectableClass + " ui-state-disabled" : "") + (x2 && !r2 ? "" : " " + w2[1] + (y2.getTime() === H2.getTime() ? " " + this._currentClass : "") + (y2.getTime() === K2.getTime() ? " ui-datepicker-today" : "")) + "'" + (x2 && !r2 || !w2[2] ? "" : " title='" + w2[2].replace(/'/g, "&#39;") + "'") + (k2 ? "" : " data-handler='selectDay' data-event='click' data-month='" + y2.getMonth() + "' data-year='" + y2.getFullYear() + "'") + ">" + (x2 && !r2 ? "&#xa0;" : k2 ? "<span class='ui-state-default'>" + y2.getDate() + "</span>" : "<a class='ui-state-default" + (y2.getTime() === K2.getTime() ? " ui-state-highlight" : "") + (y2.getTime() === H2.getTime() ? " ui-state-active" : "") + (x2 ? " ui-priority-secondary" : "") + "' href='#' aria-current='" + (y2.getTime() === H2.getTime() ? "true" : "false") + "' data-date='" + y2.getDate() + "'>" + y2.getDate() + "</a>") + "</td>", y2.setDate(y2.getDate() + 1), y2 = this._daylightSavingAdjust(y2);
+          m3 += q2 + "</tr>";
         }
-        aT = true;
+        11 < ++O2 && (O2 = 0, N2++), d2 += m3 += "</tbody></table>" + (U2 ? "</div>" + (0 < P2[0] && p2 === P2[1] - 1 ? "<div class='ui-datepicker-row-break'></div>" : "") : "");
       }
-      if (!(aO && aO.tag == aL[aW] && aO.PreDraw(aY, aL[aW], aQ, aP))) {
-        aL[aW].Draw(aY, aQ, aP);
-      }
-      aO && aO.tag == aL[aW] && aO.PostDraw(aY);
+      h2 += d2;
     }
-    if (this.freezeActive && aO) {
-      this.Freeze();
-    } else {
-      this.UnFreeze();
-      this.drawn = aV == this.listLength;
+    return h2 += T2, t2._keyEvent = false, h2;
+  }, _generateMonthYearHeader: function(t2, e2, i2, s2, n2, o2, a2, r2) {
+    var l2, h2, c2, u2, d2, p2, f2 = this._get(t2, "changeMonth"), g2 = this._get(t2, "changeYear"), m3 = this._get(t2, "showMonthAfterYear"), _2 = this._get(t2, "selectMonthLabel"), v2 = this._get(t2, "selectYearLabel"), b2 = "<div class='ui-datepicker-title'>", y2 = "";
+    if (o2 || !f2) y2 += "<span class='ui-datepicker-month'>" + a2[e2] + "</span>";
+    else {
+      for (l2 = s2 && s2.getFullYear() === i2, h2 = n2 && n2.getFullYear() === i2, y2 += "<select class='ui-datepicker-month' aria-label='" + _2 + "' data-handler='selectMonth' data-event='change'>", c2 = 0; c2 < 12; c2++) (!l2 || c2 >= s2.getMonth()) && (!h2 || c2 <= n2.getMonth()) && (y2 += "<option value='" + c2 + "'" + (c2 === e2 ? " selected='selected'" : "") + ">" + r2[c2] + "</option>");
+      y2 += "</select>";
     }
-    if (this.fixedCallback) {
-      this.fixedCallback(this, this.fixedCallbackTag);
-      this.fixedCallback = null;
+    if (m3 || (b2 += y2 + (!o2 && f2 && g2 ? "" : "&#xa0;")), !t2.yearshtml) if (t2.yearshtml = "", o2 || !g2) b2 += "<span class='ui-datepicker-year'>" + i2 + "</span>";
+    else {
+      for (a2 = this._get(t2, "yearRange").split(":"), u2 = (/* @__PURE__ */ new Date()).getFullYear(), d2 = (_2 = function(t3) {
+        t3 = t3.match(/c[+\-].*/) ? i2 + parseInt(t3.substring(1), 10) : t3.match(/[+\-].*/) ? u2 + parseInt(t3, 10) : parseInt(t3, 10);
+        return isNaN(t3) ? u2 : t3;
+      })(a2[0]), p2 = Math.max(d2, _2(a2[1] || "")), d2 = s2 ? Math.max(d2, s2.getFullYear()) : d2, p2 = n2 ? Math.min(p2, n2.getFullYear()) : p2, t2.yearshtml += "<select class='ui-datepicker-year' aria-label='" + v2 + "' data-handler='selectYear' data-event='change'>"; d2 <= p2; d2++) t2.yearshtml += "<option value='" + d2 + "'" + (d2 === i2 ? " selected='selected'" : "") + ">" + d2 + "</option>";
+      t2.yearshtml += "</select>", b2 += t2.yearshtml, t2.yearshtml = null;
     }
-    aN || this.Animate(aK, aR, aJ);
-    aO && aO.LastDraw(aY);
-    aM.style.cursor = aO ? this.activeCursor : "";
-    this.Tooltip(aO, this.taglist[aI]);
-  };
-  Q.TooltipNone = function() {
-  };
-  Q.TooltipNative = function(j, i) {
-    if (j) {
-      this.canvas.title = i && i.title ? i.title : "";
-    } else {
-      this.canvas.title = this.ctitle;
-    }
-  };
-  Q.SetTTDiv = function(aJ, j) {
-    var i = this, aI = i.ttdiv.style;
-    if (aJ != i.ttdiv.innerHTML) {
-      aI.display = "none";
-    }
-    i.ttdiv.innerHTML = aJ;
-    j && (j.title = i.ttdiv.innerHTML);
-    if (aI.display == "none" && !i.tttimer) {
-      i.tttimer = setTimeout(function() {
-        var aK = ab(i.canvas.id);
-        aI.display = "block";
-        aI.left = aK.x + i.mx + "px";
-        aI.top = aK.y + i.my + 24 + "px";
-        i.tttimer = null;
-      }, i.tooltipDelay);
-    }
-  };
-  Q.TooltipDiv = function(j, i) {
-    if (j && i && i.title) {
-      this.SetTTDiv(i.title, i);
-    } else {
-      if (!j && this.mx != -1 && this.my != -1 && this.ctitle.length) {
-        this.SetTTDiv(this.ctitle);
-      } else {
-        this.ttdiv.style.display = "none";
-      }
-    }
-  };
-  Q.Transform = function(aL, i, aN) {
-    if (i || aN) {
-      var j = ah(i), aM = w(i), aO = ah(aN), aK = w(aN), aI = new R([aK, 0, aO, 0, 1, 0, -aO, 0, aK]), aJ = new R([1, 0, 0, 0, aM, -j, 0, j, aM]);
-      aL.transform = aL.transform.mul(aI.mul(aJ));
-    }
-  };
-  Q.AnimateFixed = function() {
-    var aI, j, aK, i, aJ;
-    if (this.fadeIn) {
-      j = G() - this.startTime;
-      if (j >= this.fadeIn) {
-        this.fadeIn = 0;
-        this.fixedAlpha = 1;
-      } else {
-        this.fixedAlpha = j / this.fadeIn;
-      }
-    }
-    if (this.fixedAnim) {
-      if (!this.fixedAnim.transform) {
-        this.fixedAnim.transform = this.transform;
-      }
-      aI = this.fixedAnim, j = G() - aI.t0, aK = aI.angle, i, aJ = this.animTiming(aI.t, j);
-      this.transform = aI.transform;
-      if (j >= aI.t) {
-        this.fixedCallbackTag = aI.tag;
-        this.fixedCallback = aI.cb;
-        this.fixedAnim = this.yaw = this.pitch = 0;
-      } else {
-        aK *= aJ;
-      }
-      i = R.Rotation(aK, aI.axis);
-      this.transform = this.transform.mul(i);
-      return this.fixedAnim != 0;
-    }
-    return false;
-  };
-  Q.AnimatePosition = function(aI, aL, aJ) {
-    var j = this, i = j.mx, aN = j.my, aK, aM;
-    if (!j.frozen && i >= 0 && aN >= 0 && i < aI && aN < aL) {
-      aK = j.maxSpeed, aM = j.reverse ? -1 : 1;
-      j.lx || (j.yaw = (i * 2 * aK / aI - aK) * aM * aJ);
-      j.ly || (j.pitch = (aN * 2 * aK / aL - aK) * -aM * aJ);
-      j.initial = null;
-    } else {
-      if (!j.initial) {
-        if (j.frozen && !j.freezeDecel) {
-          j.yaw = j.pitch = 0;
-        } else {
-          j.Decel(j);
-        }
+    return b2 += this._get(t2, "yearSuffix"), m3 && (b2 += (!o2 && f2 && g2 ? "" : "&#xa0;") + y2), b2 += "</div>";
+  }, _adjustInstDate: function(t2, e2, i2) {
+    var s2 = t2.selectedYear + ("Y" === i2 ? e2 : 0), n2 = t2.selectedMonth + ("M" === i2 ? e2 : 0), e2 = Math.min(t2.selectedDay, this._getDaysInMonth(s2, n2)) + ("D" === i2 ? e2 : 0), s2 = this._restrictMinMax(t2, this._daylightSavingAdjust(new Date(s2, n2, e2)));
+    t2.selectedDay = s2.getDate(), t2.drawMonth = t2.selectedMonth = s2.getMonth(), t2.drawYear = t2.selectedYear = s2.getFullYear(), "M" !== i2 && "Y" !== i2 || this._notifyChange(t2);
+  }, _restrictMinMax: function(t2, e2) {
+    var i2 = this._getMinMaxDate(t2, "min"), t2 = this._getMinMaxDate(t2, "max"), i2 = i2 && e2 < i2 ? i2 : e2;
+    return t2 && t2 < i2 ? t2 : i2;
+  }, _notifyChange: function(t2) {
+    var e2 = this._get(t2, "onChangeMonthYear");
+    e2 && e2.apply(t2.input ? t2.input[0] : null, [t2.selectedYear, t2.selectedMonth + 1, t2]);
+  }, _getNumberOfMonths: function(t2) {
+    t2 = this._get(t2, "numberOfMonths");
+    return null == t2 ? [1, 1] : "number" == typeof t2 ? [1, t2] : t2;
+  }, _getMinMaxDate: function(t2, e2) {
+    return this._determineDate(t2, this._get(t2, e2 + "Date"), null);
+  }, _getDaysInMonth: function(t2, e2) {
+    return 32 - this._daylightSavingAdjust(new Date(t2, e2, 32)).getDate();
+  }, _getFirstDayOfMonth: function(t2, e2) {
+    return new Date(t2, e2, 1).getDay();
+  }, _canAdjustMonth: function(t2, e2, i2, s2) {
+    var n2 = this._getNumberOfMonths(t2), i2 = this._daylightSavingAdjust(new Date(i2, s2 + (e2 < 0 ? e2 : n2[0] * n2[1]), 1));
+    return e2 < 0 && i2.setDate(this._getDaysInMonth(i2.getFullYear(), i2.getMonth())), this._isInRange(t2, i2);
+  }, _isInRange: function(t2, e2) {
+    var i2, s2 = this._getMinMaxDate(t2, "min"), n2 = this._getMinMaxDate(t2, "max"), o2 = null, a2 = null, t2 = this._get(t2, "yearRange");
+    return t2 && (t2 = t2.split(":"), i2 = (/* @__PURE__ */ new Date()).getFullYear(), o2 = parseInt(t2[0], 10), a2 = parseInt(t2[1], 10), t2[0].match(/[+\-].*/) && (o2 += i2), t2[1].match(/[+\-].*/)) && (a2 += i2), (!s2 || e2.getTime() >= s2.getTime()) && (!n2 || e2.getTime() <= n2.getTime()) && (!o2 || e2.getFullYear() >= o2) && (!a2 || e2.getFullYear() <= a2);
+  }, _getFormatConfig: function(t2) {
+    var e2 = this._get(t2, "shortYearCutoff");
+    return { shortYearCutoff: "string" != typeof e2 ? e2 : (/* @__PURE__ */ new Date()).getFullYear() % 100 + parseInt(e2, 10), dayNamesShort: this._get(t2, "dayNamesShort"), dayNames: this._get(t2, "dayNames"), monthNamesShort: this._get(t2, "monthNamesShort"), monthNames: this._get(t2, "monthNames") };
+  }, _formatDate: function(t2, e2, i2, s2) {
+    e2 || (t2.currentDay = t2.selectedDay, t2.currentMonth = t2.selectedMonth, t2.currentYear = t2.selectedYear);
+    s2 = e2 ? "object" == typeof e2 ? e2 : this._daylightSavingAdjust(new Date(s2, i2, e2)) : this._daylightSavingAdjust(new Date(t2.currentYear, t2.currentMonth, t2.currentDay));
+    return this.formatDate(this._get(t2, "dateFormat"), s2, this._getFormatConfig(t2));
+  } }), V.fn.datepicker = function(t2) {
+    if (!this.length) return this;
+    V.datepicker.initialized || (V(document).on("mousedown", V.datepicker._checkExternalClick), V.datepicker.initialized = true), 0 === V("#" + V.datepicker._mainDivId).length && V("body").append(V.datepicker.dpDiv);
+    var e2 = Array.prototype.slice.call(arguments, 1);
+    return "string" == typeof t2 && ("isDisabled" === t2 || "getDate" === t2 || "widget" === t2) || "option" === t2 && 2 === arguments.length && "string" == typeof arguments[1] ? V.datepicker["_" + t2 + "Datepicker"].apply(V.datepicker, [this[0]].concat(e2)) : this.each(function() {
+      "string" == typeof t2 ? V.datepicker["_" + t2 + "Datepicker"].apply(V.datepicker, [this].concat(e2)) : V.datepicker._attachDatepicker(this, t2);
+    });
+  }, V.datepicker = new rt(), V.datepicker.initialized = false, V.datepicker.uuid = (/* @__PURE__ */ new Date()).getTime(), V.datepicker.version = "1.13.3";
+  V.datepicker, V.ui.ie = !!/msie [\w.]+/.exec(navigator.userAgent.toLowerCase());
+  var z = false;
+  V(document).on("mouseup", function() {
+    z = false;
+  }), V.widget("ui.mouse", { version: "1.13.3", options: { cancel: "input, textarea, button, select, option", distance: 1, delay: 0 }, _mouseInit: function() {
+    var e2 = this;
+    this.element.on("mousedown." + this.widgetName, function(t2) {
+      return e2._mouseDown(t2);
+    }).on("click." + this.widgetName, function(t2) {
+      if (true === V.data(t2.target, e2.widgetName + ".preventClickEvent")) return V.removeData(t2.target, e2.widgetName + ".preventClickEvent"), t2.stopImmediatePropagation(), false;
+    }), this.started = false;
+  }, _mouseDestroy: function() {
+    this.element.off("." + this.widgetName), this._mouseMoveDelegate && this.document.off("mousemove." + this.widgetName, this._mouseMoveDelegate).off("mouseup." + this.widgetName, this._mouseUpDelegate);
+  }, _mouseDown: function(t2) {
+    var e2, i2, s2;
+    if (!z) return this._mouseMoved = false, this._mouseStarted && this._mouseUp(t2), i2 = 1 === (this._mouseDownEvent = t2).which, s2 = !("string" != typeof (e2 = this).options.cancel || !t2.target.nodeName) && V(t2.target).closest(this.options.cancel).length, i2 && !s2 && this._mouseCapture(t2) && (this.mouseDelayMet = !this.options.delay, this.mouseDelayMet || (this._mouseDelayTimer = setTimeout(function() {
+      e2.mouseDelayMet = true;
+    }, this.options.delay)), this._mouseDistanceMet(t2) && this._mouseDelayMet(t2) && (this._mouseStarted = false !== this._mouseStart(t2), !this._mouseStarted) ? t2.preventDefault() : (true === V.data(t2.target, this.widgetName + ".preventClickEvent") && V.removeData(t2.target, this.widgetName + ".preventClickEvent"), this._mouseMoveDelegate = function(t3) {
+      return e2._mouseMove(t3);
+    }, this._mouseUpDelegate = function(t3) {
+      return e2._mouseUp(t3);
+    }, this.document.on("mousemove." + this.widgetName, this._mouseMoveDelegate).on("mouseup." + this.widgetName, this._mouseUpDelegate), t2.preventDefault(), z = true)), true;
+  }, _mouseMove: function(t2) {
+    if (this._mouseMoved) {
+      if (V.ui.ie && (!document.documentMode || document.documentMode < 9) && !t2.button) return this._mouseUp(t2);
+      if (!t2.which) {
+        if (t2.originalEvent.altKey || t2.originalEvent.ctrlKey || t2.originalEvent.metaKey || t2.originalEvent.shiftKey) this.ignoreMissingWhich = true;
+        else if (!this.ignoreMissingWhich) return this._mouseUp(t2);
       }
     }
-    this.Transform(j, j.pitch, j.yaw);
-  };
-  Q.AnimateDrag = function(j, aK, aJ) {
-    var i = this, aI = 100 * aJ * i.maxSpeed / i.max_radius / i.zoom;
-    if (i.dx || i.dy) {
-      i.lx || (i.yaw = i.dx * aI / i.stretchX);
-      i.ly || (i.pitch = i.dy * -aI / i.stretchY);
-      i.dx = i.dy = 0;
-      i.initial = null;
-    } else {
-      if (!i.initial) {
-        i.Decel(i);
-      }
+    return (t2.which || t2.button) && (this._mouseMoved = true), this._mouseStarted ? (this._mouseDrag(t2), t2.preventDefault()) : (this._mouseDistanceMet(t2) && this._mouseDelayMet(t2) && (this._mouseStarted = false !== this._mouseStart(this._mouseDownEvent, t2), this._mouseStarted ? this._mouseDrag(t2) : this._mouseUp(t2)), !this._mouseStarted);
+  }, _mouseUp: function(t2) {
+    this.document.off("mousemove." + this.widgetName, this._mouseMoveDelegate).off("mouseup." + this.widgetName, this._mouseUpDelegate), this._mouseStarted && (this._mouseStarted = false, t2.target === this._mouseDownEvent.target && V.data(t2.target, this.widgetName + ".preventClickEvent", true), this._mouseStop(t2)), this._mouseDelayTimer && (clearTimeout(this._mouseDelayTimer), delete this._mouseDelayTimer), this.ignoreMissingWhich = false, z = false, t2.preventDefault();
+  }, _mouseDistanceMet: function(t2) {
+    return Math.max(Math.abs(this._mouseDownEvent.pageX - t2.pageX), Math.abs(this._mouseDownEvent.pageY - t2.pageY)) >= this.options.distance;
+  }, _mouseDelayMet: function() {
+    return this.mouseDelayMet;
+  }, _mouseStart: function() {
+  }, _mouseDrag: function() {
+  }, _mouseStop: function() {
+  }, _mouseCapture: function() {
+    return true;
+  } }), V.ui.plugin = { add: function(t2, e2, i2) {
+    var s2, n2 = V.ui[t2].prototype;
+    for (s2 in i2) n2.plugins[s2] = n2.plugins[s2] || [], n2.plugins[s2].push([e2, i2[s2]]);
+  }, call: function(t2, e2, i2, s2) {
+    var n2, o2 = t2.plugins[e2];
+    if (o2 && (s2 || t2.element[0].parentNode && 11 !== t2.element[0].parentNode.nodeType)) for (n2 = 0; n2 < o2.length; n2++) t2.options[o2[n2][0]] && o2[n2][1].apply(t2.element, i2);
+  } }, V.ui.safeBlur = function(t2) {
+    t2 && "body" !== t2.nodeName.toLowerCase() && V(t2).trigger("blur");
+  }, V.widget("ui.draggable", V.ui.mouse, { version: "1.13.3", widgetEventPrefix: "drag", options: { addClasses: true, appendTo: "parent", axis: false, connectToSortable: false, containment: false, cursor: "auto", cursorAt: false, grid: false, handle: false, helper: "original", iframeFix: false, opacity: false, refreshPositions: false, revert: false, revertDuration: 500, scope: "default", scroll: true, scrollSensitivity: 20, scrollSpeed: 20, snap: false, snapMode: "both", snapTolerance: 20, stack: false, zIndex: false, drag: null, start: null, stop: null }, _create: function() {
+    "original" === this.options.helper && this._setPositionRelative(), this.options.addClasses && this._addClass("ui-draggable"), this._setHandleClassName(), this._mouseInit();
+  }, _setOption: function(t2, e2) {
+    this._super(t2, e2), "handle" === t2 && (this._removeHandleClassName(), this._setHandleClassName());
+  }, _destroy: function() {
+    (this.helper || this.element).is(".ui-draggable-dragging") ? this.destroyOnClear = true : (this._removeHandleClassName(), this._mouseDestroy());
+  }, _mouseCapture: function(t2) {
+    var e2 = this.options;
+    return !(this.helper || e2.disabled || 0 < V(t2.target).closest(".ui-resizable-handle").length || (this.handle = this._getHandle(t2), !this.handle) || (this._blurActiveElement(t2), this._blockFrames(true === e2.iframeFix ? "iframe" : e2.iframeFix), 0));
+  }, _blockFrames: function(t2) {
+    this.iframeBlocks = this.document.find(t2).map(function() {
+      var t3 = V(this);
+      return V("<div>").css("position", "absolute").appendTo(t3.parent()).outerWidth(t3.outerWidth()).outerHeight(t3.outerHeight()).offset(t3.offset())[0];
+    });
+  }, _unblockFrames: function() {
+    this.iframeBlocks && (this.iframeBlocks.remove(), delete this.iframeBlocks);
+  }, _blurActiveElement: function(t2) {
+    var e2 = V.ui.safeActiveElement(this.document[0]);
+    V(t2.target).closest(e2).length || V.ui.safeBlur(e2);
+  }, _mouseStart: function(t2) {
+    var e2 = this.options;
+    return this.helper = this._createHelper(t2), this._addClass(this.helper, "ui-draggable-dragging"), this._cacheHelperProportions(), V.ui.ddmanager && (V.ui.ddmanager.current = this), this._cacheMargins(), this.cssPosition = this.helper.css("position"), this.scrollParent = this.helper.scrollParent(true), this.offsetParent = this.helper.offsetParent(), this.hasFixedAncestor = 0 < this.helper.parents().filter(function() {
+      return "fixed" === V(this).css("position");
+    }).length, this.positionAbs = this.element.offset(), this._refreshOffsets(t2), this.originalPosition = this.position = this._generatePosition(t2, false), this.originalPageX = t2.pageX, this.originalPageY = t2.pageY, e2.cursorAt && this._adjustOffsetFromHelper(e2.cursorAt), this._setContainment(), false === this._trigger("start", t2) ? (this._clear(), false) : (this._cacheHelperProportions(), V.ui.ddmanager && !e2.dropBehaviour && V.ui.ddmanager.prepareOffsets(this, t2), this._mouseDrag(t2, true), V.ui.ddmanager && V.ui.ddmanager.dragStart(this, t2), true);
+  }, _refreshOffsets: function(t2) {
+    this.offset = { top: this.positionAbs.top - this.margins.top, left: this.positionAbs.left - this.margins.left, scroll: false, parent: this._getParentOffset(), relative: this._getRelativeOffset() }, this.offset.click = { left: t2.pageX - this.offset.left, top: t2.pageY - this.offset.top };
+  }, _mouseDrag: function(t2, e2) {
+    if (this.hasFixedAncestor && (this.offset.parent = this._getParentOffset()), this.position = this._generatePosition(t2, true), this.positionAbs = this._convertPositionTo("absolute"), !e2) {
+      e2 = this._uiHash();
+      if (false === this._trigger("drag", t2, e2)) return this._mouseUp(new V.Event("mouseup", t2)), false;
+      this.position = e2.position;
     }
-    this.Transform(i, i.pitch, i.yaw);
-  };
-  Q.Freeze = function() {
-    if (!this.frozen) {
-      this.preFreeze = [this.yaw, this.pitch];
-      this.frozen = 1;
-      this.drawn = 0;
-    }
-  };
-  Q.UnFreeze = function() {
-    if (this.frozen) {
-      this.yaw = this.preFreeze[0];
-      this.pitch = this.preFreeze[1];
-      this.frozen = 0;
-    }
-  };
-  Q.Decel = function(i) {
-    var aI = i.minSpeed, aJ = L(i.yaw), j = L(i.pitch);
-    if (!i.lx && aJ > aI) {
-      i.yaw = aJ > i.z0 ? i.yaw * i.decel : 0;
-    }
-    if (!i.ly && j > aI) {
-      i.pitch = j > i.z0 ? i.pitch * i.decel : 0;
-    }
-  };
-  Q.Zoom = function(i) {
-    this.z2 = this.z1 * (1 / i);
-    this.drawn = 0;
-  };
-  Q.Clicked = function(aI) {
-    var i = this.active;
+    return this.helper[0].style.left = this.position.left + "px", this.helper[0].style.top = this.position.top + "px", V.ui.ddmanager && V.ui.ddmanager.drag(this, t2), false;
+  }, _mouseStop: function(t2) {
+    var e2 = this, i2 = false;
+    return V.ui.ddmanager && !this.options.dropBehaviour && (i2 = V.ui.ddmanager.drop(this, t2)), this.dropped && (i2 = this.dropped, this.dropped = false), "invalid" === this.options.revert && !i2 || "valid" === this.options.revert && i2 || true === this.options.revert || "function" == typeof this.options.revert && this.options.revert.call(this.element, i2) ? V(this.helper).animate(this.originalPosition, parseInt(this.options.revertDuration, 10), function() {
+      false !== e2._trigger("stop", t2) && e2._clear();
+    }) : false !== this._trigger("stop", t2) && this._clear(), false;
+  }, _mouseUp: function(t2) {
+    return this._unblockFrames(), V.ui.ddmanager && V.ui.ddmanager.dragStop(this, t2), this.handleElement.is(t2.target) && this.element.trigger("focus"), V.ui.mouse.prototype._mouseUp.call(this, t2);
+  }, cancel: function() {
+    return this.helper.is(".ui-draggable-dragging") ? this._mouseUp(new V.Event("mouseup", { target: this.element[0] })) : this._clear(), this;
+  }, _getHandle: function(t2) {
+    return !this.options.handle || !!V(t2.target).closest(this.element.find(this.options.handle)).length;
+  }, _setHandleClassName: function() {
+    this.handleElement = this.options.handle ? this.element.find(this.options.handle) : this.element, this._addClass(this.handleElement, "ui-draggable-handle");
+  }, _removeHandleClassName: function() {
+    this._removeClass(this.handleElement, "ui-draggable-handle");
+  }, _createHelper: function(t2) {
+    var e2 = this.options, i2 = "function" == typeof e2.helper, t2 = i2 ? V(e2.helper.apply(this.element[0], [t2])) : "clone" === e2.helper ? this.element.clone().removeAttr("id") : this.element;
+    return t2.parents("body").length || t2.appendTo("parent" === e2.appendTo ? this.element[0].parentNode : e2.appendTo), i2 && t2[0] === this.element[0] && this._setPositionRelative(), t2[0] === this.element[0] || /(fixed|absolute)/.test(t2.css("position")) || t2.css("position", "absolute"), t2;
+  }, _setPositionRelative: function() {
+    /^(?:r|a|f)/.test(this.element.css("position")) || (this.element[0].style.position = "relative");
+  }, _adjustOffsetFromHelper: function(t2) {
+    "string" == typeof t2 && (t2 = t2.split(" ")), "left" in (t2 = Array.isArray(t2) ? { left: +t2[0], top: +t2[1] || 0 } : t2) && (this.offset.click.left = t2.left + this.margins.left), "right" in t2 && (this.offset.click.left = this.helperProportions.width - t2.right + this.margins.left), "top" in t2 && (this.offset.click.top = t2.top + this.margins.top), "bottom" in t2 && (this.offset.click.top = this.helperProportions.height - t2.bottom + this.margins.top);
+  }, _isRootNode: function(t2) {
+    return /(html|body)/i.test(t2.tagName) || t2 === this.document[0];
+  }, _getParentOffset: function() {
+    var t2 = this.offsetParent.offset(), e2 = this.document[0];
+    return "absolute" === this.cssPosition && this.scrollParent[0] !== e2 && V.contains(this.scrollParent[0], this.offsetParent[0]) && (t2.left += this.scrollParent.scrollLeft(), t2.top += this.scrollParent.scrollTop()), { top: (t2 = this._isRootNode(this.offsetParent[0]) ? { top: 0, left: 0 } : t2).top + (parseInt(this.offsetParent.css("borderTopWidth"), 10) || 0), left: t2.left + (parseInt(this.offsetParent.css("borderLeftWidth"), 10) || 0) };
+  }, _getRelativeOffset: function() {
+    var t2, e2;
+    return "relative" !== this.cssPosition ? { top: 0, left: 0 } : (t2 = this.element.position(), e2 = this._isRootNode(this.scrollParent[0]), { top: t2.top - (parseInt(this.helper.css("top"), 10) || 0) + (e2 ? 0 : this.scrollParent.scrollTop()), left: t2.left - (parseInt(this.helper.css("left"), 10) || 0) + (e2 ? 0 : this.scrollParent.scrollLeft()) });
+  }, _cacheMargins: function() {
+    this.margins = { left: parseInt(this.element.css("marginLeft"), 10) || 0, top: parseInt(this.element.css("marginTop"), 10) || 0, right: parseInt(this.element.css("marginRight"), 10) || 0, bottom: parseInt(this.element.css("marginBottom"), 10) || 0 };
+  }, _cacheHelperProportions: function() {
+    this.helperProportions = { width: this.helper.outerWidth(), height: this.helper.outerHeight() };
+  }, _setContainment: function() {
+    var t2, e2 = this.options, i2 = this.document[0];
+    this.relativeContainer = null, e2.containment ? "window" === e2.containment ? this.containment = [V(window).scrollLeft() - this.offset.relative.left - this.offset.parent.left, V(window).scrollTop() - this.offset.relative.top - this.offset.parent.top, V(window).scrollLeft() + V(window).width() - this.helperProportions.width - this.margins.left, V(window).scrollTop() + (V(window).height() || i2.body.parentNode.scrollHeight) - this.helperProportions.height - this.margins.top] : "document" === e2.containment ? this.containment = [0, 0, V(i2).width() - this.helperProportions.width - this.margins.left, (V(i2).height() || i2.body.parentNode.scrollHeight) - this.helperProportions.height - this.margins.top] : e2.containment.constructor === Array ? this.containment = e2.containment : ("parent" === e2.containment && (e2.containment = this.helper[0].parentNode), (e2 = (i2 = V(e2.containment))[0]) && (t2 = /(scroll|auto)/.test(i2.css("overflow")), this.containment = [(parseInt(i2.css("borderLeftWidth"), 10) || 0) + (parseInt(i2.css("paddingLeft"), 10) || 0), (parseInt(i2.css("borderTopWidth"), 10) || 0) + (parseInt(i2.css("paddingTop"), 10) || 0), (t2 ? Math.max(e2.scrollWidth, e2.offsetWidth) : e2.offsetWidth) - (parseInt(i2.css("borderRightWidth"), 10) || 0) - (parseInt(i2.css("paddingRight"), 10) || 0) - this.helperProportions.width - this.margins.left - this.margins.right, (t2 ? Math.max(e2.scrollHeight, e2.offsetHeight) : e2.offsetHeight) - (parseInt(i2.css("borderBottomWidth"), 10) || 0) - (parseInt(i2.css("paddingBottom"), 10) || 0) - this.helperProportions.height - this.margins.top - this.margins.bottom], this.relativeContainer = i2)) : this.containment = null;
+  }, _convertPositionTo: function(t2, e2) {
+    e2 = e2 || this.position;
+    var t2 = "absolute" === t2 ? 1 : -1, i2 = this._isRootNode(this.scrollParent[0]);
+    return { top: e2.top + this.offset.relative.top * t2 + this.offset.parent.top * t2 - ("fixed" === this.cssPosition ? -this.offset.scroll.top : i2 ? 0 : this.offset.scroll.top) * t2, left: e2.left + this.offset.relative.left * t2 + this.offset.parent.left * t2 - ("fixed" === this.cssPosition ? -this.offset.scroll.left : i2 ? 0 : this.offset.scroll.left) * t2 };
+  }, _generatePosition: function(t2, e2) {
+    var i2, s2 = this.options, n2 = this._isRootNode(this.scrollParent[0]), o2 = t2.pageX, a2 = t2.pageY;
+    return n2 && this.offset.scroll || (this.offset.scroll = { top: this.scrollParent.scrollTop(), left: this.scrollParent.scrollLeft() }), { top: (a2 = e2 && (this.containment && (i2 = this.relativeContainer ? (e2 = this.relativeContainer.offset(), [this.containment[0] + e2.left, this.containment[1] + e2.top, this.containment[2] + e2.left, this.containment[3] + e2.top]) : this.containment, t2.pageX - this.offset.click.left < i2[0] && (o2 = i2[0] + this.offset.click.left), t2.pageY - this.offset.click.top < i2[1] && (a2 = i2[1] + this.offset.click.top), t2.pageX - this.offset.click.left > i2[2] && (o2 = i2[2] + this.offset.click.left), t2.pageY - this.offset.click.top > i2[3]) && (a2 = i2[3] + this.offset.click.top), s2.grid && (e2 = s2.grid[1] ? this.originalPageY + Math.round((a2 - this.originalPageY) / s2.grid[1]) * s2.grid[1] : this.originalPageY, a2 = !i2 || e2 - this.offset.click.top >= i2[1] || e2 - this.offset.click.top > i2[3] ? e2 : e2 - this.offset.click.top >= i2[1] ? e2 - s2.grid[1] : e2 + s2.grid[1], t2 = s2.grid[0] ? this.originalPageX + Math.round((o2 - this.originalPageX) / s2.grid[0]) * s2.grid[0] : this.originalPageX, o2 = !i2 || t2 - this.offset.click.left >= i2[0] || t2 - this.offset.click.left > i2[2] ? t2 : t2 - this.offset.click.left >= i2[0] ? t2 - s2.grid[0] : t2 + s2.grid[0]), "y" === s2.axis && (o2 = this.originalPageX), "x" === s2.axis) ? this.originalPageY : a2) - this.offset.click.top - this.offset.relative.top - this.offset.parent.top + ("fixed" === this.cssPosition ? -this.offset.scroll.top : n2 ? 0 : this.offset.scroll.top), left: o2 - this.offset.click.left - this.offset.relative.left - this.offset.parent.left + ("fixed" === this.cssPosition ? -this.offset.scroll.left : n2 ? 0 : this.offset.scroll.left) };
+  }, _clear: function() {
+    this._removeClass(this.helper, "ui-draggable-dragging"), this.helper[0] === this.element[0] || this.cancelHelperRemoval || this.helper.remove(), this.helper = null, this.cancelHelperRemoval = false, this.destroyOnClear && this.destroy();
+  }, _trigger: function(t2, e2, i2) {
+    return i2 = i2 || this._uiHash(), V.ui.plugin.call(this, t2, [e2, i2, this], true), /^(drag|start|stop)/.test(t2) && (this.positionAbs = this._convertPositionTo("absolute"), i2.offset = this.positionAbs), V.Widget.prototype._trigger.call(this, t2, e2, i2);
+  }, plugins: {}, _uiHash: function() {
+    return { helper: this.helper, position: this.position, originalPosition: this.originalPosition, offset: this.positionAbs };
+  } }), V.ui.plugin.add("draggable", "connectToSortable", { start: function(e2, t2, i2) {
+    var s2 = V.extend({}, t2, { item: i2.element });
+    i2.sortables = [], V(i2.options.connectToSortable).each(function() {
+      var t3 = V(this).sortable("instance");
+      t3 && !t3.options.disabled && (i2.sortables.push(t3), t3.refreshPositions(), t3._trigger("activate", e2, s2));
+    });
+  }, stop: function(e2, t2, i2) {
+    var s2 = V.extend({}, t2, { item: i2.element });
+    i2.cancelHelperRemoval = false, V.each(i2.sortables, function() {
+      var t3 = this;
+      t3.isOver ? (t3.isOver = 0, i2.cancelHelperRemoval = true, t3.cancelHelperRemoval = false, t3._storedCSS = { position: t3.placeholder.css("position"), top: t3.placeholder.css("top"), left: t3.placeholder.css("left") }, t3._mouseStop(e2), t3.options.helper = t3.options._helper) : (t3.cancelHelperRemoval = true, t3._trigger("deactivate", e2, s2));
+    });
+  }, drag: function(i2, s2, n2) {
+    V.each(n2.sortables, function() {
+      var t2 = false, e2 = this;
+      e2.positionAbs = n2.positionAbs, e2.helperProportions = n2.helperProportions, e2.offset.click = n2.offset.click, e2._intersectsWith(e2.containerCache) && (t2 = true, V.each(n2.sortables, function() {
+        return this.positionAbs = n2.positionAbs, this.helperProportions = n2.helperProportions, this.offset.click = n2.offset.click, t2 = this !== e2 && this._intersectsWith(this.containerCache) && V.contains(e2.element[0], this.element[0]) ? false : t2;
+      })), t2 ? (e2.isOver || (e2.isOver = 1, n2._parent = s2.helper.parent(), e2.currentItem = s2.helper.appendTo(e2.element).data("ui-sortable-item", true), e2.options._helper = e2.options.helper, e2.options.helper = function() {
+        return s2.helper[0];
+      }, i2.target = e2.currentItem[0], e2._mouseCapture(i2, true), e2._mouseStart(i2, true, true), e2.offset.click.top = n2.offset.click.top, e2.offset.click.left = n2.offset.click.left, e2.offset.parent.left -= n2.offset.parent.left - e2.offset.parent.left, e2.offset.parent.top -= n2.offset.parent.top - e2.offset.parent.top, n2._trigger("toSortable", i2), n2.dropped = e2.element, V.each(n2.sortables, function() {
+        this.refreshPositions();
+      }), n2.currentItem = n2.element, e2.fromOutside = n2), e2.currentItem && (e2._mouseDrag(i2), s2.position = e2.position)) : e2.isOver && (e2.isOver = 0, e2.cancelHelperRemoval = true, e2.options._revert = e2.options.revert, e2.options.revert = false, e2._trigger("out", i2, e2._uiHash(e2)), e2._mouseStop(i2, true), e2.options.revert = e2.options._revert, e2.options.helper = e2.options._helper, e2.placeholder && e2.placeholder.remove(), s2.helper.appendTo(n2._parent), n2._refreshOffsets(i2), s2.position = n2._generatePosition(i2, true), n2._trigger("fromSortable", i2), n2.dropped = false, V.each(n2.sortables, function() {
+        this.refreshPositions();
+      }));
+    });
+  } }), V.ui.plugin.add("draggable", "cursor", { start: function(t2, e2, i2) {
+    var s2 = V("body"), i2 = i2.options;
+    s2.css("cursor") && (i2._cursor = s2.css("cursor")), s2.css("cursor", i2.cursor);
+  }, stop: function(t2, e2, i2) {
+    i2 = i2.options;
+    i2._cursor && V("body").css("cursor", i2._cursor);
+  } }), V.ui.plugin.add("draggable", "opacity", { start: function(t2, e2, i2) {
+    e2 = V(e2.helper), i2 = i2.options;
+    e2.css("opacity") && (i2._opacity = e2.css("opacity")), e2.css("opacity", i2.opacity);
+  }, stop: function(t2, e2, i2) {
+    i2 = i2.options;
+    i2._opacity && V(e2.helper).css("opacity", i2._opacity);
+  } }), V.ui.plugin.add("draggable", "scroll", { start: function(t2, e2, i2) {
+    i2.scrollParentNotHidden || (i2.scrollParentNotHidden = i2.helper.scrollParent(false)), i2.scrollParentNotHidden[0] !== i2.document[0] && "HTML" !== i2.scrollParentNotHidden[0].tagName && (i2.overflowOffset = i2.scrollParentNotHidden.offset());
+  }, drag: function(t2, e2, i2) {
+    var s2 = i2.options, n2 = false, o2 = i2.scrollParentNotHidden[0], a2 = i2.document[0];
+    o2 !== a2 && "HTML" !== o2.tagName ? (s2.axis && "x" === s2.axis || (i2.overflowOffset.top + o2.offsetHeight - t2.pageY < s2.scrollSensitivity ? o2.scrollTop = n2 = o2.scrollTop + s2.scrollSpeed : t2.pageY - i2.overflowOffset.top < s2.scrollSensitivity && (o2.scrollTop = n2 = o2.scrollTop - s2.scrollSpeed)), s2.axis && "y" === s2.axis || (i2.overflowOffset.left + o2.offsetWidth - t2.pageX < s2.scrollSensitivity ? o2.scrollLeft = n2 = o2.scrollLeft + s2.scrollSpeed : t2.pageX - i2.overflowOffset.left < s2.scrollSensitivity && (o2.scrollLeft = n2 = o2.scrollLeft - s2.scrollSpeed))) : (s2.axis && "x" === s2.axis || (t2.pageY - V(a2).scrollTop() < s2.scrollSensitivity ? n2 = V(a2).scrollTop(V(a2).scrollTop() - s2.scrollSpeed) : V(window).height() - (t2.pageY - V(a2).scrollTop()) < s2.scrollSensitivity && (n2 = V(a2).scrollTop(V(a2).scrollTop() + s2.scrollSpeed))), s2.axis && "y" === s2.axis || (t2.pageX - V(a2).scrollLeft() < s2.scrollSensitivity ? n2 = V(a2).scrollLeft(V(a2).scrollLeft() - s2.scrollSpeed) : V(window).width() - (t2.pageX - V(a2).scrollLeft()) < s2.scrollSensitivity && (n2 = V(a2).scrollLeft(V(a2).scrollLeft() + s2.scrollSpeed)))), false !== n2 && V.ui.ddmanager && !s2.dropBehaviour && V.ui.ddmanager.prepareOffsets(i2, t2);
+  } }), V.ui.plugin.add("draggable", "snap", { start: function(t2, e2, i2) {
+    var s2 = i2.options;
+    i2.snapElements = [], V(s2.snap.constructor !== String ? s2.snap.items || ":data(ui-draggable)" : s2.snap).each(function() {
+      var t3 = V(this), e3 = t3.offset();
+      this !== i2.element[0] && i2.snapElements.push({ item: this, width: t3.outerWidth(), height: t3.outerHeight(), top: e3.top, left: e3.left });
+    });
+  }, drag: function(t2, e2, i2) {
+    for (var s2, n2, o2, a2, r2, l2, h2, c2, u2, d2 = i2.options, p2 = d2.snapTolerance, f2 = e2.offset.left, g2 = f2 + i2.helperProportions.width, m3 = e2.offset.top, _2 = m3 + i2.helperProportions.height, v2 = i2.snapElements.length - 1; 0 <= v2; v2--) l2 = (r2 = i2.snapElements[v2].left - i2.margins.left) + i2.snapElements[v2].width, c2 = (h2 = i2.snapElements[v2].top - i2.margins.top) + i2.snapElements[v2].height, g2 < r2 - p2 || l2 + p2 < f2 || _2 < h2 - p2 || c2 + p2 < m3 || !V.contains(i2.snapElements[v2].item.ownerDocument, i2.snapElements[v2].item) ? (i2.snapElements[v2].snapping && i2.options.snap.release && i2.options.snap.release.call(i2.element, t2, V.extend(i2._uiHash(), { snapItem: i2.snapElements[v2].item })), i2.snapElements[v2].snapping = false) : ("inner" !== d2.snapMode && (s2 = Math.abs(h2 - _2) <= p2, n2 = Math.abs(c2 - m3) <= p2, o2 = Math.abs(r2 - g2) <= p2, a2 = Math.abs(l2 - f2) <= p2, s2 && (e2.position.top = i2._convertPositionTo("relative", { top: h2 - i2.helperProportions.height, left: 0 }).top), n2 && (e2.position.top = i2._convertPositionTo("relative", { top: c2, left: 0 }).top), o2 && (e2.position.left = i2._convertPositionTo("relative", { top: 0, left: r2 - i2.helperProportions.width }).left), a2) && (e2.position.left = i2._convertPositionTo("relative", { top: 0, left: l2 }).left), u2 = s2 || n2 || o2 || a2, "outer" !== d2.snapMode && (s2 = Math.abs(h2 - m3) <= p2, n2 = Math.abs(c2 - _2) <= p2, o2 = Math.abs(r2 - f2) <= p2, a2 = Math.abs(l2 - g2) <= p2, s2 && (e2.position.top = i2._convertPositionTo("relative", { top: h2, left: 0 }).top), n2 && (e2.position.top = i2._convertPositionTo("relative", { top: c2 - i2.helperProportions.height, left: 0 }).top), o2 && (e2.position.left = i2._convertPositionTo("relative", { top: 0, left: r2 }).left), a2) && (e2.position.left = i2._convertPositionTo("relative", { top: 0, left: l2 - i2.helperProportions.width }).left), !i2.snapElements[v2].snapping && (s2 || n2 || o2 || a2 || u2) && i2.options.snap.snap && i2.options.snap.snap.call(i2.element, t2, V.extend(i2._uiHash(), { snapItem: i2.snapElements[v2].item })), i2.snapElements[v2].snapping = s2 || n2 || o2 || a2 || u2);
+  } }), V.ui.plugin.add("draggable", "stack", { start: function(t2, e2, i2) {
+    var s2, i2 = i2.options, i2 = V.makeArray(V(i2.stack)).sort(function(t3, e3) {
+      return (parseInt(V(t3).css("zIndex"), 10) || 0) - (parseInt(V(e3).css("zIndex"), 10) || 0);
+    });
+    i2.length && (s2 = parseInt(V(i2[0]).css("zIndex"), 10) || 0, V(i2).each(function(t3) {
+      V(this).css("zIndex", s2 + t3);
+    }), this.css("zIndex", s2 + i2.length));
+  } }), V.ui.plugin.add("draggable", "zIndex", { start: function(t2, e2, i2) {
+    e2 = V(e2.helper), i2 = i2.options;
+    e2.css("zIndex") && (i2._zIndex = e2.css("zIndex")), e2.css("zIndex", i2.zIndex);
+  }, stop: function(t2, e2, i2) {
+    i2 = i2.options;
+    i2._zIndex && V(e2.helper).css("zIndex", i2._zIndex);
+  } }), V.ui.draggable, V.widget("ui.resizable", V.ui.mouse, { version: "1.13.3", widgetEventPrefix: "resize", options: { alsoResize: false, animate: false, animateDuration: "slow", animateEasing: "swing", aspectRatio: false, autoHide: false, classes: { "ui-resizable-se": "ui-icon ui-icon-gripsmall-diagonal-se" }, containment: false, ghost: false, grid: false, handles: "e,s,se", helper: false, maxHeight: null, maxWidth: null, minHeight: 10, minWidth: 10, zIndex: 90, resize: null, start: null, stop: null }, _num: function(t2) {
+    return parseFloat(t2) || 0;
+  }, _isNumber: function(t2) {
+    return !isNaN(parseFloat(t2));
+  }, _hasScroll: function(t2, e2) {
+    if ("hidden" === V(t2).css("overflow")) return false;
+    var e2 = e2 && "left" === e2 ? "scrollLeft" : "scrollTop", i2 = false;
+    if (0 < t2[e2]) return true;
     try {
-      if (i && i.tag) {
-        if (this.clickToFront === false || this.clickToFront === null) {
-          i.tag.Clicked(aI);
-        } else {
-          this.TagToFront(i.tag, this.clickToFront, function() {
-            i.tag.Clicked(aI);
-          }, true);
-        }
-      }
-    } catch (j) {
+      t2[e2] = 1, i2 = 0 < t2[e2], t2[e2] = 0;
+    } catch (t3) {
     }
-  };
-  Q.Wheel = function(j) {
-    var aI = this.zoom + this.zoomStep * (j ? 1 : -1);
-    this.zoom = aE(this.zoomMax, s(this.zoomMin, aI));
-    this.Zoom(this.zoom);
-  };
-  Q.BeginDrag = function(i) {
-    this.down = S(i, this.canvas);
-    i.cancelBubble = true;
-    i.returnValue = false;
-    i.preventDefault && i.preventDefault();
-  };
-  Q.Drag = function(aK, aJ) {
-    if (this.dragControl && this.down) {
-      var aI = this.dragThreshold * this.dragThreshold, j = aJ.x - this.down.x, i = aJ.y - this.down.y;
-      if (this.dragging || j * j + i * i > aI) {
-        this.dx = j;
-        this.dy = i;
-        this.dragging = 1;
-        this.down = aJ;
-      }
+    return i2;
+  }, _create: function() {
+    var t2, e2 = this.options, i2 = this;
+    this._addClass("ui-resizable"), V.extend(this, { _aspectRatio: !!e2.aspectRatio, aspectRatio: e2.aspectRatio, originalElement: this.element, _proportionallyResizeElements: [], _helper: e2.helper || e2.ghost || e2.animate ? e2.helper || "ui-resizable-helper" : null }), this.element[0].nodeName.match(/^(canvas|textarea|input|select|button|img)$/i) && (this.element.wrap(V("<div class='ui-wrapper'></div>").css({ overflow: "hidden", position: this.element.css("position"), width: this.element.outerWidth(), height: this.element.outerHeight(), top: this.element.css("top"), left: this.element.css("left") })), this.element = this.element.parent().data("ui-resizable", this.element.resizable("instance")), this.elementIsWrapper = true, t2 = { marginTop: this.originalElement.css("marginTop"), marginRight: this.originalElement.css("marginRight"), marginBottom: this.originalElement.css("marginBottom"), marginLeft: this.originalElement.css("marginLeft") }, this.element.css(t2), this.originalElement.css("margin", 0), this.originalResizeStyle = this.originalElement.css("resize"), this.originalElement.css("resize", "none"), this._proportionallyResizeElements.push(this.originalElement.css({ position: "static", zoom: 1, display: "block" })), this.originalElement.css(t2), this._proportionallyResize()), this._setupHandles(), e2.autoHide && V(this.element).on("mouseenter", function() {
+      e2.disabled || (i2._removeClass("ui-resizable-autohide"), i2._handles.show());
+    }).on("mouseleave", function() {
+      e2.disabled || i2.resizing || (i2._addClass("ui-resizable-autohide"), i2._handles.hide());
+    }), this._mouseInit();
+  }, _destroy: function() {
+    this._mouseDestroy(), this._addedHandles.remove();
+    function t2(t3) {
+      V(t3).removeData("resizable").removeData("ui-resizable").off(".resizable");
     }
-    return this.dragging;
-  };
-  Q.EndDrag = function() {
-    var i = this.dragging;
-    this.dragging = this.down = null;
-    return i;
-  };
-  function D(aI) {
-    var j = aI.targetTouches[0], i = aI.targetTouches[1];
-    return F(au(i.pageX - j.pageX, 2) + au(i.pageY - j.pageY, 2));
+    var e2;
+    return this.elementIsWrapper && (t2(this.element), e2 = this.element, this.originalElement.css({ position: e2.css("position"), width: e2.outerWidth(), height: e2.outerHeight(), top: e2.css("top"), left: e2.css("left") }).insertAfter(e2), e2.remove()), this.originalElement.css("resize", this.originalResizeStyle), t2(this.originalElement), this;
+  }, _setOption: function(t2, e2) {
+    switch (this._super(t2, e2), t2) {
+      case "handles":
+        this._removeHandles(), this._setupHandles();
+        break;
+      case "aspectRatio":
+        this._aspectRatio = !!e2;
+    }
+  }, _setupHandles: function() {
+    var t2, e2, i2, s2, n2, o2 = this.options, a2 = this;
+    if (this.handles = o2.handles || (V(".ui-resizable-handle", this.element).length ? { n: ".ui-resizable-n", e: ".ui-resizable-e", s: ".ui-resizable-s", w: ".ui-resizable-w", se: ".ui-resizable-se", sw: ".ui-resizable-sw", ne: ".ui-resizable-ne", nw: ".ui-resizable-nw" } : "e,s,se"), this._handles = V(), this._addedHandles = V(), this.handles.constructor === String) for ("all" === this.handles && (this.handles = "n,e,s,w,se,sw,ne,nw"), i2 = this.handles.split(","), this.handles = {}, e2 = 0; e2 < i2.length; e2++) s2 = "ui-resizable-" + (t2 = String.prototype.trim.call(i2[e2])), n2 = V("<div>"), this._addClass(n2, "ui-resizable-handle " + s2), n2.css({ zIndex: o2.zIndex }), this.handles[t2] = ".ui-resizable-" + t2, this.element.children(this.handles[t2]).length || (this.element.append(n2), this._addedHandles = this._addedHandles.add(n2));
+    this._renderAxis = function(t3) {
+      var e3, i3, s3;
+      for (e3 in t3 = t3 || this.element, this.handles) this.handles[e3].constructor === String ? this.handles[e3] = this.element.children(this.handles[e3]).first().show() : (this.handles[e3].jquery || this.handles[e3].nodeType) && (this.handles[e3] = V(this.handles[e3]), this._on(this.handles[e3], { mousedown: a2._mouseDown })), this.elementIsWrapper && this.originalElement[0].nodeName.match(/^(textarea|input|select|button)$/i) && (s3 = V(this.handles[e3], this.element), s3 = /sw|ne|nw|se|n|s/.test(e3) ? s3.outerHeight() : s3.outerWidth(), i3 = ["padding", /ne|nw|n/.test(e3) ? "Top" : /se|sw|s/.test(e3) ? "Bottom" : /^e$/.test(e3) ? "Right" : "Left"].join(""), t3.css(i3, s3), this._proportionallyResize()), this._handles = this._handles.add(this.handles[e3]);
+    }, this._renderAxis(this.element), this._handles = this._handles.add(this.element.find(".ui-resizable-handle")), this._handles.disableSelection(), this._handles.on("mouseover", function() {
+      a2.resizing || (this.className && (n2 = this.className.match(/ui-resizable-(se|sw|ne|nw|n|e|s|w)/i)), a2.axis = n2 && n2[1] ? n2[1] : "se");
+    }), o2.autoHide && (this._handles.hide(), this._addClass("ui-resizable-autohide"));
+  }, _removeHandles: function() {
+    this._addedHandles.remove();
+  }, _mouseCapture: function(t2) {
+    var e2, i2, s2 = false;
+    for (e2 in this.handles) (i2 = V(this.handles[e2])[0]) !== t2.target && !V.contains(i2, t2.target) || (s2 = true);
+    return !this.options.disabled && s2;
+  }, _mouseStart: function(t2) {
+    var e2, i2, s2 = this.options, n2 = this.element;
+    return this.resizing = true, this._renderProxy(), e2 = this._num(this.helper.css("left")), i2 = this._num(this.helper.css("top")), s2.containment && (e2 += V(s2.containment).scrollLeft() || 0, i2 += V(s2.containment).scrollTop() || 0), this.offset = this.helper.offset(), this.position = { left: e2, top: i2 }, this.size = this._helper ? { width: this.helper.width(), height: this.helper.height() } : { width: n2.width(), height: n2.height() }, this.originalSize = this._helper ? { width: n2.outerWidth(), height: n2.outerHeight() } : { width: n2.width(), height: n2.height() }, this.sizeDiff = { width: n2.outerWidth() - n2.width(), height: n2.outerHeight() - n2.height() }, this.originalPosition = { left: e2, top: i2 }, this.originalMousePosition = { left: t2.pageX, top: t2.pageY }, this.aspectRatio = "number" == typeof s2.aspectRatio ? s2.aspectRatio : this.originalSize.width / this.originalSize.height || 1, n2 = V(".ui-resizable-" + this.axis).css("cursor"), V("body").css("cursor", "auto" === n2 ? this.axis + "-resize" : n2), this._addClass("ui-resizable-resizing"), this._propagate("start", t2), true;
+  }, _mouseDrag: function(t2) {
+    var e2 = this.originalMousePosition, i2 = this.axis, s2 = t2.pageX - e2.left || 0, e2 = t2.pageY - e2.top || 0, i2 = this._change[i2];
+    return this._updatePrevProperties(), i2 && (i2 = i2.apply(this, [t2, s2, e2]), this._updateVirtualBoundaries(t2.shiftKey), (this._aspectRatio || t2.shiftKey) && (i2 = this._updateRatio(i2, t2)), i2 = this._respectSize(i2, t2), this._updateCache(i2), this._propagate("resize", t2), s2 = this._applyChanges(), !this._helper && this._proportionallyResizeElements.length && this._proportionallyResize(), V.isEmptyObject(s2) || (this._updatePrevProperties(), this._trigger("resize", t2, this.ui()), this._applyChanges())), false;
+  }, _mouseStop: function(t2) {
+    this.resizing = false;
+    var e2, i2, s2, n2 = this.options, o2 = this;
+    return this._helper && (i2 = (e2 = (i2 = this._proportionallyResizeElements).length && /textarea/i.test(i2[0].nodeName)) && this._hasScroll(i2[0], "left") ? 0 : o2.sizeDiff.height, e2 = e2 ? 0 : o2.sizeDiff.width, e2 = { width: o2.helper.width() - e2, height: o2.helper.height() - i2 }, i2 = parseFloat(o2.element.css("left")) + (o2.position.left - o2.originalPosition.left) || null, s2 = parseFloat(o2.element.css("top")) + (o2.position.top - o2.originalPosition.top) || null, n2.animate || this.element.css(V.extend(e2, { top: s2, left: i2 })), o2.helper.height(o2.size.height), o2.helper.width(o2.size.width), this._helper) && !n2.animate && this._proportionallyResize(), V("body").css("cursor", "auto"), this._removeClass("ui-resizable-resizing"), this._propagate("stop", t2), this._helper && this.helper.remove(), false;
+  }, _updatePrevProperties: function() {
+    this.prevPosition = { top: this.position.top, left: this.position.left }, this.prevSize = { width: this.size.width, height: this.size.height };
+  }, _applyChanges: function() {
+    var t2 = {};
+    return this.position.top !== this.prevPosition.top && (t2.top = this.position.top + "px"), this.position.left !== this.prevPosition.left && (t2.left = this.position.left + "px"), this.helper.css(t2), this.size.width !== this.prevSize.width && (t2.width = this.size.width + "px", this.helper.width(t2.width)), this.size.height !== this.prevSize.height && (t2.height = this.size.height + "px", this.helper.height(t2.height)), t2;
+  }, _updateVirtualBoundaries: function(t2) {
+    var e2, i2, s2, n2 = this.options, n2 = { minWidth: this._isNumber(n2.minWidth) ? n2.minWidth : 0, maxWidth: this._isNumber(n2.maxWidth) ? n2.maxWidth : 1 / 0, minHeight: this._isNumber(n2.minHeight) ? n2.minHeight : 0, maxHeight: this._isNumber(n2.maxHeight) ? n2.maxHeight : 1 / 0 };
+    (this._aspectRatio || t2) && (t2 = n2.minHeight * this.aspectRatio, i2 = n2.minWidth / this.aspectRatio, e2 = n2.maxHeight * this.aspectRatio, s2 = n2.maxWidth / this.aspectRatio, n2.minWidth < t2 && (n2.minWidth = t2), n2.minHeight < i2 && (n2.minHeight = i2), e2 < n2.maxWidth && (n2.maxWidth = e2), s2 < n2.maxHeight) && (n2.maxHeight = s2), this._vBoundaries = n2;
+  }, _updateCache: function(t2) {
+    this.offset = this.helper.offset(), this._isNumber(t2.left) && (this.position.left = t2.left), this._isNumber(t2.top) && (this.position.top = t2.top), this._isNumber(t2.height) && (this.size.height = t2.height), this._isNumber(t2.width) && (this.size.width = t2.width);
+  }, _updateRatio: function(t2) {
+    var e2 = this.position, i2 = this.size, s2 = this.axis;
+    return this._isNumber(t2.height) ? t2.width = t2.height * this.aspectRatio : this._isNumber(t2.width) && (t2.height = t2.width / this.aspectRatio), "sw" === s2 && (t2.left = e2.left + (i2.width - t2.width), t2.top = null), "nw" === s2 && (t2.top = e2.top + (i2.height - t2.height), t2.left = e2.left + (i2.width - t2.width)), t2;
+  }, _respectSize: function(t2) {
+    var e2 = this._vBoundaries, i2 = this.axis, s2 = this._isNumber(t2.width) && e2.maxWidth && e2.maxWidth < t2.width, n2 = this._isNumber(t2.height) && e2.maxHeight && e2.maxHeight < t2.height, o2 = this._isNumber(t2.width) && e2.minWidth && e2.minWidth > t2.width, a2 = this._isNumber(t2.height) && e2.minHeight && e2.minHeight > t2.height, r2 = this.originalPosition.left + this.originalSize.width, l2 = this.originalPosition.top + this.originalSize.height, h2 = /sw|nw|w/.test(i2), i2 = /nw|ne|n/.test(i2);
+    return o2 && (t2.width = e2.minWidth), a2 && (t2.height = e2.minHeight), s2 && (t2.width = e2.maxWidth), n2 && (t2.height = e2.maxHeight), o2 && h2 && (t2.left = r2 - e2.minWidth), s2 && h2 && (t2.left = r2 - e2.maxWidth), a2 && i2 && (t2.top = l2 - e2.minHeight), n2 && i2 && (t2.top = l2 - e2.maxHeight), t2.width || t2.height || t2.left || !t2.top ? t2.width || t2.height || t2.top || !t2.left || (t2.left = null) : t2.top = null, t2;
+  }, _getPaddingPlusBorderDimensions: function(t2) {
+    for (var e2 = 0, i2 = [], s2 = [t2.css("borderTopWidth"), t2.css("borderRightWidth"), t2.css("borderBottomWidth"), t2.css("borderLeftWidth")], n2 = [t2.css("paddingTop"), t2.css("paddingRight"), t2.css("paddingBottom"), t2.css("paddingLeft")]; e2 < 4; e2++) i2[e2] = parseFloat(s2[e2]) || 0, i2[e2] += parseFloat(n2[e2]) || 0;
+    return { height: i2[0] + i2[2], width: i2[1] + i2[3] };
+  }, _proportionallyResize: function() {
+    if (this._proportionallyResizeElements.length) for (var t2, e2 = 0, i2 = this.helper || this.element; e2 < this._proportionallyResizeElements.length; e2++) t2 = this._proportionallyResizeElements[e2], this.outerDimensions || (this.outerDimensions = this._getPaddingPlusBorderDimensions(t2)), t2.css({ height: i2.height() - this.outerDimensions.height || 0, width: i2.width() - this.outerDimensions.width || 0 });
+  }, _renderProxy: function() {
+    var t2 = this.element, e2 = this.options;
+    this.elementOffset = t2.offset(), this._helper ? (this.helper = this.helper || V("<div></div>").css({ overflow: "hidden" }), this._addClass(this.helper, this._helper), this.helper.css({ width: this.element.outerWidth(), height: this.element.outerHeight(), position: "absolute", left: this.elementOffset.left + "px", top: this.elementOffset.top + "px", zIndex: ++e2.zIndex }), this.helper.appendTo("body").disableSelection()) : this.helper = this.element;
+  }, _change: { e: function(t2, e2) {
+    return { width: this.originalSize.width + e2 };
+  }, w: function(t2, e2) {
+    var i2 = this.originalSize;
+    return { left: this.originalPosition.left + e2, width: i2.width - e2 };
+  }, n: function(t2, e2, i2) {
+    var s2 = this.originalSize;
+    return { top: this.originalPosition.top + i2, height: s2.height - i2 };
+  }, s: function(t2, e2, i2) {
+    return { height: this.originalSize.height + i2 };
+  }, se: function(t2, e2, i2) {
+    return V.extend(this._change.s.apply(this, arguments), this._change.e.apply(this, [t2, e2, i2]));
+  }, sw: function(t2, e2, i2) {
+    return V.extend(this._change.s.apply(this, arguments), this._change.w.apply(this, [t2, e2, i2]));
+  }, ne: function(t2, e2, i2) {
+    return V.extend(this._change.n.apply(this, arguments), this._change.e.apply(this, [t2, e2, i2]));
+  }, nw: function(t2, e2, i2) {
+    return V.extend(this._change.n.apply(this, arguments), this._change.w.apply(this, [t2, e2, i2]));
+  } }, _propagate: function(t2, e2) {
+    V.ui.plugin.call(this, t2, [e2, this.ui()]), "resize" !== t2 && this._trigger(t2, e2, this.ui());
+  }, plugins: {}, ui: function() {
+    return { originalElement: this.originalElement, element: this.element, helper: this.helper, position: this.position, size: this.size, originalSize: this.originalSize, originalPosition: this.originalPosition };
+  } }), V.ui.plugin.add("resizable", "animate", { stop: function(e2) {
+    var i2 = V(this).resizable("instance"), t2 = i2.options, s2 = i2._proportionallyResizeElements, n2 = s2.length && /textarea/i.test(s2[0].nodeName), o2 = n2 && i2._hasScroll(s2[0], "left") ? 0 : i2.sizeDiff.height, n2 = n2 ? 0 : i2.sizeDiff.width, n2 = { width: i2.size.width - n2, height: i2.size.height - o2 }, o2 = parseFloat(i2.element.css("left")) + (i2.position.left - i2.originalPosition.left) || null, a2 = parseFloat(i2.element.css("top")) + (i2.position.top - i2.originalPosition.top) || null;
+    i2.element.animate(V.extend(n2, a2 && o2 ? { top: a2, left: o2 } : {}), { duration: t2.animateDuration, easing: t2.animateEasing, step: function() {
+      var t3 = { width: parseFloat(i2.element.css("width")), height: parseFloat(i2.element.css("height")), top: parseFloat(i2.element.css("top")), left: parseFloat(i2.element.css("left")) };
+      s2 && s2.length && V(s2[0]).css({ width: t3.width, height: t3.height }), i2._updateCache(t3), i2._propagate("resize", e2);
+    } });
+  } }), V.ui.plugin.add("resizable", "containment", { start: function() {
+    var i2, s2, t2, e2, n2 = V(this).resizable("instance"), o2 = n2.options, a2 = n2.element, o2 = o2.containment, a2 = o2 instanceof V ? o2.get(0) : /parent/.test(o2) ? a2.parent().get(0) : o2;
+    a2 && (n2.containerElement = V(a2), /document/.test(o2) || o2 === document ? (n2.containerOffset = { left: 0, top: 0 }, n2.containerPosition = { left: 0, top: 0 }, n2.parentData = { element: V(document), left: 0, top: 0, width: V(document).width(), height: V(document).height() || document.body.parentNode.scrollHeight }) : (i2 = V(a2), s2 = [], V(["Top", "Right", "Left", "Bottom"]).each(function(t3, e3) {
+      s2[t3] = n2._num(i2.css("padding" + e3));
+    }), n2.containerOffset = i2.offset(), n2.containerPosition = i2.position(), n2.containerSize = { height: i2.innerHeight() - s2[3], width: i2.innerWidth() - s2[1] }, o2 = n2.containerOffset, e2 = n2.containerSize.height, t2 = n2.containerSize.width, t2 = n2._hasScroll(a2, "left") ? a2.scrollWidth : t2, e2 = n2._hasScroll(a2) ? a2.scrollHeight : e2, n2.parentData = { element: a2, left: o2.left, top: o2.top, width: t2, height: e2 }));
+  }, resize: function(t2) {
+    var e2 = V(this).resizable("instance"), i2 = e2.options, s2 = e2.containerOffset, n2 = e2.position, t2 = e2._aspectRatio || t2.shiftKey, o2 = { top: 0, left: 0 }, a2 = e2.containerElement, r2 = true;
+    a2[0] !== document && /static/.test(a2.css("position")) && (o2 = s2), n2.left < (e2._helper ? s2.left : 0) && (e2.size.width = e2.size.width + (e2._helper ? e2.position.left - s2.left : e2.position.left - o2.left), t2 && (e2.size.height = e2.size.width / e2.aspectRatio, r2 = false), e2.position.left = i2.helper ? s2.left : 0), n2.top < (e2._helper ? s2.top : 0) && (e2.size.height = e2.size.height + (e2._helper ? e2.position.top - s2.top : e2.position.top), t2 && (e2.size.width = e2.size.height * e2.aspectRatio, r2 = false), e2.position.top = e2._helper ? s2.top : 0), a2 = e2.containerElement.get(0) === e2.element.parent().get(0), i2 = /relative|absolute/.test(e2.containerElement.css("position")), a2 && i2 ? (e2.offset.left = e2.parentData.left + e2.position.left, e2.offset.top = e2.parentData.top + e2.position.top) : (e2.offset.left = e2.element.offset().left, e2.offset.top = e2.element.offset().top), n2 = Math.abs(e2.sizeDiff.width + (e2._helper ? e2.offset.left - o2.left : e2.offset.left - s2.left)), a2 = Math.abs(e2.sizeDiff.height + (e2._helper ? e2.offset.top - o2.top : e2.offset.top - s2.top)), n2 + e2.size.width >= e2.parentData.width && (e2.size.width = e2.parentData.width - n2, t2) && (e2.size.height = e2.size.width / e2.aspectRatio, r2 = false), a2 + e2.size.height >= e2.parentData.height && (e2.size.height = e2.parentData.height - a2, t2) && (e2.size.width = e2.size.height * e2.aspectRatio, r2 = false), r2 || (e2.position.left = e2.prevPosition.left, e2.position.top = e2.prevPosition.top, e2.size.width = e2.prevSize.width, e2.size.height = e2.prevSize.height);
+  }, stop: function() {
+    var t2 = V(this).resizable("instance"), e2 = t2.options, i2 = t2.containerOffset, s2 = t2.containerPosition, n2 = t2.containerElement, o2 = V(t2.helper), a2 = o2.offset(), r2 = o2.outerWidth() - t2.sizeDiff.width, o2 = o2.outerHeight() - t2.sizeDiff.height;
+    t2._helper && !e2.animate && /relative/.test(n2.css("position")) && V(this).css({ left: a2.left - s2.left - i2.left, width: r2, height: o2 }), t2._helper && !e2.animate && /static/.test(n2.css("position")) && V(this).css({ left: a2.left - s2.left - i2.left, width: r2, height: o2 });
+  } }), V.ui.plugin.add("resizable", "alsoResize", { start: function() {
+    var t2 = V(this).resizable("instance").options;
+    V(t2.alsoResize).each(function() {
+      var t3 = V(this);
+      t3.data("ui-resizable-alsoresize", { width: parseFloat(t3.css("width")), height: parseFloat(t3.css("height")), left: parseFloat(t3.css("left")), top: parseFloat(t3.css("top")) });
+    });
+  }, resize: function(t2, i2) {
+    var e2 = V(this).resizable("instance"), s2 = e2.options, n2 = e2.originalSize, o2 = e2.originalPosition, a2 = { height: e2.size.height - n2.height || 0, width: e2.size.width - n2.width || 0, top: e2.position.top - o2.top || 0, left: e2.position.left - o2.left || 0 };
+    V(s2.alsoResize).each(function() {
+      var t3 = V(this), s3 = V(this).data("ui-resizable-alsoresize"), n3 = {}, e3 = t3.parents(i2.originalElement[0]).length ? ["width", "height"] : ["width", "height", "top", "left"];
+      V.each(e3, function(t4, e4) {
+        var i3 = (s3[e4] || 0) + (a2[e4] || 0);
+        i3 && 0 <= i3 && (n3[e4] = i3 || null);
+      }), t3.css(n3);
+    });
+  }, stop: function() {
+    V(this).removeData("ui-resizable-alsoresize");
+  } }), V.ui.plugin.add("resizable", "ghost", { start: function() {
+    var t2 = V(this).resizable("instance"), e2 = t2.size;
+    t2.ghost = t2.originalElement.clone(), t2.ghost.css({ opacity: 0.25, display: "block", position: "relative", height: e2.height, width: e2.width, margin: 0, left: 0, top: 0 }), t2._addClass(t2.ghost, "ui-resizable-ghost"), false !== V.uiBackCompat && "string" == typeof t2.options.ghost && t2.ghost.addClass(this.options.ghost), t2.ghost.appendTo(t2.helper);
+  }, resize: function() {
+    var t2 = V(this).resizable("instance");
+    t2.ghost && t2.ghost.css({ position: "relative", height: t2.size.height, width: t2.size.width });
+  }, stop: function() {
+    var t2 = V(this).resizable("instance");
+    t2.ghost && t2.helper && t2.helper.get(0).removeChild(t2.ghost.get(0));
+  } }), V.ui.plugin.add("resizable", "grid", { resize: function() {
+    var t2, e2 = V(this).resizable("instance"), i2 = e2.options, s2 = e2.size, n2 = e2.originalSize, o2 = e2.originalPosition, a2 = e2.axis, r2 = "number" == typeof i2.grid ? [i2.grid, i2.grid] : i2.grid, l2 = r2[0] || 1, h2 = r2[1] || 1, c2 = Math.round((s2.width - n2.width) / l2) * l2, s2 = Math.round((s2.height - n2.height) / h2) * h2, u2 = n2.width + c2, d2 = n2.height + s2, p2 = i2.maxWidth && i2.maxWidth < u2, f2 = i2.maxHeight && i2.maxHeight < d2, g2 = i2.minWidth && i2.minWidth > u2, m3 = i2.minHeight && i2.minHeight > d2;
+    i2.grid = r2, g2 && (u2 += l2), m3 && (d2 += h2), p2 && (u2 -= l2), f2 && (d2 -= h2), /^(se|s|e)$/.test(a2) ? (e2.size.width = u2, e2.size.height = d2) : /^(ne)$/.test(a2) ? (e2.size.width = u2, e2.size.height = d2, e2.position.top = o2.top - s2) : /^(sw)$/.test(a2) ? (e2.size.width = u2, e2.size.height = d2, e2.position.left = o2.left - c2) : ((d2 - h2 <= 0 || u2 - l2 <= 0) && (t2 = e2._getPaddingPlusBorderDimensions(this)), 0 < d2 - h2 ? (e2.size.height = d2, e2.position.top = o2.top - s2) : (d2 = h2 - t2.height, e2.size.height = d2, e2.position.top = o2.top + n2.height - d2), 0 < u2 - l2 ? (e2.size.width = u2, e2.position.left = o2.left - c2) : (u2 = l2 - t2.width, e2.size.width = u2, e2.position.left = o2.left + n2.width - u2));
+  } }), V.ui.resizable, V.widget("ui.dialog", { version: "1.13.3", options: { appendTo: "body", autoOpen: true, buttons: [], classes: { "ui-dialog": "ui-corner-all", "ui-dialog-titlebar": "ui-corner-all" }, closeOnEscape: true, closeText: "Close", draggable: true, hide: null, height: "auto", maxHeight: null, maxWidth: null, minHeight: 150, minWidth: 150, modal: false, position: { my: "center", at: "center", of: window, collision: "fit", using: function(t2) {
+    var e2 = V(this).css(t2).offset().top;
+    e2 < 0 && V(this).css("top", t2.top - e2);
+  } }, resizable: true, show: null, title: null, width: 300, beforeClose: null, close: null, drag: null, dragStart: null, dragStop: null, focus: null, open: null, resize: null, resizeStart: null, resizeStop: null }, sizeRelatedOptions: { buttons: true, height: true, maxHeight: true, maxWidth: true, minHeight: true, minWidth: true, width: true }, resizableRelatedOptions: { maxHeight: true, maxWidth: true, minHeight: true, minWidth: true }, _create: function() {
+    this.originalCss = { display: this.element[0].style.display, width: this.element[0].style.width, minHeight: this.element[0].style.minHeight, maxHeight: this.element[0].style.maxHeight, height: this.element[0].style.height }, this.originalPosition = { parent: this.element.parent(), index: this.element.parent().children().index(this.element) }, this.originalTitle = this.element.attr("title"), null == this.options.title && null != this.originalTitle && (this.options.title = this.originalTitle), this.options.disabled && (this.options.disabled = false), this._createWrapper(), this.element.show().removeAttr("title").appendTo(this.uiDialog), this._addClass("ui-dialog-content", "ui-widget-content"), this._createTitlebar(), this._createButtonPane(), this.options.draggable && V.fn.draggable && this._makeDraggable(), this.options.resizable && V.fn.resizable && this._makeResizable(), this._isOpen = false, this._trackFocus();
+  }, _init: function() {
+    this.options.autoOpen && this.open();
+  }, _appendTo: function() {
+    var t2 = this.options.appendTo;
+    return t2 && (t2.jquery || t2.nodeType) ? V(t2) : this.document.find(t2 || "body").eq(0);
+  }, _destroy: function() {
+    var t2, e2 = this.originalPosition;
+    this._untrackInstance(), this._destroyOverlay(), this.element.removeUniqueId().css(this.originalCss).detach(), this.uiDialog.remove(), this.originalTitle && this.element.attr("title", this.originalTitle), (t2 = e2.parent.children().eq(e2.index)).length && t2[0] !== this.element[0] ? t2.before(this.element) : e2.parent.append(this.element);
+  }, widget: function() {
+    return this.uiDialog;
+  }, disable: V.noop, enable: V.noop, close: function(t2) {
+    var e2 = this;
+    this._isOpen && false !== this._trigger("beforeClose", t2) && (this._isOpen = false, this._focusedElement = null, this._destroyOverlay(), this._untrackInstance(), this.opener.filter(":focusable").trigger("focus").length || V.ui.safeBlur(V.ui.safeActiveElement(this.document[0])), this._hide(this.uiDialog, this.options.hide, function() {
+      e2._trigger("close", t2);
+    }));
+  }, isOpen: function() {
+    return this._isOpen;
+  }, moveToTop: function() {
+    this._moveToTop();
+  }, _moveToTop: function(t2, e2) {
+    var i2 = false, s2 = this.uiDialog.siblings(".ui-front:visible").map(function() {
+      return +V(this).css("z-index");
+    }).get(), s2 = Math.max.apply(null, s2);
+    return s2 >= +this.uiDialog.css("z-index") && (this.uiDialog.css("z-index", s2 + 1), i2 = true), i2 && !e2 && this._trigger("focus", t2), i2;
+  }, open: function() {
+    var t2 = this;
+    this._isOpen ? this._moveToTop() && this._focusTabbable() : (this._isOpen = true, this.opener = V(V.ui.safeActiveElement(this.document[0])), this._size(), this._position(), this._createOverlay(), this._moveToTop(null, true), this.overlay && this.overlay.css("z-index", this.uiDialog.css("z-index") - 1), this._show(this.uiDialog, this.options.show, function() {
+      t2._focusTabbable(), t2._trigger("focus");
+    }), this._makeFocusTarget(), this._trigger("open"));
+  }, _focusTabbable: function() {
+    var t2 = this._focusedElement;
+    (t2 = (t2 = (t2 = (t2 = (t2 = t2 || this.element.find("[autofocus]")).length ? t2 : this.element.find(":tabbable")).length ? t2 : this.uiDialogButtonPane.find(":tabbable")).length ? t2 : this.uiDialogTitlebarClose.filter(":tabbable")).length ? t2 : this.uiDialog).eq(0).trigger("focus");
+  }, _restoreTabbableFocus: function() {
+    var t2 = V.ui.safeActiveElement(this.document[0]);
+    this.uiDialog[0] === t2 || V.contains(this.uiDialog[0], t2) || this._focusTabbable();
+  }, _keepFocus: function(t2) {
+    t2.preventDefault(), this._restoreTabbableFocus(), this._delay(this._restoreTabbableFocus);
+  }, _createWrapper: function() {
+    this.uiDialog = V("<div>").hide().attr({ tabIndex: -1, role: "dialog" }).appendTo(this._appendTo()), this._addClass(this.uiDialog, "ui-dialog", "ui-widget ui-widget-content ui-front"), this._on(this.uiDialog, { keydown: function(t2) {
+      var e2, i2, s2;
+      this.options.closeOnEscape && !t2.isDefaultPrevented() && t2.keyCode && t2.keyCode === V.ui.keyCode.ESCAPE ? (t2.preventDefault(), this.close(t2)) : t2.keyCode !== V.ui.keyCode.TAB || t2.isDefaultPrevented() || (e2 = this.uiDialog.find(":tabbable"), i2 = e2.first(), s2 = e2.last(), t2.target !== s2[0] && t2.target !== this.uiDialog[0] || t2.shiftKey ? t2.target !== i2[0] && t2.target !== this.uiDialog[0] || !t2.shiftKey || (this._delay(function() {
+        s2.trigger("focus");
+      }), t2.preventDefault()) : (this._delay(function() {
+        i2.trigger("focus");
+      }), t2.preventDefault()));
+    }, mousedown: function(t2) {
+      this._moveToTop(t2) && this._focusTabbable();
+    } }), this.element.find("[aria-describedby]").length || this.uiDialog.attr({ "aria-describedby": this.element.uniqueId().attr("id") });
+  }, _createTitlebar: function() {
+    var t2;
+    this.uiDialogTitlebar = V("<div>"), this._addClass(this.uiDialogTitlebar, "ui-dialog-titlebar", "ui-widget-header ui-helper-clearfix"), this._on(this.uiDialogTitlebar, { mousedown: function(t3) {
+      V(t3.target).closest(".ui-dialog-titlebar-close") || this.uiDialog.trigger("focus");
+    } }), this.uiDialogTitlebarClose = V("<button type='button'></button>").button({ label: V("<a>").text(this.options.closeText).html(), icon: "ui-icon-closethick", showLabel: false }).appendTo(this.uiDialogTitlebar), this._addClass(this.uiDialogTitlebarClose, "ui-dialog-titlebar-close"), this._on(this.uiDialogTitlebarClose, { click: function(t3) {
+      t3.preventDefault(), this.close(t3);
+    } }), t2 = V("<span>").uniqueId().prependTo(this.uiDialogTitlebar), this._addClass(t2, "ui-dialog-title"), this._title(t2), this.uiDialogTitlebar.prependTo(this.uiDialog), this.uiDialog.attr({ "aria-labelledby": t2.attr("id") });
+  }, _title: function(t2) {
+    this.options.title ? t2.text(this.options.title) : t2.html("&#160;");
+  }, _createButtonPane: function() {
+    this.uiDialogButtonPane = V("<div>"), this._addClass(this.uiDialogButtonPane, "ui-dialog-buttonpane", "ui-widget-content ui-helper-clearfix"), this.uiButtonSet = V("<div>").appendTo(this.uiDialogButtonPane), this._addClass(this.uiButtonSet, "ui-dialog-buttonset"), this._createButtons();
+  }, _createButtons: function() {
+    var s2 = this, t2 = this.options.buttons;
+    this.uiDialogButtonPane.remove(), this.uiButtonSet.empty(), V.isEmptyObject(t2) || Array.isArray(t2) && !t2.length ? this._removeClass(this.uiDialog, "ui-dialog-buttons") : (V.each(t2, function(t3, e2) {
+      var i2;
+      e2 = V.extend({ type: "button" }, e2 = "function" == typeof e2 ? { click: e2, text: t3 } : e2), i2 = e2.click, t3 = { icon: e2.icon, iconPosition: e2.iconPosition, showLabel: e2.showLabel, icons: e2.icons, text: e2.text }, delete e2.click, delete e2.icon, delete e2.iconPosition, delete e2.showLabel, delete e2.icons, "boolean" == typeof e2.text && delete e2.text, V("<button></button>", e2).button(t3).appendTo(s2.uiButtonSet).on("click", function() {
+        i2.apply(s2.element[0], arguments);
+      });
+    }), this._addClass(this.uiDialog, "ui-dialog-buttons"), this.uiDialogButtonPane.appendTo(this.uiDialog));
+  }, _makeDraggable: function() {
+    var n2 = this, o2 = this.options;
+    function a2(t2) {
+      return { position: t2.position, offset: t2.offset };
+    }
+    this.uiDialog.draggable({ cancel: ".ui-dialog-content, .ui-dialog-titlebar-close", handle: ".ui-dialog-titlebar", containment: "document", start: function(t2, e2) {
+      n2._addClass(V(this), "ui-dialog-dragging"), n2._blockFrames(), n2._trigger("dragStart", t2, a2(e2));
+    }, drag: function(t2, e2) {
+      n2._trigger("drag", t2, a2(e2));
+    }, stop: function(t2, e2) {
+      var i2 = e2.offset.left - n2.document.scrollLeft(), s2 = e2.offset.top - n2.document.scrollTop();
+      o2.position = { my: "left top", at: "left" + (0 <= i2 ? "+" : "") + i2 + " top" + (0 <= s2 ? "+" : "") + s2, of: n2.window }, n2._removeClass(V(this), "ui-dialog-dragging"), n2._unblockFrames(), n2._trigger("dragStop", t2, a2(e2));
+    } });
+  }, _makeResizable: function() {
+    var n2 = this, o2 = this.options, t2 = o2.resizable, e2 = this.uiDialog.css("position"), t2 = "string" == typeof t2 ? t2 : "n,e,s,w,se,sw,ne,nw";
+    function a2(t3) {
+      return { originalPosition: t3.originalPosition, originalSize: t3.originalSize, position: t3.position, size: t3.size };
+    }
+    this.uiDialog.resizable({ cancel: ".ui-dialog-content", containment: "document", alsoResize: this.element, maxWidth: o2.maxWidth, maxHeight: o2.maxHeight, minWidth: o2.minWidth, minHeight: this._minHeight(), handles: t2, start: function(t3, e3) {
+      n2._addClass(V(this), "ui-dialog-resizing"), n2._blockFrames(), n2._trigger("resizeStart", t3, a2(e3));
+    }, resize: function(t3, e3) {
+      n2._trigger("resize", t3, a2(e3));
+    }, stop: function(t3, e3) {
+      var i2 = n2.uiDialog.offset(), s2 = i2.left - n2.document.scrollLeft(), i2 = i2.top - n2.document.scrollTop();
+      o2.height = n2.uiDialog.height(), o2.width = n2.uiDialog.width(), o2.position = { my: "left top", at: "left" + (0 <= s2 ? "+" : "") + s2 + " top" + (0 <= i2 ? "+" : "") + i2, of: n2.window }, n2._removeClass(V(this), "ui-dialog-resizing"), n2._unblockFrames(), n2._trigger("resizeStop", t3, a2(e3));
+    } }).css("position", e2);
+  }, _trackFocus: function() {
+    this._on(this.widget(), { focusin: function(t2) {
+      this._makeFocusTarget(), this._focusedElement = V(t2.target);
+    } });
+  }, _makeFocusTarget: function() {
+    this._untrackInstance(), this._trackingInstances().unshift(this);
+  }, _untrackInstance: function() {
+    var t2 = this._trackingInstances(), e2 = V.inArray(this, t2);
+    -1 !== e2 && t2.splice(e2, 1);
+  }, _trackingInstances: function() {
+    var t2 = this.document.data("ui-dialog-instances");
+    return t2 || this.document.data("ui-dialog-instances", t2 = []), t2;
+  }, _minHeight: function() {
+    var t2 = this.options;
+    return "auto" === t2.height ? t2.minHeight : Math.min(t2.minHeight, t2.height);
+  }, _position: function() {
+    var t2 = this.uiDialog.is(":visible");
+    t2 || this.uiDialog.show(), this.uiDialog.position(this.options.position), t2 || this.uiDialog.hide();
+  }, _setOptions: function(t2) {
+    var i2 = this, s2 = false, n2 = {};
+    V.each(t2, function(t3, e2) {
+      i2._setOption(t3, e2), t3 in i2.sizeRelatedOptions && (s2 = true), t3 in i2.resizableRelatedOptions && (n2[t3] = e2);
+    }), s2 && (this._size(), this._position()), this.uiDialog.is(":data(ui-resizable)") && this.uiDialog.resizable("option", n2);
+  }, _setOption: function(t2, e2) {
+    var i2, s2 = this.uiDialog;
+    "disabled" !== t2 && (this._super(t2, e2), "appendTo" === t2 && this.uiDialog.appendTo(this._appendTo()), "buttons" === t2 && this._createButtons(), "closeText" === t2 && this.uiDialogTitlebarClose.button({ label: V("<a>").text("" + this.options.closeText).html() }), "draggable" === t2 && ((i2 = s2.is(":data(ui-draggable)")) && !e2 && s2.draggable("destroy"), !i2) && e2 && this._makeDraggable(), "position" === t2 && this._position(), "resizable" === t2 && ((i2 = s2.is(":data(ui-resizable)")) && !e2 && s2.resizable("destroy"), i2 && "string" == typeof e2 && s2.resizable("option", "handles", e2), i2 || false === e2 || this._makeResizable()), "title" === t2) && this._title(this.uiDialogTitlebar.find(".ui-dialog-title"));
+  }, _size: function() {
+    var t2, e2, i2, s2 = this.options;
+    this.element.show().css({ width: "auto", minHeight: 0, maxHeight: "none", height: 0 }), s2.minWidth > s2.width && (s2.width = s2.minWidth), t2 = this.uiDialog.css({ height: "auto", width: s2.width }).outerHeight(), e2 = Math.max(0, s2.minHeight - t2), i2 = "number" == typeof s2.maxHeight ? Math.max(0, s2.maxHeight - t2) : "none", "auto" === s2.height ? this.element.css({ minHeight: e2, maxHeight: i2, height: "auto" }) : this.element.height(Math.max(0, s2.height - t2)), this.uiDialog.is(":data(ui-resizable)") && this.uiDialog.resizable("option", "minHeight", this._minHeight());
+  }, _blockFrames: function() {
+    this.iframeBlocks = this.document.find("iframe").map(function() {
+      var t2 = V(this);
+      return V("<div>").css({ position: "absolute", width: t2.outerWidth(), height: t2.outerHeight() }).appendTo(t2.parent()).offset(t2.offset())[0];
+    });
+  }, _unblockFrames: function() {
+    this.iframeBlocks && (this.iframeBlocks.remove(), delete this.iframeBlocks);
+  }, _allowInteraction: function(t2) {
+    return !!V(t2.target).closest(".ui-dialog").length || !!V(t2.target).closest(".ui-datepicker").length;
+  }, _createOverlay: function() {
+    var i2, s2;
+    this.options.modal && (i2 = V.fn.jquery.substring(0, 4), s2 = true, this._delay(function() {
+      s2 = false;
+    }), this.document.data("ui-dialog-overlays") || this.document.on("focusin.ui-dialog", function(t2) {
+      var e2;
+      s2 || (e2 = this._trackingInstances()[0])._allowInteraction(t2) || (t2.preventDefault(), e2._focusTabbable(), "3.4." !== i2 && "3.5." !== i2 && "3.6." !== i2) || e2._delay(e2._restoreTabbableFocus);
+    }.bind(this)), this.overlay = V("<div>").appendTo(this._appendTo()), this._addClass(this.overlay, null, "ui-widget-overlay ui-front"), this._on(this.overlay, { mousedown: "_keepFocus" }), this.document.data("ui-dialog-overlays", (this.document.data("ui-dialog-overlays") || 0) + 1));
+  }, _destroyOverlay: function() {
+    var t2;
+    this.options.modal && this.overlay && ((t2 = this.document.data("ui-dialog-overlays") - 1) ? this.document.data("ui-dialog-overlays", t2) : (this.document.off("focusin.ui-dialog"), this.document.removeData("ui-dialog-overlays")), this.overlay.remove(), this.overlay = null);
+  } }), false !== V.uiBackCompat && V.widget("ui.dialog", V.ui.dialog, { options: { dialogClass: "" }, _createWrapper: function() {
+    this._super(), this.uiDialog.addClass(this.options.dialogClass);
+  }, _setOption: function(t2, e2) {
+    "dialogClass" === t2 && this.uiDialog.removeClass(this.options.dialogClass).addClass(e2), this._superApply(arguments);
+  } }), V.ui.dialog;
+  function ct(t2, e2, i2) {
+    return e2 <= t2 && t2 < e2 + i2;
   }
-  Q.BeginPinch = function(i) {
-    this.pinched = [D(i), this.zoom];
-    i.preventDefault && i.preventDefault();
-  };
-  Q.Pinch = function(j) {
-    var aJ, aI, i = this.pinched;
-    if (!i) {
-      return;
+  V.widget("ui.droppable", { version: "1.13.3", widgetEventPrefix: "drop", options: { accept: "*", addClasses: true, greedy: false, scope: "default", tolerance: "intersect", activate: null, deactivate: null, drop: null, out: null, over: null }, _create: function() {
+    var t2, e2 = this.options, i2 = e2.accept;
+    this.isover = false, this.isout = true, this.accept = "function" == typeof i2 ? i2 : function(t3) {
+      return t3.is(i2);
+    }, this.proportions = function() {
+      if (!arguments.length) return t2 = t2 || { width: this.element[0].offsetWidth, height: this.element[0].offsetHeight };
+      t2 = arguments[0];
+    }, this._addToManager(e2.scope), e2.addClasses && this._addClass("ui-droppable");
+  }, _addToManager: function(t2) {
+    V.ui.ddmanager.droppables[t2] = V.ui.ddmanager.droppables[t2] || [], V.ui.ddmanager.droppables[t2].push(this);
+  }, _splice: function(t2) {
+    for (var e2 = 0; e2 < t2.length; e2++) t2[e2] === this && t2.splice(e2, 1);
+  }, _destroy: function() {
+    var t2 = V.ui.ddmanager.droppables[this.options.scope];
+    this._splice(t2);
+  }, _setOption: function(t2, e2) {
+    var i2;
+    "accept" === t2 ? this.accept = "function" == typeof e2 ? e2 : function(t3) {
+      return t3.is(e2);
+    } : "scope" === t2 && (i2 = V.ui.ddmanager.droppables[this.options.scope], this._splice(i2), this._addToManager(e2)), this._super(t2, e2);
+  }, _activate: function(t2) {
+    var e2 = V.ui.ddmanager.current;
+    this._addActiveClass(), e2 && this._trigger("activate", t2, this.ui(e2));
+  }, _deactivate: function(t2) {
+    var e2 = V.ui.ddmanager.current;
+    this._removeActiveClass(), e2 && this._trigger("deactivate", t2, this.ui(e2));
+  }, _over: function(t2) {
+    var e2 = V.ui.ddmanager.current;
+    e2 && (e2.currentItem || e2.element)[0] !== this.element[0] && this.accept.call(this.element[0], e2.currentItem || e2.element) && (this._addHoverClass(), this._trigger("over", t2, this.ui(e2)));
+  }, _out: function(t2) {
+    var e2 = V.ui.ddmanager.current;
+    e2 && (e2.currentItem || e2.element)[0] !== this.element[0] && this.accept.call(this.element[0], e2.currentItem || e2.element) && (this._removeHoverClass(), this._trigger("out", t2, this.ui(e2)));
+  }, _drop: function(e2, t2) {
+    var i2 = t2 || V.ui.ddmanager.current, s2 = false;
+    return !(!i2 || (i2.currentItem || i2.element)[0] === this.element[0] || (this.element.find(":data(ui-droppable)").not(".ui-draggable-dragging").each(function() {
+      var t3 = V(this).droppable("instance");
+      if (t3.options.greedy && !t3.options.disabled && t3.options.scope === i2.options.scope && t3.accept.call(t3.element[0], i2.currentItem || i2.element) && V.ui.intersect(i2, V.extend(t3, { offset: t3.element.offset() }), t3.options.tolerance, e2)) return !(s2 = true);
+    }), s2) || !this.accept.call(this.element[0], i2.currentItem || i2.element)) && (this._removeActiveClass(), this._removeHoverClass(), this._trigger("drop", e2, this.ui(i2)), this.element);
+  }, ui: function(t2) {
+    return { draggable: t2.currentItem || t2.element, helper: t2.helper, position: t2.position, offset: t2.positionAbs };
+  }, _addHoverClass: function() {
+    this._addClass("ui-droppable-hover");
+  }, _removeHoverClass: function() {
+    this._removeClass("ui-droppable-hover");
+  }, _addActiveClass: function() {
+    this._addClass("ui-droppable-active");
+  }, _removeActiveClass: function() {
+    this._removeClass("ui-droppable-active");
+  } }), V.ui.intersect = function(t2, e2, i2, s2) {
+    if (!e2.offset) return false;
+    var n2 = (t2.positionAbs || t2.position.absolute).left + t2.margins.left, o2 = (t2.positionAbs || t2.position.absolute).top + t2.margins.top, a2 = n2 + t2.helperProportions.width, r2 = o2 + t2.helperProportions.height, l2 = e2.offset.left, h2 = e2.offset.top, c2 = l2 + e2.proportions().width, u2 = h2 + e2.proportions().height;
+    switch (i2) {
+      case "fit":
+        return l2 <= n2 && a2 <= c2 && h2 <= o2 && r2 <= u2;
+      case "intersect":
+        return l2 < n2 + t2.helperProportions.width / 2 && a2 - t2.helperProportions.width / 2 < c2 && h2 < o2 + t2.helperProportions.height / 2 && r2 - t2.helperProportions.height / 2 < u2;
+      case "pointer":
+        return ct(s2.pageY, h2, e2.proportions().height) && ct(s2.pageX, l2, e2.proportions().width);
+      case "touch":
+        return (h2 <= o2 && o2 <= u2 || h2 <= r2 && r2 <= u2 || o2 < h2 && u2 < r2) && (l2 <= n2 && n2 <= c2 || l2 <= a2 && a2 <= c2 || n2 < l2 && c2 < a2);
+      default:
+        return false;
     }
-    aI = D(j);
-    aJ = i[1] * aI / i[0];
-    this.zoom = aE(this.zoomMax, s(this.zoomMin, aJ));
-    this.Zoom(this.zoom);
-  };
-  Q.EndPinch = function(i) {
-    this.pinched = null;
-  };
-  Q.Pause = function() {
-    this.paused = true;
-  };
-  Q.Resume = function() {
-    this.paused = false;
-  };
-  Q.SetSpeed = function(j) {
-    this.initial = j;
-    this.yaw = j[0] * this.maxSpeed;
-    this.pitch = j[1] * this.maxSpeed;
-  };
-  Q.FindTag = function(aI) {
-    if (!ai(aI)) {
-      return null;
-    }
-    ai(aI.index) && (aI = aI.index);
-    if (!I(aI)) {
-      return this.taglist[aI];
-    }
-    var aJ, aK, j;
-    if (ai(aI.id)) {
-      aJ = "id", aK = aI.id;
-    } else {
-      if (ai(aI.text)) {
-        aJ = "innerText", aK = aI.text;
+  }, !(V.ui.ddmanager = { current: null, droppables: { default: [] }, prepareOffsets: function(t2, e2) {
+    var i2, s2, n2 = V.ui.ddmanager.droppables[t2.options.scope] || [], o2 = e2 ? e2.type : null, a2 = (t2.currentItem || t2.element).find(":data(ui-droppable)").addBack();
+    t: for (i2 = 0; i2 < n2.length; i2++) if (!(n2[i2].options.disabled || t2 && !n2[i2].accept.call(n2[i2].element[0], t2.currentItem || t2.element))) {
+      for (s2 = 0; s2 < a2.length; s2++) if (a2[s2] === n2[i2].element[0]) {
+        n2[i2].proportions().height = 0;
+        continue t;
       }
+      n2[i2].visible = "none" !== n2[i2].element.css("display"), n2[i2].visible && ("mousedown" === o2 && n2[i2]._activate.call(n2[i2], e2), n2[i2].offset = n2[i2].element.offset(), n2[i2].proportions({ width: n2[i2].element[0].offsetWidth, height: n2[i2].element[0].offsetHeight }));
     }
-    for (j = 0; j < this.taglist.length; ++j) {
-      if (this.taglist[j].a[aJ] == aK) {
-        return this.taglist[j];
-      }
+  }, drop: function(t2, e2) {
+    var i2 = false;
+    return V.each((V.ui.ddmanager.droppables[t2.options.scope] || []).slice(), function() {
+      this.options && (!this.options.disabled && this.visible && V.ui.intersect(t2, this, this.options.tolerance, e2) && (i2 = this._drop.call(this, e2) || i2), !this.options.disabled) && this.visible && this.accept.call(this.element[0], t2.currentItem || t2.element) && (this.isout = true, this.isover = false, this._deactivate.call(this, e2));
+    }), i2;
+  }, dragStart: function(t2, e2) {
+    t2.element.parentsUntil("body").on("scroll.droppable", function() {
+      t2.options.refreshPositions || V.ui.ddmanager.prepareOffsets(t2, e2);
+    });
+  }, drag: function(n2, o2) {
+    n2.options.refreshPositions && V.ui.ddmanager.prepareOffsets(n2, o2), V.each(V.ui.ddmanager.droppables[n2.options.scope] || [], function() {
+      var t2, e2, i2, s2;
+      this.options.disabled || this.greedyChild || !this.visible || (s2 = !(s2 = V.ui.intersect(n2, this, this.options.tolerance, o2)) && this.isover ? "isout" : s2 && !this.isover ? "isover" : null) && (this.options.greedy && (e2 = this.options.scope, (i2 = this.element.parents(":data(ui-droppable)").filter(function() {
+        return V(this).droppable("instance").options.scope === e2;
+      })).length) && ((t2 = V(i2[0]).droppable("instance")).greedyChild = "isover" === s2), t2 && "isover" === s2 && (t2.isover = false, t2.isout = true, t2._out.call(t2, o2)), this[s2] = true, this["isout" === s2 ? "isover" : "isout"] = false, this["isover" === s2 ? "_over" : "_out"].call(this, o2), t2) && "isout" === s2 && (t2.isout = false, t2.isover = true, t2._over.call(t2, o2));
+    });
+  }, dragStop: function(t2, e2) {
+    t2.element.parentsUntil("body").off("scroll.droppable"), t2.options.refreshPositions || V.ui.ddmanager.prepareOffsets(t2, e2);
+  } }) !== V.uiBackCompat && V.widget("ui.droppable", V.ui.droppable, { options: { hoverClass: false, activeClass: false }, _addActiveClass: function() {
+    this._super(), this.options.activeClass && this.element.addClass(this.options.activeClass);
+  }, _removeActiveClass: function() {
+    this._super(), this.options.activeClass && this.element.removeClass(this.options.activeClass);
+  }, _addHoverClass: function() {
+    this._super(), this.options.hoverClass && this.element.addClass(this.options.hoverClass);
+  }, _removeHoverClass: function() {
+    this._super(), this.options.hoverClass && this.element.removeClass(this.options.hoverClass);
+  } });
+  V.ui.droppable, V.widget("ui.progressbar", { version: "1.13.3", options: { classes: { "ui-progressbar": "ui-corner-all", "ui-progressbar-value": "ui-corner-left", "ui-progressbar-complete": "ui-corner-right" }, max: 100, value: 0, change: null, complete: null }, min: 0, _create: function() {
+    this.oldValue = this.options.value = this._constrainedValue(), this.element.attr({ role: "progressbar", "aria-valuemin": this.min }), this._addClass("ui-progressbar", "ui-widget ui-widget-content"), this.valueDiv = V("<div>").appendTo(this.element), this._addClass(this.valueDiv, "ui-progressbar-value", "ui-widget-header"), this._refreshValue();
+  }, _destroy: function() {
+    this.element.removeAttr("role aria-valuemin aria-valuemax aria-valuenow"), this.valueDiv.remove();
+  }, value: function(t2) {
+    if (void 0 === t2) return this.options.value;
+    this.options.value = this._constrainedValue(t2), this._refreshValue();
+  }, _constrainedValue: function(t2) {
+    return void 0 === t2 && (t2 = this.options.value), this.indeterminate = false === t2, "number" != typeof t2 && (t2 = 0), !this.indeterminate && Math.min(this.options.max, Math.max(this.min, t2));
+  }, _setOptions: function(t2) {
+    var e2 = t2.value;
+    delete t2.value, this._super(t2), this.options.value = this._constrainedValue(e2), this._refreshValue();
+  }, _setOption: function(t2, e2) {
+    "max" === t2 && (e2 = Math.max(this.min, e2)), this._super(t2, e2);
+  }, _setOptionDisabled: function(t2) {
+    this._super(t2), this.element.attr("aria-disabled", t2), this._toggleClass(null, "ui-state-disabled", !!t2);
+  }, _percentage: function() {
+    return this.indeterminate ? 100 : 100 * (this.options.value - this.min) / (this.options.max - this.min);
+  }, _refreshValue: function() {
+    var t2 = this.options.value, e2 = this._percentage();
+    this.valueDiv.toggle(this.indeterminate || t2 > this.min).width(e2.toFixed(0) + "%"), this._toggleClass(this.valueDiv, "ui-progressbar-complete", null, t2 === this.options.max)._toggleClass("ui-progressbar-indeterminate", null, this.indeterminate), this.indeterminate ? (this.element.removeAttr("aria-valuenow"), this.overlayDiv || (this.overlayDiv = V("<div>").appendTo(this.valueDiv), this._addClass(this.overlayDiv, "ui-progressbar-overlay"))) : (this.element.attr({ "aria-valuemax": this.options.max, "aria-valuenow": t2 }), this.overlayDiv && (this.overlayDiv.remove(), this.overlayDiv = null)), this.oldValue !== t2 && (this.oldValue = t2, this._trigger("change")), t2 === this.options.max && this._trigger("complete");
+  } }), V.widget("ui.selectable", V.ui.mouse, { version: "1.13.3", options: { appendTo: "body", autoRefresh: true, distance: 0, filter: "*", tolerance: "touch", selected: null, selecting: null, start: null, stop: null, unselected: null, unselecting: null }, _create: function() {
+    var i2 = this;
+    this._addClass("ui-selectable"), this.dragged = false, this.refresh = function() {
+      i2.elementPos = V(i2.element[0]).offset(), i2.selectees = V(i2.options.filter, i2.element[0]), i2._addClass(i2.selectees, "ui-selectee"), i2.selectees.each(function() {
+        var t2 = V(this), e2 = t2.offset(), e2 = { left: e2.left - i2.elementPos.left, top: e2.top - i2.elementPos.top };
+        V.data(this, "selectable-item", { element: this, $element: t2, left: e2.left, top: e2.top, right: e2.left + t2.outerWidth(), bottom: e2.top + t2.outerHeight(), startselected: false, selected: t2.hasClass("ui-selected"), selecting: t2.hasClass("ui-selecting"), unselecting: t2.hasClass("ui-unselecting") });
+      });
+    }, this.refresh(), this._mouseInit(), this.helper = V("<div>"), this._addClass(this.helper, "ui-selectable-helper");
+  }, _destroy: function() {
+    this.selectees.removeData("selectable-item"), this._mouseDestroy();
+  }, _mouseStart: function(i2) {
+    var s2 = this, t2 = this.options;
+    this.opos = [i2.pageX, i2.pageY], this.elementPos = V(this.element[0]).offset(), this.options.disabled || (this.selectees = V(t2.filter, this.element[0]), this._trigger("start", i2), V(t2.appendTo).append(this.helper), this.helper.css({ left: i2.pageX, top: i2.pageY, width: 0, height: 0 }), t2.autoRefresh && this.refresh(), this.selectees.filter(".ui-selected").each(function() {
+      var t3 = V.data(this, "selectable-item");
+      t3.startselected = true, i2.metaKey || i2.ctrlKey || (s2._removeClass(t3.$element, "ui-selected"), t3.selected = false, s2._addClass(t3.$element, "ui-unselecting"), t3.unselecting = true, s2._trigger("unselecting", i2, { unselecting: t3.element }));
+    }), V(i2.target).parents().addBack().each(function() {
+      var t3, e2 = V.data(this, "selectable-item");
+      if (e2) return t3 = !i2.metaKey && !i2.ctrlKey || !e2.$element.hasClass("ui-selected"), s2._removeClass(e2.$element, t3 ? "ui-unselecting" : "ui-selected")._addClass(e2.$element, t3 ? "ui-selecting" : "ui-unselecting"), e2.unselecting = !t3, e2.selecting = t3, (e2.selected = t3) ? s2._trigger("selecting", i2, { selecting: e2.element }) : s2._trigger("unselecting", i2, { unselecting: e2.element }), false;
+    }));
+  }, _mouseDrag: function(s2) {
+    var t2, n2, o2, a2, r2, l2, h2;
+    if (this.dragged = true, !this.options.disabled) return o2 = (n2 = this).options, a2 = this.opos[0], r2 = this.opos[1], l2 = s2.pageX, h2 = s2.pageY, l2 < a2 && (t2 = l2, l2 = a2, a2 = t2), h2 < r2 && (t2 = h2, h2 = r2, r2 = t2), this.helper.css({ left: a2, top: r2, width: l2 - a2, height: h2 - r2 }), this.selectees.each(function() {
+      var t3 = V.data(this, "selectable-item"), e2 = false, i2 = {};
+      t3 && t3.element !== n2.element[0] && (i2.left = t3.left + n2.elementPos.left, i2.right = t3.right + n2.elementPos.left, i2.top = t3.top + n2.elementPos.top, i2.bottom = t3.bottom + n2.elementPos.top, "touch" === o2.tolerance ? e2 = !(l2 < i2.left || i2.right < a2 || h2 < i2.top || i2.bottom < r2) : "fit" === o2.tolerance && (e2 = a2 < i2.left && i2.right < l2 && r2 < i2.top && i2.bottom < h2), e2 ? (t3.selected && (n2._removeClass(t3.$element, "ui-selected"), t3.selected = false), t3.unselecting && (n2._removeClass(t3.$element, "ui-unselecting"), t3.unselecting = false), t3.selecting || (n2._addClass(t3.$element, "ui-selecting"), t3.selecting = true, n2._trigger("selecting", s2, { selecting: t3.element }))) : (t3.selecting && ((s2.metaKey || s2.ctrlKey) && t3.startselected ? (n2._removeClass(t3.$element, "ui-selecting"), t3.selecting = false, n2._addClass(t3.$element, "ui-selected"), t3.selected = true) : (n2._removeClass(t3.$element, "ui-selecting"), t3.selecting = false, t3.startselected && (n2._addClass(t3.$element, "ui-unselecting"), t3.unselecting = true), n2._trigger("unselecting", s2, { unselecting: t3.element }))), !t3.selected || s2.metaKey || s2.ctrlKey || t3.startselected || (n2._removeClass(t3.$element, "ui-selected"), t3.selected = false, n2._addClass(t3.$element, "ui-unselecting"), t3.unselecting = true, n2._trigger("unselecting", s2, { unselecting: t3.element }))));
+    }), false;
+  }, _mouseStop: function(e2) {
+    var i2 = this;
+    return this.dragged = false, V(".ui-unselecting", this.element[0]).each(function() {
+      var t2 = V.data(this, "selectable-item");
+      i2._removeClass(t2.$element, "ui-unselecting"), t2.unselecting = false, t2.startselected = false, i2._trigger("unselected", e2, { unselected: t2.element });
+    }), V(".ui-selecting", this.element[0]).each(function() {
+      var t2 = V.data(this, "selectable-item");
+      i2._removeClass(t2.$element, "ui-selecting")._addClass(t2.$element, "ui-selected"), t2.selecting = false, t2.selected = true, t2.startselected = true, i2._trigger("selected", e2, { selected: t2.element });
+    }), this._trigger("stop", e2), this.helper.remove(), false;
+  } }), V.widget("ui.selectmenu", [V.ui.formResetMixin, { version: "1.13.3", defaultElement: "<select>", options: { appendTo: null, classes: { "ui-selectmenu-button-open": "ui-corner-top", "ui-selectmenu-button-closed": "ui-corner-all" }, disabled: null, icons: { button: "ui-icon-triangle-1-s" }, position: { my: "left top", at: "left bottom", collision: "none" }, width: false, change: null, close: null, focus: null, open: null, select: null }, _create: function() {
+    var t2 = this.element.uniqueId().attr("id");
+    this.ids = { element: t2, button: t2 + "-button", menu: t2 + "-menu" }, this._drawButton(), this._drawMenu(), this._bindFormResetHandler(), this._rendered = false, this.menuItems = V();
+  }, _drawButton: function() {
+    var t2, e2 = this, i2 = this._parseOption(this.element.find("option:selected"), this.element[0].selectedIndex);
+    this.labels = this.element.labels().attr("for", this.ids.button), this._on(this.labels, { click: function(t3) {
+      this.button.trigger("focus"), t3.preventDefault();
+    } }), this.element.hide(), this.button = V("<span>", { tabindex: this.options.disabled ? -1 : 0, id: this.ids.button, role: "combobox", "aria-expanded": "false", "aria-autocomplete": "list", "aria-owns": this.ids.menu, "aria-haspopup": "true", title: this.element.attr("title") }).insertAfter(this.element), this._addClass(this.button, "ui-selectmenu-button ui-selectmenu-button-closed", "ui-button ui-widget"), t2 = V("<span>").appendTo(this.button), this._addClass(t2, "ui-selectmenu-icon", "ui-icon " + this.options.icons.button), this.buttonItem = this._renderButtonItem(i2).appendTo(this.button), false !== this.options.width && this._resizeButton(), this._on(this.button, this._buttonEvents), this.button.one("focusin", function() {
+      e2._rendered || e2._refreshMenu();
+    });
+  }, _drawMenu: function() {
+    var i2 = this;
+    this.menu = V("<ul>", { "aria-hidden": "true", "aria-labelledby": this.ids.button, id: this.ids.menu }), this.menuWrap = V("<div>").append(this.menu), this._addClass(this.menuWrap, "ui-selectmenu-menu", "ui-front"), this.menuWrap.appendTo(this._appendTo()), this.menuInstance = this.menu.menu({ classes: { "ui-menu": "ui-corner-bottom" }, role: "listbox", select: function(t2, e2) {
+      t2.preventDefault(), i2._setSelection(), i2._select(e2.item.data("ui-selectmenu-item"), t2);
+    }, focus: function(t2, e2) {
+      e2 = e2.item.data("ui-selectmenu-item");
+      null != i2.focusIndex && e2.index !== i2.focusIndex && (i2._trigger("focus", t2, { item: e2 }), i2.isOpen || i2._select(e2, t2)), i2.focusIndex = e2.index, i2.button.attr("aria-activedescendant", i2.menuItems.eq(e2.index).attr("id"));
+    } }).menu("instance"), this.menuInstance._off(this.menu, "mouseleave"), this.menuInstance._closeOnDocumentClick = function() {
+      return false;
+    }, this.menuInstance._isDivider = function() {
+      return false;
+    };
+  }, refresh: function() {
+    this._refreshMenu(), this.buttonItem.replaceWith(this.buttonItem = this._renderButtonItem(this._getSelectedItem().data("ui-selectmenu-item") || {})), null === this.options.width && this._resizeButton();
+  }, _refreshMenu: function() {
+    var t2 = this.element.find("option");
+    this.menu.empty(), this._parseOptions(t2), this._renderMenu(this.menu, this.items), this.menuInstance.refresh(), this.menuItems = this.menu.find("li").not(".ui-selectmenu-optgroup").find(".ui-menu-item-wrapper"), this._rendered = true, t2.length && (t2 = this._getSelectedItem(), this.menuInstance.focus(null, t2), this._setAria(t2.data("ui-selectmenu-item")), this._setOption("disabled", this.element.prop("disabled")));
+  }, open: function(t2) {
+    this.options.disabled || (this._rendered ? (this._removeClass(this.menu.find(".ui-state-active"), null, "ui-state-active"), this.menuInstance.focus(null, this._getSelectedItem())) : this._refreshMenu(), this.menuItems.length && (this.isOpen = true, this._toggleAttr(), this._resizeMenu(), this._position(), this._on(this.document, this._documentClick), this._trigger("open", t2)));
+  }, _position: function() {
+    this.menuWrap.position(V.extend({ of: this.button }, this.options.position));
+  }, close: function(t2) {
+    this.isOpen && (this.isOpen = false, this._toggleAttr(), this.range = null, this._off(this.document), this._trigger("close", t2));
+  }, widget: function() {
+    return this.button;
+  }, menuWidget: function() {
+    return this.menu;
+  }, _renderButtonItem: function(t2) {
+    var e2 = V("<span>");
+    return this._setText(e2, t2.label), this._addClass(e2, "ui-selectmenu-text"), e2;
+  }, _renderMenu: function(s2, t2) {
+    var n2 = this, o2 = "";
+    V.each(t2, function(t3, e2) {
+      var i2;
+      e2.optgroup !== o2 && (i2 = V("<li>", { text: e2.optgroup }), n2._addClass(i2, "ui-selectmenu-optgroup", "ui-menu-divider" + (e2.element.parent("optgroup").prop("disabled") ? " ui-state-disabled" : "")), i2.appendTo(s2), o2 = e2.optgroup), n2._renderItemData(s2, e2);
+    });
+  }, _renderItemData: function(t2, e2) {
+    return this._renderItem(t2, e2).data("ui-selectmenu-item", e2);
+  }, _renderItem: function(t2, e2) {
+    var i2 = V("<li>"), s2 = V("<div>", { title: e2.element.attr("title") });
+    return e2.disabled && this._addClass(i2, null, "ui-state-disabled"), e2.hidden ? i2.prop("hidden", true) : this._setText(s2, e2.label), i2.append(s2).appendTo(t2);
+  }, _setText: function(t2, e2) {
+    e2 ? t2.text(e2) : t2.html("&#160;");
+  }, _move: function(t2, e2) {
+    var i2, s2 = ".ui-menu-item";
+    this.isOpen ? i2 = this.menuItems.eq(this.focusIndex).parent("li") : (i2 = this.menuItems.eq(this.element[0].selectedIndex).parent("li"), s2 += ":not(.ui-state-disabled)"), (i2 = "first" === t2 || "last" === t2 ? i2["first" === t2 ? "prevAll" : "nextAll"](s2).eq(-1) : i2[t2 + "All"](s2).eq(0)).length && this.menuInstance.focus(e2, i2);
+  }, _getSelectedItem: function() {
+    return this.menuItems.eq(this.element[0].selectedIndex).parent("li");
+  }, _toggle: function(t2) {
+    this[this.isOpen ? "close" : "open"](t2);
+  }, _setSelection: function() {
+    var t2;
+    this.range && (window.getSelection ? ((t2 = window.getSelection()).removeAllRanges(), t2.addRange(this.range)) : this.range.select(), this.button.trigger("focus"));
+  }, _documentClick: { mousedown: function(t2) {
+    !this.isOpen || V(t2.target).closest(".ui-selectmenu-menu, #" + V.escapeSelector(this.ids.button)).length || this.close(t2);
+  } }, _buttonEvents: { mousedown: function() {
+    var t2;
+    window.getSelection ? (t2 = window.getSelection()).rangeCount && (this.range = t2.getRangeAt(0)) : this.range = document.selection.createRange();
+  }, click: function(t2) {
+    this._setSelection(), this._toggle(t2);
+  }, keydown: function(t2) {
+    var e2 = true;
+    switch (t2.keyCode) {
+      case V.ui.keyCode.TAB:
+      case V.ui.keyCode.ESCAPE:
+        this.close(t2), e2 = false;
+        break;
+      case V.ui.keyCode.ENTER:
+        this.isOpen && this._selectFocusedItem(t2);
+        break;
+      case V.ui.keyCode.UP:
+        t2.altKey ? this._toggle(t2) : this._move("prev", t2);
+        break;
+      case V.ui.keyCode.DOWN:
+        t2.altKey ? this._toggle(t2) : this._move("next", t2);
+        break;
+      case V.ui.keyCode.SPACE:
+        this.isOpen ? this._selectFocusedItem(t2) : this._toggle(t2);
+        break;
+      case V.ui.keyCode.LEFT:
+        this._move("prev", t2);
+        break;
+      case V.ui.keyCode.RIGHT:
+        this._move("next", t2);
+        break;
+      case V.ui.keyCode.HOME:
+      case V.ui.keyCode.PAGE_UP:
+        this._move("first", t2);
+        break;
+      case V.ui.keyCode.END:
+      case V.ui.keyCode.PAGE_DOWN:
+        this._move("last", t2);
+        break;
+      default:
+        this.menu.trigger(t2), e2 = false;
     }
-  };
-  Q.RotateTag = function(aQ, aJ, aP, i, aN, aI) {
-    var aO = aQ.Calc(this.transform, 1), aL = new ae(aO.x, aO.y, aO.z), aK = aj(aP, aJ), j = aL.angle(aK), aM = aL.cross(aK).unit();
-    if (j == 0) {
-      this.fixedCallbackTag = aQ;
-      this.fixedCallback = aN;
-    } else {
-      this.fixedAnim = { angle: -j, axis: aM, t: i, t0: G(), cb: aN, tag: aQ, active: aI };
+    e2 && t2.preventDefault();
+  } }, _selectFocusedItem: function(t2) {
+    var e2 = this.menuItems.eq(this.focusIndex).parent("li");
+    e2.hasClass("ui-state-disabled") || this._select(e2.data("ui-selectmenu-item"), t2);
+  }, _select: function(t2, e2) {
+    var i2 = this.element[0].selectedIndex;
+    this.element[0].selectedIndex = t2.index, this.buttonItem.replaceWith(this.buttonItem = this._renderButtonItem(t2)), this._setAria(t2), this._trigger("select", e2, { item: t2 }), t2.index !== i2 && this._trigger("change", e2, { item: t2 }), this.close(e2);
+  }, _setAria: function(t2) {
+    t2 = this.menuItems.eq(t2.index).attr("id");
+    this.button.attr({ "aria-labelledby": t2, "aria-activedescendant": t2 }), this.menu.attr("aria-activedescendant", t2);
+  }, _setOption: function(t2, e2) {
+    var i2;
+    "icons" === t2 && (i2 = this.button.find("span.ui-icon"), this._removeClass(i2, null, this.options.icons.button)._addClass(i2, null, e2.button)), this._super(t2, e2), "appendTo" === t2 && this.menuWrap.appendTo(this._appendTo()), "width" === t2 && this._resizeButton();
+  }, _setOptionDisabled: function(t2) {
+    this._super(t2), this.menuInstance.option("disabled", t2), this.button.attr("aria-disabled", t2), this._toggleClass(this.button, null, "ui-state-disabled", t2), this.element.prop("disabled", t2), t2 ? (this.button.attr("tabindex", -1), this.close()) : this.button.attr("tabindex", 0);
+  }, _appendTo: function() {
+    var t2 = this.options.appendTo;
+    return t2 = (t2 = (t2 = t2 && (t2.jquery || t2.nodeType ? V(t2) : this.document.find(t2).eq(0))) && t2[0] ? t2 : this.element.closest(".ui-front, dialog")).length ? t2 : this.document[0].body;
+  }, _toggleAttr: function() {
+    this.button.attr("aria-expanded", this.isOpen), this._removeClass(this.button, "ui-selectmenu-button-" + (this.isOpen ? "closed" : "open"))._addClass(this.button, "ui-selectmenu-button-" + (this.isOpen ? "open" : "closed"))._toggleClass(this.menuWrap, "ui-selectmenu-open", null, this.isOpen), this.menu.attr("aria-hidden", !this.isOpen);
+  }, _resizeButton: function() {
+    var t2 = this.options.width;
+    false === t2 ? this.button.css("width", "") : (null === t2 && (t2 = this.element.show().outerWidth(), this.element.hide()), this.button.outerWidth(t2));
+  }, _resizeMenu: function() {
+    this.menu.outerWidth(Math.max(this.button.outerWidth(), this.menu.width("").outerWidth() + 1));
+  }, _getCreateOptions: function() {
+    var t2 = this._super();
+    return t2.disabled = this.element.prop("disabled"), t2;
+  }, _parseOptions: function(t2) {
+    var i2 = this, s2 = [];
+    t2.each(function(t3, e2) {
+      s2.push(i2._parseOption(V(e2), t3));
+    }), this.items = s2;
+  }, _parseOption: function(t2, e2) {
+    var i2 = t2.parent("optgroup");
+    return { element: t2, index: e2, value: t2.val(), label: t2.text(), hidden: i2.prop("hidden") || t2.prop("hidden"), optgroup: i2.attr("label") || "", disabled: i2.prop("disabled") || t2.prop("disabled") };
+  }, _destroy: function() {
+    this._unbindFormResetHandler(), this.menuWrap.remove(), this.button.remove(), this.element.show(), this.element.removeUniqueId(), this.labels.attr("for", this.ids.element);
+  } }]), V.widget("ui.slider", V.ui.mouse, { version: "1.13.3", widgetEventPrefix: "slide", options: { animate: false, classes: { "ui-slider": "ui-corner-all", "ui-slider-handle": "ui-corner-all", "ui-slider-range": "ui-corner-all ui-widget-header" }, distance: 0, max: 100, min: 0, orientation: "horizontal", range: false, step: 1, value: 0, values: null, change: null, slide: null, start: null, stop: null }, numPages: 5, _create: function() {
+    this._keySliding = false, this._mouseSliding = false, this._animateOff = true, this._handleIndex = null, this._detectOrientation(), this._mouseInit(), this._calculateNewMax(), this._addClass("ui-slider ui-slider-" + this.orientation, "ui-widget ui-widget-content"), this._refresh(), this._animateOff = false;
+  }, _refresh: function() {
+    this._createRange(), this._createHandles(), this._setupEvents(), this._refreshValue();
+  }, _createHandles: function() {
+    var t2, e2 = this.options, i2 = this.element.find(".ui-slider-handle"), s2 = [], n2 = e2.values && e2.values.length || 1;
+    for (i2.length > n2 && (i2.slice(n2).remove(), i2 = i2.slice(0, n2)), t2 = i2.length; t2 < n2; t2++) s2.push("<span tabindex='0'></span>");
+    this.handles = i2.add(V(s2.join("")).appendTo(this.element)), this._addClass(this.handles, "ui-slider-handle", "ui-state-default"), this.handle = this.handles.eq(0), this.handles.each(function(t3) {
+      V(this).data("ui-slider-handle-index", t3).attr("tabIndex", 0);
+    });
+  }, _createRange: function() {
+    var t2 = this.options;
+    t2.range ? (true === t2.range && (t2.values ? t2.values.length && 2 !== t2.values.length ? t2.values = [t2.values[0], t2.values[0]] : Array.isArray(t2.values) && (t2.values = t2.values.slice(0)) : t2.values = [this._valueMin(), this._valueMin()]), this.range && this.range.length ? (this._removeClass(this.range, "ui-slider-range-min ui-slider-range-max"), this.range.css({ left: "", bottom: "" })) : (this.range = V("<div>").appendTo(this.element), this._addClass(this.range, "ui-slider-range")), "min" !== t2.range && "max" !== t2.range || this._addClass(this.range, "ui-slider-range-" + t2.range)) : (this.range && this.range.remove(), this.range = null);
+  }, _setupEvents: function() {
+    this._off(this.handles), this._on(this.handles, this._handleEvents), this._hoverable(this.handles), this._focusable(this.handles);
+  }, _destroy: function() {
+    this.handles.remove(), this.range && this.range.remove(), this._mouseDestroy();
+  }, _mouseCapture: function(t2) {
+    var i2, s2, n2, o2, e2, a2, r2 = this, l2 = this.options;
+    return !l2.disabled && (this.elementSize = { width: this.element.outerWidth(), height: this.element.outerHeight() }, this.elementOffset = this.element.offset(), e2 = { x: t2.pageX, y: t2.pageY }, i2 = this._normValueFromMouse(e2), s2 = this._valueMax() - this._valueMin() + 1, this.handles.each(function(t3) {
+      var e3 = Math.abs(i2 - r2.values(t3));
+      (e3 < s2 || s2 === e3 && (t3 === r2._lastChangedValue || r2.values(t3) === l2.min)) && (s2 = e3, n2 = V(this), o2 = t3);
+    }), false !== this._start(t2, o2)) && (this._mouseSliding = true, this._handleIndex = o2, this._addClass(n2, null, "ui-state-active"), n2.trigger("focus"), e2 = n2.offset(), a2 = !V(t2.target).parents().addBack().is(".ui-slider-handle"), this._clickOffset = a2 ? { left: 0, top: 0 } : { left: t2.pageX - e2.left - n2.width() / 2, top: t2.pageY - e2.top - n2.height() / 2 - (parseInt(n2.css("borderTopWidth"), 10) || 0) - (parseInt(n2.css("borderBottomWidth"), 10) || 0) + (parseInt(n2.css("marginTop"), 10) || 0) }, this.handles.hasClass("ui-state-hover") || this._slide(t2, o2, i2), this._animateOff = true);
+  }, _mouseStart: function() {
+    return true;
+  }, _mouseDrag: function(t2) {
+    var e2 = { x: t2.pageX, y: t2.pageY }, e2 = this._normValueFromMouse(e2);
+    return this._slide(t2, this._handleIndex, e2), false;
+  }, _mouseStop: function(t2) {
+    return this._removeClass(this.handles, null, "ui-state-active"), this._mouseSliding = false, this._stop(t2, this._handleIndex), this._change(t2, this._handleIndex), this._handleIndex = null, this._clickOffset = null, this._animateOff = false;
+  }, _detectOrientation: function() {
+    this.orientation = "vertical" === this.options.orientation ? "vertical" : "horizontal";
+  }, _normValueFromMouse: function(t2) {
+    var e2, t2 = "horizontal" === this.orientation ? (e2 = this.elementSize.width, t2.x - this.elementOffset.left - (this._clickOffset ? this._clickOffset.left : 0)) : (e2 = this.elementSize.height, t2.y - this.elementOffset.top - (this._clickOffset ? this._clickOffset.top : 0)), t2 = t2 / e2;
+    return (t2 = 1 < t2 ? 1 : t2) < 0 && (t2 = 0), "vertical" === this.orientation && (t2 = 1 - t2), e2 = this._valueMax() - this._valueMin(), t2 = this._valueMin() + t2 * e2, this._trimAlignValue(t2);
+  }, _uiHash: function(t2, e2, i2) {
+    var s2 = { handle: this.handles[t2], handleIndex: t2, value: void 0 !== e2 ? e2 : this.value() };
+    return this._hasMultipleValues() && (s2.value = void 0 !== e2 ? e2 : this.values(t2), s2.values = i2 || this.values()), s2;
+  }, _hasMultipleValues: function() {
+    return this.options.values && this.options.values.length;
+  }, _start: function(t2, e2) {
+    return this._trigger("start", t2, this._uiHash(e2));
+  }, _slide: function(t2, e2, i2) {
+    var s2, n2 = this.value(), o2 = this.values();
+    this._hasMultipleValues() && (s2 = this.values(e2 ? 0 : 1), n2 = this.values(e2), 2 === this.options.values.length && true === this.options.range && (i2 = 0 === e2 ? Math.min(s2, i2) : Math.max(s2, i2)), o2[e2] = i2), i2 !== n2 && false !== this._trigger("slide", t2, this._uiHash(e2, i2, o2)) && (this._hasMultipleValues() ? this.values(e2, i2) : this.value(i2));
+  }, _stop: function(t2, e2) {
+    this._trigger("stop", t2, this._uiHash(e2));
+  }, _change: function(t2, e2) {
+    this._keySliding || this._mouseSliding || (this._lastChangedValue = e2, this._trigger("change", t2, this._uiHash(e2)));
+  }, value: function(t2) {
+    if (!arguments.length) return this._value();
+    this.options.value = this._trimAlignValue(t2), this._refreshValue(), this._change(null, 0);
+  }, values: function(t2, e2) {
+    var i2, s2, n2;
+    if (1 < arguments.length) this.options.values[t2] = this._trimAlignValue(e2), this._refreshValue(), this._change(null, t2);
+    else {
+      if (!arguments.length) return this._values();
+      if (!Array.isArray(t2)) return this._hasMultipleValues() ? this._values(t2) : this.value();
+      for (i2 = this.options.values, s2 = t2, n2 = 0; n2 < i2.length; n2 += 1) i2[n2] = this._trimAlignValue(s2[n2]), this._change(null, n2);
+      this._refreshValue();
     }
-  };
-  Q.TagToFront = function(i, aI, aJ, j) {
-    this.RotateTag(i, 0, 0, aI, aJ, j);
-  };
-  y.Start = function(aI, i, j) {
-    y.Delete(aI);
-    y.tc[aI] = new y(aI, i, j);
-  };
-  function az(i, j) {
-    y.tc[j] && y.tc[j][i]();
-  }
-  y.Linear = function(i, j) {
-    return j / i;
-  };
-  y.Smooth = function(i, j) {
-    return 0.5 - w(j * Math.PI / i) / 2;
-  };
-  y.Pause = function(i) {
-    az("Pause", i);
-  };
-  y.Resume = function(i) {
-    az("Resume", i);
-  };
-  y.Reload = function(i) {
-    az("Load", i);
-  };
-  y.Update = function(i) {
-    az("Update", i);
-  };
-  y.SetSpeed = function(j, i) {
-    if (I(i) && y.tc[j] && !isNaN(i[0]) && !isNaN(i[1])) {
-      y.tc[j].SetSpeed(i);
+  }, _setOption: function(t2, e2) {
+    var i2, s2 = 0;
+    switch ("range" === t2 && true === this.options.range && ("min" === e2 ? (this.options.value = this._values(0), this.options.values = null) : "max" === e2 && (this.options.value = this._values(this.options.values.length - 1), this.options.values = null)), Array.isArray(this.options.values) && (s2 = this.options.values.length), this._super(t2, e2), t2) {
+      case "orientation":
+        this._detectOrientation(), this._removeClass("ui-slider-horizontal ui-slider-vertical")._addClass("ui-slider-" + this.orientation), this._refreshValue(), this.options.range && this._refreshRange(e2), this.handles.css("horizontal" === e2 ? "bottom" : "left", "");
+        break;
+      case "value":
+        this._animateOff = true, this._refreshValue(), this._change(null, 0), this._animateOff = false;
+        break;
+      case "values":
+        for (this._animateOff = true, this._refreshValue(), i2 = s2 - 1; 0 <= i2; i2--) this._change(null, i2);
+        this._animateOff = false;
+        break;
+      case "step":
+      case "min":
+      case "max":
+        this._animateOff = true, this._calculateNewMax(), this._refreshValue(), this._animateOff = false;
+        break;
+      case "range":
+        this._animateOff = true, this._refresh(), this._animateOff = false;
+    }
+  }, _setOptionDisabled: function(t2) {
+    this._super(t2), this._toggleClass(null, "ui-state-disabled", !!t2);
+  }, _value: function() {
+    var t2 = this.options.value;
+    return this._trimAlignValue(t2);
+  }, _values: function(t2) {
+    var e2, i2;
+    if (arguments.length) return t2 = this.options.values[t2], this._trimAlignValue(t2);
+    if (this._hasMultipleValues()) {
+      for (e2 = this.options.values.slice(), i2 = 0; i2 < e2.length; i2 += 1) e2[i2] = this._trimAlignValue(e2[i2]);
+      return e2;
+    }
+    return [];
+  }, _trimAlignValue: function(t2) {
+    var e2, i2;
+    return t2 <= this._valueMin() ? this._valueMin() : t2 >= this._valueMax() ? this._valueMax() : (e2 = 0 < this.options.step ? this.options.step : 1, i2 = t2 - (t2 = (t2 - this._valueMin()) % e2), 2 * Math.abs(t2) >= e2 && (i2 += 0 < t2 ? e2 : -e2), parseFloat(i2.toFixed(5)));
+  }, _calculateNewMax: function() {
+    var t2 = this.options.max, e2 = this._valueMin(), i2 = this.options.step;
+    (t2 = Math.round((t2 - e2) / i2) * i2 + e2) > this.options.max && (t2 -= i2), this.max = parseFloat(t2.toFixed(this._precision()));
+  }, _precision: function() {
+    var t2 = this._precisionOf(this.options.step);
+    return t2 = null !== this.options.min ? Math.max(t2, this._precisionOf(this.options.min)) : t2;
+  }, _precisionOf: function(t2) {
+    var t2 = t2.toString(), e2 = t2.indexOf(".");
+    return -1 === e2 ? 0 : t2.length - e2 - 1;
+  }, _valueMin: function() {
+    return this.options.min;
+  }, _valueMax: function() {
+    return this.max;
+  }, _refreshRange: function(t2) {
+    "vertical" === t2 && this.range.css({ width: "", left: "" }), "horizontal" === t2 && this.range.css({ height: "", bottom: "" });
+  }, _refreshValue: function() {
+    var e2, i2, t2, s2, n2, o2 = this.options.range, a2 = this.options, r2 = this, l2 = !this._animateOff && a2.animate, h2 = {};
+    this._hasMultipleValues() ? this.handles.each(function(t3) {
+      i2 = (r2.values(t3) - r2._valueMin()) / (r2._valueMax() - r2._valueMin()) * 100, h2["horizontal" === r2.orientation ? "left" : "bottom"] = i2 + "%", V(this).stop(1, 1)[l2 ? "animate" : "css"](h2, a2.animate), true === r2.options.range && ("horizontal" === r2.orientation ? (0 === t3 && r2.range.stop(1, 1)[l2 ? "animate" : "css"]({ left: i2 + "%" }, a2.animate), 1 === t3 && r2.range[l2 ? "animate" : "css"]({ width: i2 - e2 + "%" }, { queue: false, duration: a2.animate })) : (0 === t3 && r2.range.stop(1, 1)[l2 ? "animate" : "css"]({ bottom: i2 + "%" }, a2.animate), 1 === t3 && r2.range[l2 ? "animate" : "css"]({ height: i2 - e2 + "%" }, { queue: false, duration: a2.animate }))), e2 = i2;
+    }) : (t2 = this.value(), s2 = this._valueMin(), n2 = this._valueMax(), i2 = n2 !== s2 ? (t2 - s2) / (n2 - s2) * 100 : 0, h2["horizontal" === this.orientation ? "left" : "bottom"] = i2 + "%", this.handle.stop(1, 1)[l2 ? "animate" : "css"](h2, a2.animate), "min" === o2 && "horizontal" === this.orientation && this.range.stop(1, 1)[l2 ? "animate" : "css"]({ width: i2 + "%" }, a2.animate), "max" === o2 && "horizontal" === this.orientation && this.range.stop(1, 1)[l2 ? "animate" : "css"]({ width: 100 - i2 + "%" }, a2.animate), "min" === o2 && "vertical" === this.orientation && this.range.stop(1, 1)[l2 ? "animate" : "css"]({ height: i2 + "%" }, a2.animate), "max" === o2 && "vertical" === this.orientation && this.range.stop(1, 1)[l2 ? "animate" : "css"]({ height: 100 - i2 + "%" }, a2.animate));
+  }, _handleEvents: { keydown: function(t2) {
+    var e2, i2, s2, n2 = V(t2.target).data("ui-slider-handle-index");
+    switch (t2.keyCode) {
+      case V.ui.keyCode.HOME:
+      case V.ui.keyCode.END:
+      case V.ui.keyCode.PAGE_UP:
+      case V.ui.keyCode.PAGE_DOWN:
+      case V.ui.keyCode.UP:
+      case V.ui.keyCode.RIGHT:
+      case V.ui.keyCode.DOWN:
+      case V.ui.keyCode.LEFT:
+        if (t2.preventDefault(), this._keySliding || (this._keySliding = true, this._addClass(V(t2.target), null, "ui-state-active"), false !== this._start(t2, n2))) break;
+        return;
+    }
+    switch (s2 = this.options.step, e2 = i2 = this._hasMultipleValues() ? this.values(n2) : this.value(), t2.keyCode) {
+      case V.ui.keyCode.HOME:
+        i2 = this._valueMin();
+        break;
+      case V.ui.keyCode.END:
+        i2 = this._valueMax();
+        break;
+      case V.ui.keyCode.PAGE_UP:
+        i2 = this._trimAlignValue(e2 + (this._valueMax() - this._valueMin()) / this.numPages);
+        break;
+      case V.ui.keyCode.PAGE_DOWN:
+        i2 = this._trimAlignValue(e2 - (this._valueMax() - this._valueMin()) / this.numPages);
+        break;
+      case V.ui.keyCode.UP:
+      case V.ui.keyCode.RIGHT:
+        if (e2 === this._valueMax()) return;
+        i2 = this._trimAlignValue(e2 + s2);
+        break;
+      case V.ui.keyCode.DOWN:
+      case V.ui.keyCode.LEFT:
+        if (e2 === this._valueMin()) return;
+        i2 = this._trimAlignValue(e2 - s2);
+    }
+    this._slide(t2, n2, i2);
+  }, keyup: function(t2) {
+    var e2 = V(t2.target).data("ui-slider-handle-index");
+    this._keySliding && (this._keySliding = false, this._stop(t2, e2), this._change(t2, e2), this._removeClass(V(t2.target), null, "ui-state-active"));
+  } } }), V.widget("ui.sortable", V.ui.mouse, { version: "1.13.3", widgetEventPrefix: "sort", ready: false, options: { appendTo: "parent", axis: false, connectWith: false, containment: false, cursor: "auto", cursorAt: false, dropOnEmpty: true, forcePlaceholderSize: false, forceHelperSize: false, grid: false, handle: false, helper: "original", items: "> *", opacity: false, placeholder: false, revert: false, scroll: true, scrollSensitivity: 20, scrollSpeed: 20, scope: "default", tolerance: "intersect", zIndex: 1e3, activate: null, beforeStop: null, change: null, deactivate: null, out: null, over: null, receive: null, remove: null, sort: null, start: null, stop: null, update: null }, _isOverAxis: function(t2, e2, i2) {
+    return e2 <= t2 && t2 < e2 + i2;
+  }, _isFloating: function(t2) {
+    return /left|right/.test(t2.css("float")) || /inline|table-cell/.test(t2.css("display"));
+  }, _create: function() {
+    this.containerCache = {}, this._addClass("ui-sortable"), this.refresh(), this.offset = this.element.offset(), this._mouseInit(), this._setHandleClassName(), this.ready = true;
+  }, _setOption: function(t2, e2) {
+    this._super(t2, e2), "handle" === t2 && this._setHandleClassName();
+  }, _setHandleClassName: function() {
+    var t2 = this;
+    this._removeClass(this.element.find(".ui-sortable-handle"), "ui-sortable-handle"), V.each(this.items, function() {
+      t2._addClass(this.instance.options.handle ? this.item.find(this.instance.options.handle) : this.item, "ui-sortable-handle");
+    });
+  }, _destroy: function() {
+    this._mouseDestroy();
+    for (var t2 = this.items.length - 1; 0 <= t2; t2--) this.items[t2].item.removeData(this.widgetName + "-item");
+    return this;
+  }, _mouseCapture: function(t2, e2) {
+    var i2 = null, s2 = false, n2 = this;
+    return !(this.reverting || this.options.disabled || "static" === this.options.type || (this._refreshItems(t2), V(t2.target).parents().each(function() {
+      if (V.data(this, n2.widgetName + "-item") === n2) return i2 = V(this), false;
+    }), !(i2 = V.data(t2.target, n2.widgetName + "-item") === n2 ? V(t2.target) : i2)) || (this.options.handle && !e2 && (V(this.options.handle, i2).find("*").addBack().each(function() {
+      this === t2.target && (s2 = true);
+    }), !s2) || (this.currentItem = i2, this._removeCurrentsFromItems(), 0)));
+  }, _mouseStart: function(t2, e2, i2) {
+    var s2, n2, o2 = this.options;
+    if ((this.currentContainer = this).refreshPositions(), this.appendTo = V("parent" !== o2.appendTo ? o2.appendTo : this.currentItem.parent()), this.helper = this._createHelper(t2), this._cacheHelperProportions(), this._cacheMargins(), this.offset = this.currentItem.offset(), this.offset = { top: this.offset.top - this.margins.top, left: this.offset.left - this.margins.left }, V.extend(this.offset, { click: { left: t2.pageX - this.offset.left, top: t2.pageY - this.offset.top }, relative: this._getRelativeOffset() }), this.helper.css("position", "absolute"), this.cssPosition = this.helper.css("position"), o2.cursorAt && this._adjustOffsetFromHelper(o2.cursorAt), this.domPosition = { prev: this.currentItem.prev()[0], parent: this.currentItem.parent()[0] }, this.helper[0] !== this.currentItem[0] && this.currentItem.hide(), this._createPlaceholder(), this.scrollParent = this.placeholder.scrollParent(), V.extend(this.offset, { parent: this._getParentOffset() }), o2.containment && this._setContainment(), o2.cursor && "auto" !== o2.cursor && (n2 = this.document.find("body"), this.storedCursor = n2.css("cursor"), n2.css("cursor", o2.cursor), this.storedStylesheet = V("<style>*{ cursor: " + o2.cursor + " !important; }</style>").appendTo(n2)), o2.zIndex && (this.helper.css("zIndex") && (this._storedZIndex = this.helper.css("zIndex")), this.helper.css("zIndex", o2.zIndex)), o2.opacity && (this.helper.css("opacity") && (this._storedOpacity = this.helper.css("opacity")), this.helper.css("opacity", o2.opacity)), this.scrollParent[0] !== this.document[0] && "HTML" !== this.scrollParent[0].tagName && (this.overflowOffset = this.scrollParent.offset()), this._trigger("start", t2, this._uiHash()), this._preserveHelperProportions || this._cacheHelperProportions(), !i2) for (s2 = this.containers.length - 1; 0 <= s2; s2--) this.containers[s2]._trigger("activate", t2, this._uiHash(this));
+    return V.ui.ddmanager && (V.ui.ddmanager.current = this), V.ui.ddmanager && !o2.dropBehaviour && V.ui.ddmanager.prepareOffsets(this, t2), this.dragging = true, this._addClass(this.helper, "ui-sortable-helper"), this.helper.parent().is(this.appendTo) || (this.helper.detach().appendTo(this.appendTo), this.offset.parent = this._getParentOffset()), this.position = this.originalPosition = this._generatePosition(t2), this.originalPageX = t2.pageX, this.originalPageY = t2.pageY, this.lastPositionAbs = this.positionAbs = this._convertPositionTo("absolute"), this._mouseDrag(t2), true;
+  }, _scroll: function(t2) {
+    var e2 = this.options, i2 = false;
+    return this.scrollParent[0] !== this.document[0] && "HTML" !== this.scrollParent[0].tagName ? (this.overflowOffset.top + this.scrollParent[0].offsetHeight - t2.pageY < e2.scrollSensitivity ? this.scrollParent[0].scrollTop = i2 = this.scrollParent[0].scrollTop + e2.scrollSpeed : t2.pageY - this.overflowOffset.top < e2.scrollSensitivity && (this.scrollParent[0].scrollTop = i2 = this.scrollParent[0].scrollTop - e2.scrollSpeed), this.overflowOffset.left + this.scrollParent[0].offsetWidth - t2.pageX < e2.scrollSensitivity ? this.scrollParent[0].scrollLeft = i2 = this.scrollParent[0].scrollLeft + e2.scrollSpeed : t2.pageX - this.overflowOffset.left < e2.scrollSensitivity && (this.scrollParent[0].scrollLeft = i2 = this.scrollParent[0].scrollLeft - e2.scrollSpeed)) : (t2.pageY - this.document.scrollTop() < e2.scrollSensitivity ? i2 = this.document.scrollTop(this.document.scrollTop() - e2.scrollSpeed) : this.window.height() - (t2.pageY - this.document.scrollTop()) < e2.scrollSensitivity && (i2 = this.document.scrollTop(this.document.scrollTop() + e2.scrollSpeed)), t2.pageX - this.document.scrollLeft() < e2.scrollSensitivity ? i2 = this.document.scrollLeft(this.document.scrollLeft() - e2.scrollSpeed) : this.window.width() - (t2.pageX - this.document.scrollLeft()) < e2.scrollSensitivity && (i2 = this.document.scrollLeft(this.document.scrollLeft() + e2.scrollSpeed))), i2;
+  }, _mouseDrag: function(t2) {
+    var e2, i2, s2, n2, o2 = this.options;
+    for (this.position = this._generatePosition(t2), this.positionAbs = this._convertPositionTo("absolute"), this.options.axis && "y" === this.options.axis || (this.helper[0].style.left = this.position.left + "px"), this.options.axis && "x" === this.options.axis || (this.helper[0].style.top = this.position.top + "px"), o2.scroll && false !== this._scroll(t2) && (this._refreshItemPositions(true), V.ui.ddmanager) && !o2.dropBehaviour && V.ui.ddmanager.prepareOffsets(this, t2), this.dragDirection = { vertical: this._getDragVerticalDirection(), horizontal: this._getDragHorizontalDirection() }, e2 = this.items.length - 1; 0 <= e2; e2--) if (s2 = (i2 = this.items[e2]).item[0], (n2 = this._intersectsWithPointer(i2)) && i2.instance === this.currentContainer && !(s2 === this.currentItem[0] || this.placeholder[1 === n2 ? "next" : "prev"]()[0] === s2 || V.contains(this.placeholder[0], s2) || "semi-dynamic" === this.options.type && V.contains(this.element[0], s2))) {
+      if (this.direction = 1 === n2 ? "down" : "up", "pointer" !== this.options.tolerance && !this._intersectsWithSides(i2)) break;
+      this._rearrange(t2, i2), this._trigger("change", t2, this._uiHash());
+      break;
+    }
+    return this._contactContainers(t2), V.ui.ddmanager && V.ui.ddmanager.drag(this, t2), this._trigger("sort", t2, this._uiHash()), this.lastPositionAbs = this.positionAbs, false;
+  }, _mouseStop: function(t2, e2) {
+    var i2, s2, n2, o2;
+    if (t2) return V.ui.ddmanager && !this.options.dropBehaviour && V.ui.ddmanager.drop(this, t2), this.options.revert ? (s2 = (i2 = this).placeholder.offset(), o2 = {}, (n2 = this.options.axis) && "x" !== n2 || (o2.left = s2.left - this.offset.parent.left - this.margins.left + (this.offsetParent[0] === this.document[0].body ? 0 : this.offsetParent[0].scrollLeft)), n2 && "y" !== n2 || (o2.top = s2.top - this.offset.parent.top - this.margins.top + (this.offsetParent[0] === this.document[0].body ? 0 : this.offsetParent[0].scrollTop)), this.reverting = true, V(this.helper).animate(o2, parseInt(this.options.revert, 10) || 500, function() {
+      i2._clear(t2);
+    })) : this._clear(t2, e2), false;
+  }, cancel: function() {
+    if (this.dragging) {
+      this._mouseUp(new V.Event("mouseup", { target: null })), "original" === this.options.helper ? (this.currentItem.css(this._storedCSS), this._removeClass(this.currentItem, "ui-sortable-helper")) : this.currentItem.show();
+      for (var t2 = this.containers.length - 1; 0 <= t2; t2--) this.containers[t2]._trigger("deactivate", null, this._uiHash(this)), this.containers[t2].containerCache.over && (this.containers[t2]._trigger("out", null, this._uiHash(this)), this.containers[t2].containerCache.over = 0);
+    }
+    return this.placeholder && (this.placeholder[0].parentNode && this.placeholder[0].parentNode.removeChild(this.placeholder[0]), "original" !== this.options.helper && this.helper && this.helper[0].parentNode && this.helper.remove(), V.extend(this, { helper: null, dragging: false, reverting: false, _noFinalSort: null }), this.domPosition.prev ? V(this.domPosition.prev).after(this.currentItem) : V(this.domPosition.parent).prepend(this.currentItem)), this;
+  }, serialize: function(e2) {
+    var t2 = this._getItemsAsjQuery(e2 && e2.connected), i2 = [];
+    return e2 = e2 || {}, V(t2).each(function() {
+      var t3 = (V(e2.item || this).attr(e2.attribute || "id") || "").match(e2.expression || /(.+)[\-=_](.+)/);
+      t3 && i2.push((e2.key || t3[1] + "[]") + "=" + (e2.key && e2.expression ? t3[1] : t3[2]));
+    }), !i2.length && e2.key && i2.push(e2.key + "="), i2.join("&");
+  }, toArray: function(t2) {
+    var e2 = this._getItemsAsjQuery(t2 && t2.connected), i2 = [];
+    return t2 = t2 || {}, e2.each(function() {
+      i2.push(V(t2.item || this).attr(t2.attribute || "id") || "");
+    }), i2;
+  }, _intersectsWith: function(t2) {
+    var e2 = this.positionAbs.left, i2 = e2 + this.helperProportions.width, s2 = this.positionAbs.top, n2 = s2 + this.helperProportions.height, o2 = t2.left, a2 = o2 + t2.width, r2 = t2.top, l2 = r2 + t2.height, h2 = this.offset.click.top, c2 = this.offset.click.left, h2 = "x" === this.options.axis || r2 < s2 + h2 && s2 + h2 < l2, c2 = "y" === this.options.axis || o2 < e2 + c2 && e2 + c2 < a2;
+    return "pointer" === this.options.tolerance || this.options.forcePointerForContainers || "pointer" !== this.options.tolerance && this.helperProportions[this.floating ? "width" : "height"] > t2[this.floating ? "width" : "height"] ? h2 && c2 : o2 < e2 + this.helperProportions.width / 2 && i2 - this.helperProportions.width / 2 < a2 && r2 < s2 + this.helperProportions.height / 2 && n2 - this.helperProportions.height / 2 < l2;
+  }, _intersectsWithPointer: function(t2) {
+    var e2 = "x" === this.options.axis || this._isOverAxis(this.positionAbs.top + this.offset.click.top, t2.top, t2.height), t2 = "y" === this.options.axis || this._isOverAxis(this.positionAbs.left + this.offset.click.left, t2.left, t2.width);
+    return !(!e2 || !t2) && (e2 = this.dragDirection.vertical, t2 = this.dragDirection.horizontal, this.floating ? "right" === t2 || "down" === e2 ? 2 : 1 : e2 && ("down" === e2 ? 2 : 1));
+  }, _intersectsWithSides: function(t2) {
+    var e2 = this._isOverAxis(this.positionAbs.top + this.offset.click.top, t2.top + t2.height / 2, t2.height), t2 = this._isOverAxis(this.positionAbs.left + this.offset.click.left, t2.left + t2.width / 2, t2.width), i2 = this.dragDirection.vertical, s2 = this.dragDirection.horizontal;
+    return this.floating && s2 ? "right" === s2 && t2 || "left" === s2 && !t2 : i2 && ("down" === i2 && e2 || "up" === i2 && !e2);
+  }, _getDragVerticalDirection: function() {
+    var t2 = this.positionAbs.top - this.lastPositionAbs.top;
+    return 0 != t2 && (0 < t2 ? "down" : "up");
+  }, _getDragHorizontalDirection: function() {
+    var t2 = this.positionAbs.left - this.lastPositionAbs.left;
+    return 0 != t2 && (0 < t2 ? "right" : "left");
+  }, refresh: function(t2) {
+    return this._refreshItems(t2), this._setHandleClassName(), this.refreshPositions(), this;
+  }, _connectWith: function() {
+    var t2 = this.options;
+    return t2.connectWith.constructor === String ? [t2.connectWith] : t2.connectWith;
+  }, _getItemsAsjQuery: function(t2) {
+    var e2, i2, s2, n2, o2 = [], a2 = [], r2 = this._connectWith();
+    if (r2 && t2) for (e2 = r2.length - 1; 0 <= e2; e2--) for (i2 = (s2 = V(r2[e2], this.document[0])).length - 1; 0 <= i2; i2--) (n2 = V.data(s2[i2], this.widgetFullName)) && n2 !== this && !n2.options.disabled && a2.push(["function" == typeof n2.options.items ? n2.options.items.call(n2.element) : V(n2.options.items, n2.element).not(".ui-sortable-helper").not(".ui-sortable-placeholder"), n2]);
+    function l2() {
+      o2.push(this);
+    }
+    for (a2.push(["function" == typeof this.options.items ? this.options.items.call(this.element, null, { options: this.options, item: this.currentItem }) : V(this.options.items, this.element).not(".ui-sortable-helper").not(".ui-sortable-placeholder"), this]), e2 = a2.length - 1; 0 <= e2; e2--) a2[e2][0].each(l2);
+    return V(o2);
+  }, _removeCurrentsFromItems: function() {
+    var i2 = this.currentItem.find(":data(" + this.widgetName + "-item)");
+    this.items = V.grep(this.items, function(t2) {
+      for (var e2 = 0; e2 < i2.length; e2++) if (i2[e2] === t2.item[0]) return false;
       return true;
+    });
+  }, _refreshItems: function(t2) {
+    this.items = [], this.containers = [this];
+    var e2, i2, s2, n2, o2, a2, r2, l2, h2 = this.items, c2 = [["function" == typeof this.options.items ? this.options.items.call(this.element[0], t2, { item: this.currentItem }) : V(this.options.items, this.element), this]], u2 = this._connectWith();
+    if (u2 && this.ready) for (e2 = u2.length - 1; 0 <= e2; e2--) for (i2 = (s2 = V(u2[e2], this.document[0])).length - 1; 0 <= i2; i2--) (n2 = V.data(s2[i2], this.widgetFullName)) && n2 !== this && !n2.options.disabled && (c2.push(["function" == typeof n2.options.items ? n2.options.items.call(n2.element[0], t2, { item: this.currentItem }) : V(n2.options.items, n2.element), n2]), this.containers.push(n2));
+    for (e2 = c2.length - 1; 0 <= e2; e2--) for (o2 = c2[e2][1], l2 = (a2 = c2[e2][i2 = 0]).length; i2 < l2; i2++) (r2 = V(a2[i2])).data(this.widgetName + "-item", o2), h2.push({ item: r2, instance: o2, width: 0, height: 0, left: 0, top: 0 });
+  }, _refreshItemPositions: function(t2) {
+    for (var e2, i2, s2 = this.items.length - 1; 0 <= s2; s2--) e2 = this.items[s2], this.currentContainer && e2.instance !== this.currentContainer && e2.item[0] !== this.currentItem[0] || (i2 = this.options.toleranceElement ? V(this.options.toleranceElement, e2.item) : e2.item, t2 || (e2.width = i2.outerWidth(), e2.height = i2.outerHeight()), i2 = i2.offset(), e2.left = i2.left, e2.top = i2.top);
+  }, refreshPositions: function(t2) {
+    var e2, i2;
+    if (this.floating = !!this.items.length && ("x" === this.options.axis || this._isFloating(this.items[0].item)), this.offsetParent && this.helper && (this.offset.parent = this._getParentOffset()), this._refreshItemPositions(t2), this.options.custom && this.options.custom.refreshContainers) this.options.custom.refreshContainers.call(this);
+    else for (e2 = this.containers.length - 1; 0 <= e2; e2--) i2 = this.containers[e2].element.offset(), this.containers[e2].containerCache.left = i2.left, this.containers[e2].containerCache.top = i2.top, this.containers[e2].containerCache.width = this.containers[e2].element.outerWidth(), this.containers[e2].containerCache.height = this.containers[e2].element.outerHeight();
+    return this;
+  }, _createPlaceholder: function(i2) {
+    var s2, n2, o2 = (i2 = i2 || this).options;
+    o2.placeholder && o2.placeholder.constructor !== String || (s2 = o2.placeholder, n2 = i2.currentItem[0].nodeName.toLowerCase(), o2.placeholder = { element: function() {
+      var t2 = V("<" + n2 + ">", i2.document[0]);
+      return i2._addClass(t2, "ui-sortable-placeholder", s2 || i2.currentItem[0].className)._removeClass(t2, "ui-sortable-helper"), "tbody" === n2 ? i2._createTrPlaceholder(i2.currentItem.find("tr").eq(0), V("<tr>", i2.document[0]).appendTo(t2)) : "tr" === n2 ? i2._createTrPlaceholder(i2.currentItem, t2) : "img" === n2 && t2.attr("src", i2.currentItem.attr("src")), s2 || t2.css("visibility", "hidden"), t2;
+    }, update: function(t2, e2) {
+      s2 && !o2.forcePlaceholderSize || (e2.height() && (!o2.forcePlaceholderSize || "tbody" !== n2 && "tr" !== n2) || e2.height(i2.currentItem.innerHeight() - parseInt(i2.currentItem.css("paddingTop") || 0, 10) - parseInt(i2.currentItem.css("paddingBottom") || 0, 10)), e2.width()) || e2.width(i2.currentItem.innerWidth() - parseInt(i2.currentItem.css("paddingLeft") || 0, 10) - parseInt(i2.currentItem.css("paddingRight") || 0, 10));
+    } }), i2.placeholder = V(o2.placeholder.element.call(i2.element, i2.currentItem)), i2.currentItem.after(i2.placeholder), o2.placeholder.update(i2, i2.placeholder);
+  }, _createTrPlaceholder: function(t2, e2) {
+    var i2 = this;
+    t2.children().each(function() {
+      V("<td>&#160;</td>", i2.document[0]).attr("colspan", V(this).attr("colspan") || 1).appendTo(e2);
+    });
+  }, _contactContainers: function(t2) {
+    for (var e2, i2, s2, n2, o2, a2, r2, l2, h2, c2 = null, u2 = null, d2 = this.containers.length - 1; 0 <= d2; d2--) V.contains(this.currentItem[0], this.containers[d2].element[0]) || (this._intersectsWith(this.containers[d2].containerCache) ? c2 && V.contains(this.containers[d2].element[0], c2.element[0]) || (c2 = this.containers[d2], u2 = d2) : this.containers[d2].containerCache.over && (this.containers[d2]._trigger("out", t2, this._uiHash(this)), this.containers[d2].containerCache.over = 0));
+    if (c2) if (1 === this.containers.length) this.containers[u2].containerCache.over || (this.containers[u2]._trigger("over", t2, this._uiHash(this)), this.containers[u2].containerCache.over = 1);
+    else {
+      for (i2 = 1e4, s2 = null, n2 = (l2 = c2.floating || this._isFloating(this.currentItem)) ? "left" : "top", o2 = l2 ? "width" : "height", h2 = l2 ? "pageX" : "pageY", e2 = this.items.length - 1; 0 <= e2; e2--) V.contains(this.containers[u2].element[0], this.items[e2].item[0]) && this.items[e2].item[0] !== this.currentItem[0] && (a2 = this.items[e2].item.offset()[n2], r2 = false, t2[h2] - a2 > this.items[e2][o2] / 2 && (r2 = true), Math.abs(t2[h2] - a2) < i2) && (i2 = Math.abs(t2[h2] - a2), s2 = this.items[e2], this.direction = r2 ? "up" : "down");
+      (s2 || this.options.dropOnEmpty) && (this.currentContainer === this.containers[u2] ? this.currentContainer.containerCache.over || (this.containers[u2]._trigger("over", t2, this._uiHash()), this.currentContainer.containerCache.over = 1) : (s2 ? this._rearrange(t2, s2, null, true) : this._rearrange(t2, null, this.containers[u2].element, true), this._trigger("change", t2, this._uiHash()), this.containers[u2]._trigger("change", t2, this._uiHash(this)), this.currentContainer = this.containers[u2], this.options.placeholder.update(this.currentContainer, this.placeholder), this.scrollParent = this.placeholder.scrollParent(), this.scrollParent[0] !== this.document[0] && "HTML" !== this.scrollParent[0].tagName && (this.overflowOffset = this.scrollParent.offset()), this.containers[u2]._trigger("over", t2, this._uiHash(this)), this.containers[u2].containerCache.over = 1));
+    }
+  }, _createHelper: function(t2) {
+    var e2 = this.options, t2 = "function" == typeof e2.helper ? V(e2.helper.apply(this.element[0], [t2, this.currentItem])) : "clone" === e2.helper ? this.currentItem.clone() : this.currentItem;
+    return t2.parents("body").length || this.appendTo[0].appendChild(t2[0]), t2[0] === this.currentItem[0] && (this._storedCSS = { width: this.currentItem[0].style.width, height: this.currentItem[0].style.height, position: this.currentItem.css("position"), top: this.currentItem.css("top"), left: this.currentItem.css("left") }), t2[0].style.width && !e2.forceHelperSize || t2.width(this.currentItem.width()), t2[0].style.height && !e2.forceHelperSize || t2.height(this.currentItem.height()), t2;
+  }, _adjustOffsetFromHelper: function(t2) {
+    "string" == typeof t2 && (t2 = t2.split(" ")), "left" in (t2 = Array.isArray(t2) ? { left: +t2[0], top: +t2[1] || 0 } : t2) && (this.offset.click.left = t2.left + this.margins.left), "right" in t2 && (this.offset.click.left = this.helperProportions.width - t2.right + this.margins.left), "top" in t2 && (this.offset.click.top = t2.top + this.margins.top), "bottom" in t2 && (this.offset.click.top = this.helperProportions.height - t2.bottom + this.margins.top);
+  }, _getParentOffset: function() {
+    this.offsetParent = this.helper.offsetParent();
+    var t2 = this.offsetParent.offset();
+    return "absolute" === this.cssPosition && this.scrollParent[0] !== this.document[0] && V.contains(this.scrollParent[0], this.offsetParent[0]) && (t2.left += this.scrollParent.scrollLeft(), t2.top += this.scrollParent.scrollTop()), { top: (t2 = this.offsetParent[0] === this.document[0].body || this.offsetParent[0].tagName && "html" === this.offsetParent[0].tagName.toLowerCase() && V.ui.ie ? { top: 0, left: 0 } : t2).top + (parseInt(this.offsetParent.css("borderTopWidth"), 10) || 0), left: t2.left + (parseInt(this.offsetParent.css("borderLeftWidth"), 10) || 0) };
+  }, _getRelativeOffset: function() {
+    var t2;
+    return "relative" === this.cssPosition ? { top: (t2 = this.currentItem.position()).top - (parseInt(this.helper.css("top"), 10) || 0) + this.scrollParent.scrollTop(), left: t2.left - (parseInt(this.helper.css("left"), 10) || 0) + this.scrollParent.scrollLeft() } : { top: 0, left: 0 };
+  }, _cacheMargins: function() {
+    this.margins = { left: parseInt(this.currentItem.css("marginLeft"), 10) || 0, top: parseInt(this.currentItem.css("marginTop"), 10) || 0 };
+  }, _cacheHelperProportions: function() {
+    this.helperProportions = { width: this.helper.outerWidth(), height: this.helper.outerHeight() };
+  }, _setContainment: function() {
+    var t2, e2, i2 = this.options;
+    "parent" === i2.containment && (i2.containment = this.helper[0].parentNode), "document" !== i2.containment && "window" !== i2.containment || (this.containment = [0 - this.offset.relative.left - this.offset.parent.left, 0 - this.offset.relative.top - this.offset.parent.top, "document" === i2.containment ? this.document.width() : this.window.width() - this.helperProportions.width - this.margins.left, ("document" === i2.containment ? this.document.height() || document.body.parentNode.scrollHeight : this.window.height() || this.document[0].body.parentNode.scrollHeight) - this.helperProportions.height - this.margins.top]), /^(document|window|parent)$/.test(i2.containment) || (t2 = V(i2.containment)[0], i2 = V(i2.containment).offset(), e2 = "hidden" !== V(t2).css("overflow"), this.containment = [i2.left + (parseInt(V(t2).css("borderLeftWidth"), 10) || 0) + (parseInt(V(t2).css("paddingLeft"), 10) || 0) - this.margins.left, i2.top + (parseInt(V(t2).css("borderTopWidth"), 10) || 0) + (parseInt(V(t2).css("paddingTop"), 10) || 0) - this.margins.top, i2.left + (e2 ? Math.max(t2.scrollWidth, t2.offsetWidth) : t2.offsetWidth) - (parseInt(V(t2).css("borderLeftWidth"), 10) || 0) - (parseInt(V(t2).css("paddingRight"), 10) || 0) - this.helperProportions.width - this.margins.left, i2.top + (e2 ? Math.max(t2.scrollHeight, t2.offsetHeight) : t2.offsetHeight) - (parseInt(V(t2).css("borderTopWidth"), 10) || 0) - (parseInt(V(t2).css("paddingBottom"), 10) || 0) - this.helperProportions.height - this.margins.top]);
+  }, _convertPositionTo: function(t2, e2) {
+    e2 = e2 || this.position;
+    var t2 = "absolute" === t2 ? 1 : -1, i2 = "absolute" !== this.cssPosition || this.scrollParent[0] !== this.document[0] && V.contains(this.scrollParent[0], this.offsetParent[0]) ? this.scrollParent : this.offsetParent, s2 = /(html|body)/i.test(i2[0].tagName);
+    return { top: e2.top + this.offset.relative.top * t2 + this.offset.parent.top * t2 - ("fixed" === this.cssPosition ? -this.scrollParent.scrollTop() : s2 ? 0 : i2.scrollTop()) * t2, left: e2.left + this.offset.relative.left * t2 + this.offset.parent.left * t2 - ("fixed" === this.cssPosition ? -this.scrollParent.scrollLeft() : s2 ? 0 : i2.scrollLeft()) * t2 };
+  }, _generatePosition: function(t2) {
+    var e2 = this.options, i2 = t2.pageX, s2 = t2.pageY, n2 = "absolute" !== this.cssPosition || this.scrollParent[0] !== this.document[0] && V.contains(this.scrollParent[0], this.offsetParent[0]) ? this.scrollParent : this.offsetParent, o2 = /(html|body)/i.test(n2[0].tagName);
+    return "relative" !== this.cssPosition || this.scrollParent[0] !== this.document[0] && this.scrollParent[0] !== this.offsetParent[0] || (this.offset.relative = this._getRelativeOffset()), this.originalPosition && (this.containment && (t2.pageX - this.offset.click.left < this.containment[0] && (i2 = this.containment[0] + this.offset.click.left), t2.pageY - this.offset.click.top < this.containment[1] && (s2 = this.containment[1] + this.offset.click.top), t2.pageX - this.offset.click.left > this.containment[2] && (i2 = this.containment[2] + this.offset.click.left), t2.pageY - this.offset.click.top > this.containment[3]) && (s2 = this.containment[3] + this.offset.click.top), e2.grid) && (t2 = this.originalPageY + Math.round((s2 - this.originalPageY) / e2.grid[1]) * e2.grid[1], s2 = !this.containment || t2 - this.offset.click.top >= this.containment[1] && t2 - this.offset.click.top <= this.containment[3] ? t2 : t2 - this.offset.click.top >= this.containment[1] ? t2 - e2.grid[1] : t2 + e2.grid[1], t2 = this.originalPageX + Math.round((i2 - this.originalPageX) / e2.grid[0]) * e2.grid[0], i2 = !this.containment || t2 - this.offset.click.left >= this.containment[0] && t2 - this.offset.click.left <= this.containment[2] ? t2 : t2 - this.offset.click.left >= this.containment[0] ? t2 - e2.grid[0] : t2 + e2.grid[0]), { top: s2 - this.offset.click.top - this.offset.relative.top - this.offset.parent.top + ("fixed" === this.cssPosition ? -this.scrollParent.scrollTop() : o2 ? 0 : n2.scrollTop()), left: i2 - this.offset.click.left - this.offset.relative.left - this.offset.parent.left + ("fixed" === this.cssPosition ? -this.scrollParent.scrollLeft() : o2 ? 0 : n2.scrollLeft()) };
+  }, _rearrange: function(t2, e2, i2, s2) {
+    i2 ? i2[0].appendChild(this.placeholder[0]) : e2.item[0].parentNode.insertBefore(this.placeholder[0], "down" === this.direction ? e2.item[0] : e2.item[0].nextSibling), this.counter = this.counter ? ++this.counter : 1;
+    var n2 = this.counter;
+    this._delay(function() {
+      n2 === this.counter && this.refreshPositions(!s2);
+    });
+  }, _clear: function(t2, e2) {
+    this.reverting = false;
+    var i2, s2 = [];
+    if (!this._noFinalSort && this.currentItem.parent().length && this.placeholder.before(this.currentItem), this._noFinalSort = null, this.helper[0] === this.currentItem[0]) {
+      for (i2 in this._storedCSS) "auto" !== this._storedCSS[i2] && "static" !== this._storedCSS[i2] || (this._storedCSS[i2] = "");
+      this.currentItem.css(this._storedCSS), this._removeClass(this.currentItem, "ui-sortable-helper");
+    } else this.currentItem.show();
+    function n2(e3, i3, s3) {
+      return function(t3) {
+        s3._trigger(e3, t3, i3._uiHash(i3));
+      };
+    }
+    for (this.fromOutside && !e2 && s2.push(function(t3) {
+      this._trigger("receive", t3, this._uiHash(this.fromOutside));
+    }), !this.fromOutside && this.domPosition.prev === this.currentItem.prev().not(".ui-sortable-helper")[0] && this.domPosition.parent === this.currentItem.parent()[0] || e2 || s2.push(function(t3) {
+      this._trigger("update", t3, this._uiHash());
+    }), this === this.currentContainer || e2 || (s2.push(function(t3) {
+      this._trigger("remove", t3, this._uiHash());
+    }), s2.push(function(e3) {
+      return function(t3) {
+        e3._trigger("receive", t3, this._uiHash(this));
+      };
+    }.call(this, this.currentContainer)), s2.push(function(e3) {
+      return function(t3) {
+        e3._trigger("update", t3, this._uiHash(this));
+      };
+    }.call(this, this.currentContainer))), i2 = this.containers.length - 1; 0 <= i2; i2--) e2 || s2.push(n2("deactivate", this, this.containers[i2])), this.containers[i2].containerCache.over && (s2.push(n2("out", this, this.containers[i2])), this.containers[i2].containerCache.over = 0);
+    if (this.storedCursor && (this.document.find("body").css("cursor", this.storedCursor), this.storedStylesheet.remove()), this._storedOpacity && this.helper.css("opacity", this._storedOpacity), this._storedZIndex && this.helper.css("zIndex", "auto" === this._storedZIndex ? "" : this._storedZIndex), this.dragging = false, e2 || this._trigger("beforeStop", t2, this._uiHash()), this.placeholder[0].parentNode.removeChild(this.placeholder[0]), this.cancelHelperRemoval || (this.helper[0] !== this.currentItem[0] && this.helper.remove(), this.helper = null), !e2) {
+      for (i2 = 0; i2 < s2.length; i2++) s2[i2].call(this, t2);
+      this._trigger("stop", t2, this._uiHash());
+    }
+    return this.fromOutside = false, !this.cancelHelperRemoval;
+  }, _trigger: function() {
+    false === V.Widget.prototype._trigger.apply(this, arguments) && this.cancel();
+  }, _uiHash: function(t2) {
+    var e2 = t2 || this;
+    return { helper: e2.helper, placeholder: e2.placeholder || V([]), position: e2.position, originalPosition: e2.originalPosition, offset: e2.positionAbs, item: e2.currentItem, sender: t2 ? t2.element : null };
+  } });
+  function A(e2) {
+    return function() {
+      var t2 = this.element.val();
+      e2.apply(this, arguments), this._refresh(), t2 !== this.element.val() && this._trigger("change");
+    };
+  }
+  V.widget("ui.spinner", { version: "1.13.3", defaultElement: "<input>", widgetEventPrefix: "spin", options: { classes: { "ui-spinner": "ui-corner-all", "ui-spinner-down": "ui-corner-br", "ui-spinner-up": "ui-corner-tr" }, culture: null, icons: { down: "ui-icon-triangle-1-s", up: "ui-icon-triangle-1-n" }, incremental: true, max: null, min: null, numberFormat: null, page: 10, step: 1, change: null, spin: null, start: null, stop: null }, _create: function() {
+    this._setOption("max", this.options.max), this._setOption("min", this.options.min), this._setOption("step", this.options.step), "" !== this.value() && this._value(this.element.val(), true), this._draw(), this._on(this._events), this._refresh(), this._on(this.window, { beforeunload: function() {
+      this.element.removeAttr("autocomplete");
+    } });
+  }, _getCreateOptions: function() {
+    var s2 = this._super(), n2 = this.element;
+    return V.each(["min", "max", "step"], function(t2, e2) {
+      var i2 = n2.attr(e2);
+      null != i2 && i2.length && (s2[e2] = i2);
+    }), s2;
+  }, _events: { keydown: function(t2) {
+    this._start(t2) && this._keydown(t2) && t2.preventDefault();
+  }, keyup: "_stop", focus: function() {
+    this.previous = this.element.val();
+  }, blur: function(t2) {
+    this.cancelBlur ? delete this.cancelBlur : (this._stop(), this._refresh(), this.previous !== this.element.val() && this._trigger("change", t2));
+  }, mousewheel: function(t2, e2) {
+    var i2 = V.ui.safeActiveElement(this.document[0]);
+    if (this.element[0] === i2 && e2) {
+      if (!this.spinning && !this._start(t2)) return false;
+      this._spin((0 < e2 ? 1 : -1) * this.options.step, t2), clearTimeout(this.mousewheelTimer), this.mousewheelTimer = this._delay(function() {
+        this.spinning && this._stop(t2);
+      }, 100), t2.preventDefault();
+    }
+  }, "mousedown .ui-spinner-button": function(t2) {
+    var e2;
+    function i2() {
+      this.element[0] !== V.ui.safeActiveElement(this.document[0]) && (this.element.trigger("focus"), this.previous = e2, this._delay(function() {
+        this.previous = e2;
+      }));
+    }
+    e2 = this.element[0] === V.ui.safeActiveElement(this.document[0]) ? this.previous : this.element.val(), t2.preventDefault(), i2.call(this), this.cancelBlur = true, this._delay(function() {
+      delete this.cancelBlur, i2.call(this);
+    }), false !== this._start(t2) && this._repeat(null, V(t2.currentTarget).hasClass("ui-spinner-up") ? 1 : -1, t2);
+  }, "mouseup .ui-spinner-button": "_stop", "mouseenter .ui-spinner-button": function(t2) {
+    if (V(t2.currentTarget).hasClass("ui-state-active")) return false !== this._start(t2) && void this._repeat(null, V(t2.currentTarget).hasClass("ui-spinner-up") ? 1 : -1, t2);
+  }, "mouseleave .ui-spinner-button": "_stop" }, _enhance: function() {
+    this.uiSpinner = this.element.attr("autocomplete", "off").wrap("<span>").parent().append("<a></a><a></a>");
+  }, _draw: function() {
+    this._enhance(), this._addClass(this.uiSpinner, "ui-spinner", "ui-widget ui-widget-content"), this._addClass("ui-spinner-input"), this.element.attr("role", "spinbutton"), this.buttons = this.uiSpinner.children("a").attr("tabIndex", -1).attr("aria-hidden", true).button({ classes: { "ui-button": "" } }), this._removeClass(this.buttons, "ui-corner-all"), this._addClass(this.buttons.first(), "ui-spinner-button ui-spinner-up"), this._addClass(this.buttons.last(), "ui-spinner-button ui-spinner-down"), this.buttons.first().button({ icon: this.options.icons.up, showLabel: false }), this.buttons.last().button({ icon: this.options.icons.down, showLabel: false }), this.buttons.height() > Math.ceil(0.5 * this.uiSpinner.height()) && 0 < this.uiSpinner.height() && this.uiSpinner.height(this.uiSpinner.height());
+  }, _keydown: function(t2) {
+    var e2 = this.options, i2 = V.ui.keyCode;
+    switch (t2.keyCode) {
+      case i2.UP:
+        return this._repeat(null, 1, t2), true;
+      case i2.DOWN:
+        return this._repeat(null, -1, t2), true;
+      case i2.PAGE_UP:
+        return this._repeat(null, e2.page, t2), true;
+      case i2.PAGE_DOWN:
+        return this._repeat(null, -e2.page, t2), true;
     }
     return false;
-  };
-  y.TagToFront = function(j, i) {
-    if (!I(i)) {
+  }, _start: function(t2) {
+    return !(!this.spinning && false === this._trigger("start", t2)) && (this.counter || (this.counter = 1), this.spinning = true);
+  }, _repeat: function(t2, e2, i2) {
+    t2 = t2 || 500, clearTimeout(this.timer), this.timer = this._delay(function() {
+      this._repeat(40, e2, i2);
+    }, t2), this._spin(e2 * this.options.step, i2);
+  }, _spin: function(t2, e2) {
+    var i2 = this.value() || 0;
+    this.counter || (this.counter = 1), i2 = this._adjustValue(i2 + t2 * this._increment(this.counter)), this.spinning && false === this._trigger("spin", e2, { value: i2 }) || (this._value(i2), this.counter++);
+  }, _increment: function(t2) {
+    var e2 = this.options.incremental;
+    return e2 ? "function" == typeof e2 ? e2(t2) : Math.floor(t2 * t2 * t2 / 5e4 - t2 * t2 / 500 + 17 * t2 / 200 + 1) : 1;
+  }, _precision: function() {
+    var t2 = this._precisionOf(this.options.step);
+    return t2 = null !== this.options.min ? Math.max(t2, this._precisionOf(this.options.min)) : t2;
+  }, _precisionOf: function(t2) {
+    var t2 = t2.toString(), e2 = t2.indexOf(".");
+    return -1 === e2 ? 0 : t2.length - e2 - 1;
+  }, _adjustValue: function(t2) {
+    var e2 = this.options, i2 = null !== e2.min ? e2.min : 0, s2 = t2 - i2;
+    return t2 = i2 + Math.round(s2 / e2.step) * e2.step, t2 = parseFloat(t2.toFixed(this._precision())), null !== e2.max && t2 > e2.max ? e2.max : null !== e2.min && t2 < e2.min ? e2.min : t2;
+  }, _stop: function(t2) {
+    this.spinning && (clearTimeout(this.timer), clearTimeout(this.mousewheelTimer), this.counter = 0, this.spinning = false, this._trigger("stop", t2));
+  }, _setOption: function(t2, e2) {
+    var i2;
+    "culture" === t2 || "numberFormat" === t2 ? (i2 = this._parse(this.element.val()), this.options[t2] = e2, this.element.val(this._format(i2))) : ("max" !== t2 && "min" !== t2 && "step" !== t2 || "string" == typeof e2 && (e2 = this._parse(e2)), "icons" === t2 && (i2 = this.buttons.first().find(".ui-icon"), this._removeClass(i2, null, this.options.icons.up), this._addClass(i2, null, e2.up), i2 = this.buttons.last().find(".ui-icon"), this._removeClass(i2, null, this.options.icons.down), this._addClass(i2, null, e2.down)), this._super(t2, e2));
+  }, _setOptionDisabled: function(t2) {
+    this._super(t2), this._toggleClass(this.uiSpinner, null, "ui-state-disabled", !!t2), this.element.prop("disabled", !!t2), this.buttons.button(t2 ? "disable" : "enable");
+  }, _setOptions: A(function(t2) {
+    this._super(t2);
+  }), _parse: function(t2) {
+    return "" === (t2 = "string" == typeof t2 && "" !== t2 ? window.Globalize && this.options.numberFormat ? Globalize.parseFloat(t2, 10, this.options.culture) : +t2 : t2) || isNaN(t2) ? null : t2;
+  }, _format: function(t2) {
+    return "" === t2 ? "" : window.Globalize && this.options.numberFormat ? Globalize.format(t2, this.options.numberFormat, this.options.culture) : t2;
+  }, _refresh: function() {
+    this.element.attr({ "aria-valuemin": this.options.min, "aria-valuemax": this.options.max, "aria-valuenow": this._parse(this.element.val()) });
+  }, isValid: function() {
+    var t2 = this.value();
+    return null !== t2 && t2 === this._adjustValue(t2);
+  }, _value: function(t2, e2) {
+    var i2;
+    "" !== t2 && null !== (i2 = this._parse(t2)) && (e2 || (i2 = this._adjustValue(i2)), t2 = this._format(i2)), this.element.val(t2), this._refresh();
+  }, _destroy: function() {
+    this.element.prop("disabled", false).removeAttr("autocomplete role aria-valuemin aria-valuemax aria-valuenow"), this.uiSpinner.replaceWith(this.element);
+  }, stepUp: A(function(t2) {
+    this._stepUp(t2);
+  }), _stepUp: function(t2) {
+    this._start() && (this._spin((t2 || 1) * this.options.step), this._stop());
+  }, stepDown: A(function(t2) {
+    this._stepDown(t2);
+  }), _stepDown: function(t2) {
+    this._start() && (this._spin((t2 || 1) * -this.options.step), this._stop());
+  }, pageUp: A(function(t2) {
+    this._stepUp((t2 || 1) * this.options.page);
+  }), pageDown: A(function(t2) {
+    this._stepDown((t2 || 1) * this.options.page);
+  }), value: function(t2) {
+    if (!arguments.length) return this._parse(this.element.val());
+    A(this._value).call(this, t2);
+  }, widget: function() {
+    return this.uiSpinner;
+  } }), false !== V.uiBackCompat && V.widget("ui.spinner", V.ui.spinner, { _enhance: function() {
+    this.uiSpinner = this.element.attr("autocomplete", "off").wrap(this._uiSpinnerHtml()).parent().append(this._buttonHtml());
+  }, _uiSpinnerHtml: function() {
+    return "<span>";
+  }, _buttonHtml: function() {
+    return "<a></a><a></a>";
+  } });
+  var O;
+  V.ui.spinner, V.widget("ui.tabs", { version: "1.13.3", delay: 300, options: { active: null, classes: { "ui-tabs": "ui-corner-all", "ui-tabs-nav": "ui-corner-all", "ui-tabs-panel": "ui-corner-bottom", "ui-tabs-tab": "ui-corner-top" }, collapsible: false, event: "click", heightStyle: "content", hide: null, show: null, activate: null, beforeActivate: null, beforeLoad: null, load: null }, _isLocal: (O = /#.*$/, function(t2) {
+    var e2 = t2.href.replace(O, ""), i2 = location.href.replace(O, "");
+    try {
+      e2 = decodeURIComponent(e2);
+    } catch (t3) {
+    }
+    try {
+      i2 = decodeURIComponent(i2);
+    } catch (t3) {
+    }
+    return 1 < t2.hash.length && e2 === i2;
+  }), _create: function() {
+    var e2 = this, t2 = this.options;
+    this.running = false, this._addClass("ui-tabs", "ui-widget ui-widget-content"), this._toggleClass("ui-tabs-collapsible", null, t2.collapsible), this._processTabs(), t2.active = this._initialActive(), Array.isArray(t2.disabled) && (t2.disabled = V.uniqueSort(t2.disabled.concat(V.map(this.tabs.filter(".ui-state-disabled"), function(t3) {
+      return e2.tabs.index(t3);
+    }))).sort()), false !== this.options.active && this.anchors.length ? this.active = this._findActive(t2.active) : this.active = V(), this._refresh(), this.active.length && this.load(t2.active);
+  }, _initialActive: function() {
+    var i2 = this.options.active, t2 = this.options.collapsible, s2 = location.hash.substring(1);
+    return null === i2 && (s2 && this.tabs.each(function(t3, e2) {
+      if (V(e2).attr("aria-controls") === s2) return i2 = t3, false;
+    }), null !== (i2 = null === i2 ? this.tabs.index(this.tabs.filter(".ui-tabs-active")) : i2) && -1 !== i2 || (i2 = !!this.tabs.length && 0)), false !== i2 && -1 === (i2 = this.tabs.index(this.tabs.eq(i2))) && (i2 = !t2 && 0), i2 = !t2 && false === i2 && this.anchors.length ? 0 : i2;
+  }, _getCreateEventData: function() {
+    return { tab: this.active, panel: this.active.length ? this._getPanelForTab(this.active) : V() };
+  }, _tabKeydown: function(t2) {
+    var e2 = V(V.ui.safeActiveElement(this.document[0])).closest("li"), i2 = this.tabs.index(e2), s2 = true;
+    if (!this._handlePageNav(t2)) {
+      switch (t2.keyCode) {
+        case V.ui.keyCode.RIGHT:
+        case V.ui.keyCode.DOWN:
+          i2++;
+          break;
+        case V.ui.keyCode.UP:
+        case V.ui.keyCode.LEFT:
+          s2 = false, i2--;
+          break;
+        case V.ui.keyCode.END:
+          i2 = this.anchors.length - 1;
+          break;
+        case V.ui.keyCode.HOME:
+          i2 = 0;
+          break;
+        case V.ui.keyCode.SPACE:
+          return t2.preventDefault(), clearTimeout(this.activating), void this._activate(i2);
+        case V.ui.keyCode.ENTER:
+          return t2.preventDefault(), clearTimeout(this.activating), void this._activate(i2 !== this.options.active && i2);
+        default:
+          return;
+      }
+      t2.preventDefault(), clearTimeout(this.activating), i2 = this._focusNextTab(i2, s2), t2.ctrlKey || t2.metaKey || (e2.attr("aria-selected", "false"), this.tabs.eq(i2).attr("aria-selected", "true"), this.activating = this._delay(function() {
+        this.option("active", i2);
+      }, this.delay));
+    }
+  }, _panelKeydown: function(t2) {
+    this._handlePageNav(t2) || t2.ctrlKey && t2.keyCode === V.ui.keyCode.UP && (t2.preventDefault(), this.active.trigger("focus"));
+  }, _handlePageNav: function(t2) {
+    return t2.altKey && t2.keyCode === V.ui.keyCode.PAGE_UP ? (this._activate(this._focusNextTab(this.options.active - 1, false)), true) : t2.altKey && t2.keyCode === V.ui.keyCode.PAGE_DOWN ? (this._activate(this._focusNextTab(this.options.active + 1, true)), true) : void 0;
+  }, _findNextTab: function(t2, e2) {
+    var i2 = this.tabs.length - 1;
+    for (; -1 !== V.inArray(t2 = (t2 = i2 < t2 ? 0 : t2) < 0 ? i2 : t2, this.options.disabled); ) t2 = e2 ? t2 + 1 : t2 - 1;
+    return t2;
+  }, _focusNextTab: function(t2, e2) {
+    return t2 = this._findNextTab(t2, e2), this.tabs.eq(t2).trigger("focus"), t2;
+  }, _setOption: function(t2, e2) {
+    "active" === t2 ? this._activate(e2) : (this._super(t2, e2), "collapsible" === t2 && (this._toggleClass("ui-tabs-collapsible", null, e2), e2 || false !== this.options.active || this._activate(0)), "event" === t2 && this._setupEvents(e2), "heightStyle" === t2 && this._setupHeightStyle(e2));
+  }, _sanitizeSelector: function(t2) {
+    return t2 ? t2.replace(/[!"$%&'()*+,.\/:;<=>?@\[\]\^`{|}~]/g, "\\$&") : "";
+  }, refresh: function() {
+    var t2 = this.options, e2 = this.tablist.children(":has(a[href])");
+    t2.disabled = V.map(e2.filter(".ui-state-disabled"), function(t3) {
+      return e2.index(t3);
+    }), this._processTabs(), false !== t2.active && this.anchors.length ? this.active.length && !V.contains(this.tablist[0], this.active[0]) ? this.tabs.length === t2.disabled.length ? (t2.active = false, this.active = V()) : this._activate(this._findNextTab(Math.max(0, t2.active - 1), false)) : t2.active = this.tabs.index(this.active) : (t2.active = false, this.active = V()), this._refresh();
+  }, _refresh: function() {
+    this._setOptionDisabled(this.options.disabled), this._setupEvents(this.options.event), this._setupHeightStyle(this.options.heightStyle), this.tabs.not(this.active).attr({ "aria-selected": "false", "aria-expanded": "false", tabIndex: -1 }), this.panels.not(this._getPanelForTab(this.active)).hide().attr({ "aria-hidden": "true" }), this.active.length ? (this.active.attr({ "aria-selected": "true", "aria-expanded": "true", tabIndex: 0 }), this._addClass(this.active, "ui-tabs-active", "ui-state-active"), this._getPanelForTab(this.active).show().attr({ "aria-hidden": "false" })) : this.tabs.eq(0).attr("tabIndex", 0);
+  }, _processTabs: function() {
+    var l2 = this, t2 = this.tabs, e2 = this.anchors, i2 = this.panels;
+    this.tablist = this._getList().attr("role", "tablist"), this._addClass(this.tablist, "ui-tabs-nav", "ui-helper-reset ui-helper-clearfix ui-widget-header"), this.tablist.on("mousedown" + this.eventNamespace, "> li", function(t3) {
+      V(this).is(".ui-state-disabled") && t3.preventDefault();
+    }).on("focus" + this.eventNamespace, ".ui-tabs-anchor", function() {
+      V(this).closest("li").is(".ui-state-disabled") && this.blur();
+    }), this.tabs = this.tablist.find("> li:has(a[href])").attr({ role: "tab", tabIndex: -1 }), this._addClass(this.tabs, "ui-tabs-tab", "ui-state-default"), this.anchors = this.tabs.map(function() {
+      return V("a", this)[0];
+    }).attr({ tabIndex: -1 }), this._addClass(this.anchors, "ui-tabs-anchor"), this.panels = V(), this.anchors.each(function(t3, e3) {
+      var i3, s2, n2, o2 = V(e3).uniqueId().attr("id"), a2 = V(e3).closest("li"), r2 = a2.attr("aria-controls");
+      l2._isLocal(e3) ? (n2 = (i3 = e3.hash).substring(1), s2 = l2.element.find(l2._sanitizeSelector(i3))) : (n2 = a2.attr("aria-controls") || V({}).uniqueId()[0].id, (s2 = l2.element.find(i3 = "#" + n2)).length || (s2 = l2._createPanel(n2)).insertAfter(l2.panels[t3 - 1] || l2.tablist), s2.attr("aria-live", "polite")), s2.length && (l2.panels = l2.panels.add(s2)), r2 && a2.data("ui-tabs-aria-controls", r2), a2.attr({ "aria-controls": n2, "aria-labelledby": o2 }), s2.attr("aria-labelledby", o2);
+    }), this.panels.attr("role", "tabpanel"), this._addClass(this.panels, "ui-tabs-panel", "ui-widget-content"), t2 && (this._off(t2.not(this.tabs)), this._off(e2.not(this.anchors)), this._off(i2.not(this.panels)));
+  }, _getList: function() {
+    return this.tablist || this.element.find("ol, ul").eq(0);
+  }, _createPanel: function(t2) {
+    return V("<div>").attr("id", t2).data("ui-tabs-destroy", true);
+  }, _setOptionDisabled: function(t2) {
+    var e2, i2;
+    for (Array.isArray(t2) && (t2.length ? t2.length === this.anchors.length && (t2 = true) : t2 = false), i2 = 0; e2 = this.tabs[i2]; i2++) e2 = V(e2), true === t2 || -1 !== V.inArray(i2, t2) ? (e2.attr("aria-disabled", "true"), this._addClass(e2, null, "ui-state-disabled")) : (e2.removeAttr("aria-disabled"), this._removeClass(e2, null, "ui-state-disabled"));
+    this.options.disabled = t2, this._toggleClass(this.widget(), this.widgetFullName + "-disabled", null, true === t2);
+  }, _setupEvents: function(t2) {
+    var i2 = {};
+    t2 && V.each(t2.split(" "), function(t3, e2) {
+      i2[e2] = "_eventHandler";
+    }), this._off(this.anchors.add(this.tabs).add(this.panels)), this._on(true, this.anchors, { click: function(t3) {
+      t3.preventDefault();
+    } }), this._on(this.anchors, i2), this._on(this.tabs, { keydown: "_tabKeydown" }), this._on(this.panels, { keydown: "_panelKeydown" }), this._focusable(this.tabs), this._hoverable(this.tabs);
+  }, _setupHeightStyle: function(t2) {
+    var i2, e2 = this.element.parent();
+    "fill" === t2 ? (i2 = e2.height(), i2 -= this.element.outerHeight() - this.element.height(), this.element.siblings(":visible").each(function() {
+      var t3 = V(this), e3 = t3.css("position");
+      "absolute" !== e3 && "fixed" !== e3 && (i2 -= t3.outerHeight(true));
+    }), this.element.children().not(this.panels).each(function() {
+      i2 -= V(this).outerHeight(true);
+    }), this.panels.each(function() {
+      V(this).height(Math.max(0, i2 - V(this).innerHeight() + V(this).height()));
+    }).css("overflow", "auto")) : "auto" === t2 && (i2 = 0, this.panels.each(function() {
+      i2 = Math.max(i2, V(this).height("").height());
+    }).height(i2));
+  }, _eventHandler: function(t2) {
+    var e2 = this.options, i2 = this.active, s2 = V(t2.currentTarget).closest("li"), n2 = s2[0] === i2[0], o2 = n2 && e2.collapsible, a2 = o2 ? V() : this._getPanelForTab(s2), r2 = i2.length ? this._getPanelForTab(i2) : V(), i2 = { oldTab: i2, oldPanel: r2, newTab: o2 ? V() : s2, newPanel: a2 };
+    t2.preventDefault(), s2.hasClass("ui-state-disabled") || s2.hasClass("ui-tabs-loading") || this.running || n2 && !e2.collapsible || false === this._trigger("beforeActivate", t2, i2) || (e2.active = !o2 && this.tabs.index(s2), this.active = n2 ? V() : s2, this.xhr && this.xhr.abort(), r2.length || a2.length || V.error("jQuery UI Tabs: Mismatching fragment identifier."), a2.length && this.load(this.tabs.index(s2), t2), this._toggle(t2, i2));
+  }, _toggle: function(t2, e2) {
+    var i2 = this, s2 = e2.newPanel, n2 = e2.oldPanel;
+    function o2() {
+      i2.running = false, i2._trigger("activate", t2, e2);
+    }
+    function a2() {
+      i2._addClass(e2.newTab.closest("li"), "ui-tabs-active", "ui-state-active"), s2.length && i2.options.show ? i2._show(s2, i2.options.show, o2) : (s2.show(), o2());
+    }
+    this.running = true, n2.length && this.options.hide ? this._hide(n2, this.options.hide, function() {
+      i2._removeClass(e2.oldTab.closest("li"), "ui-tabs-active", "ui-state-active"), a2();
+    }) : (this._removeClass(e2.oldTab.closest("li"), "ui-tabs-active", "ui-state-active"), n2.hide(), a2()), n2.attr("aria-hidden", "true"), e2.oldTab.attr({ "aria-selected": "false", "aria-expanded": "false" }), s2.length && n2.length ? e2.oldTab.attr("tabIndex", -1) : s2.length && this.tabs.filter(function() {
+      return 0 === V(this).attr("tabIndex");
+    }).attr("tabIndex", -1), s2.attr("aria-hidden", "false"), e2.newTab.attr({ "aria-selected": "true", "aria-expanded": "true", tabIndex: 0 });
+  }, _activate: function(t2) {
+    var t2 = this._findActive(t2);
+    t2[0] !== this.active[0] && (t2 = (t2 = t2.length ? t2 : this.active).find(".ui-tabs-anchor")[0], this._eventHandler({ target: t2, currentTarget: t2, preventDefault: V.noop }));
+  }, _findActive: function(t2) {
+    return false === t2 ? V() : this.tabs.eq(t2);
+  }, _getIndex: function(t2) {
+    return t2 = "string" == typeof t2 ? this.anchors.index(this.anchors.filter("[href$='" + V.escapeSelector(t2) + "']")) : t2;
+  }, _destroy: function() {
+    this.xhr && this.xhr.abort(), this.tablist.removeAttr("role").off(this.eventNamespace), this.anchors.removeAttr("role tabIndex").removeUniqueId(), this.tabs.add(this.panels).each(function() {
+      V.data(this, "ui-tabs-destroy") ? V(this).remove() : V(this).removeAttr("role tabIndex aria-live aria-busy aria-selected aria-labelledby aria-hidden aria-expanded");
+    }), this.tabs.each(function() {
+      var t2 = V(this), e2 = t2.data("ui-tabs-aria-controls");
+      e2 ? t2.attr("aria-controls", e2).removeData("ui-tabs-aria-controls") : t2.removeAttr("aria-controls");
+    }), this.panels.show(), "content" !== this.options.heightStyle && this.panels.css("height", "");
+  }, enable: function(i2) {
+    var t2 = this.options.disabled;
+    false !== t2 && (t2 = void 0 !== i2 && (i2 = this._getIndex(i2), Array.isArray(t2) ? V.map(t2, function(t3) {
+      return t3 !== i2 ? t3 : null;
+    }) : V.map(this.tabs, function(t3, e2) {
+      return e2 !== i2 ? e2 : null;
+    })), this._setOptionDisabled(t2));
+  }, disable: function(t2) {
+    var e2 = this.options.disabled;
+    if (true !== e2) {
+      if (void 0 === t2) e2 = true;
+      else {
+        if (t2 = this._getIndex(t2), -1 !== V.inArray(t2, e2)) return;
+        e2 = Array.isArray(e2) ? V.merge([t2], e2).sort() : [t2];
+      }
+      this._setOptionDisabled(e2);
+    }
+  }, load: function(t2, s2) {
+    t2 = this._getIndex(t2);
+    function n2(t3, e2) {
+      "abort" === e2 && o2.panels.stop(false, true), o2._removeClass(i2, "ui-tabs-loading"), a2.removeAttr("aria-busy"), t3 === o2.xhr && delete o2.xhr;
+    }
+    var o2 = this, i2 = this.tabs.eq(t2), t2 = i2.find(".ui-tabs-anchor"), a2 = this._getPanelForTab(i2), r2 = { tab: i2, panel: a2 };
+    this._isLocal(t2[0]) || (this.xhr = V.ajax(this._ajaxSettings(t2, s2, r2)), this.xhr && "canceled" !== this.xhr.statusText && (this._addClass(i2, "ui-tabs-loading"), a2.attr("aria-busy", "true"), this.xhr.done(function(t3, e2, i3) {
+      setTimeout(function() {
+        a2.html(t3), o2._trigger("load", s2, r2), n2(i3, e2);
+      }, 1);
+    }).fail(function(t3, e2) {
+      setTimeout(function() {
+        n2(t3, e2);
+      }, 1);
+    })));
+  }, _ajaxSettings: function(t2, i2, s2) {
+    var n2 = this;
+    return { url: t2.attr("href").replace(/#.*$/, ""), beforeSend: function(t3, e2) {
+      return n2._trigger("beforeLoad", i2, V.extend({ jqXHR: t3, ajaxSettings: e2 }, s2));
+    } };
+  }, _getPanelForTab: function(t2) {
+    t2 = V(t2).attr("aria-controls");
+    return this.element.find(this._sanitizeSelector("#" + t2));
+  } }), false !== V.uiBackCompat && V.widget("ui.tabs", V.ui.tabs, { _processTabs: function() {
+    this._superApply(arguments), this._addClass(this.tabs, "ui-tab");
+  } }), V.ui.tabs, V.widget("ui.tooltip", { version: "1.13.3", options: { classes: { "ui-tooltip": "ui-corner-all ui-widget-shadow" }, content: function() {
+    var t2 = V(this).attr("title");
+    return V("<a>").text(t2).html();
+  }, hide: true, items: "[title]:not([disabled])", position: { my: "left top+15", at: "left bottom", collision: "flipfit flip" }, show: true, track: false, close: null, open: null }, _addDescribedBy: function(t2, e2) {
+    var i2 = (t2.attr("aria-describedby") || "").split(/\s+/);
+    i2.push(e2), t2.data("ui-tooltip-id", e2).attr("aria-describedby", String.prototype.trim.call(i2.join(" ")));
+  }, _removeDescribedBy: function(t2) {
+    var e2 = t2.data("ui-tooltip-id"), i2 = (t2.attr("aria-describedby") || "").split(/\s+/), e2 = V.inArray(e2, i2);
+    -1 !== e2 && i2.splice(e2, 1), t2.removeData("ui-tooltip-id"), (i2 = String.prototype.trim.call(i2.join(" "))) ? t2.attr("aria-describedby", i2) : t2.removeAttr("aria-describedby");
+  }, _create: function() {
+    this._on({ mouseover: "open", focusin: "open" }), this.tooltips = {}, this.parents = {}, this.liveRegion = V("<div>").attr({ role: "log", "aria-live": "assertive", "aria-relevant": "additions" }).appendTo(this.document[0].body), this._addClass(this.liveRegion, null, "ui-helper-hidden-accessible"), this.disabledTitles = V([]);
+  }, _setOption: function(t2, e2) {
+    var i2 = this;
+    this._super(t2, e2), "content" === t2 && V.each(this.tooltips, function(t3, e3) {
+      i2._updateContent(e3.element);
+    });
+  }, _setOptionDisabled: function(t2) {
+    this[t2 ? "_disable" : "_enable"]();
+  }, _disable: function() {
+    var s2 = this;
+    V.each(this.tooltips, function(t2, e2) {
+      var i2 = V.Event("blur");
+      i2.target = i2.currentTarget = e2.element[0], s2.close(i2, true);
+    }), this.disabledTitles = this.disabledTitles.add(this.element.find(this.options.items).addBack().filter(function() {
+      var t2 = V(this);
+      if (t2.is("[title]")) return t2.data("ui-tooltip-title", t2.attr("title")).removeAttr("title");
+    }));
+  }, _enable: function() {
+    this.disabledTitles.each(function() {
+      var t2 = V(this);
+      t2.data("ui-tooltip-title") && t2.attr("title", t2.data("ui-tooltip-title"));
+    }), this.disabledTitles = V([]);
+  }, open: function(t2) {
+    var i2 = this, e2 = V(t2 ? t2.target : this.element).closest(this.options.items);
+    e2.length && !e2.data("ui-tooltip-id") && (e2.attr("title") && e2.data("ui-tooltip-title", e2.attr("title")), e2.data("ui-tooltip-open", true), t2 && "mouseover" === t2.type && e2.parents().each(function() {
+      var t3, e3 = V(this);
+      e3.data("ui-tooltip-open") && ((t3 = V.Event("blur")).target = t3.currentTarget = this, i2.close(t3, true)), e3.attr("title") && (e3.uniqueId(), i2.parents[this.id] = { element: this, title: e3.attr("title") }, e3.attr("title", ""));
+    }), this._registerCloseHandlers(t2, e2), this._updateContent(e2, t2));
+  }, _updateContent: function(e2, i2) {
+    var t2 = this.options.content, s2 = this, n2 = i2 ? i2.type : null;
+    if ("string" == typeof t2 || t2.nodeType || t2.jquery) return this._open(i2, e2, t2);
+    (t2 = t2.call(e2[0], function(t3) {
+      s2._delay(function() {
+        e2.data("ui-tooltip-open") && (i2 && (i2.type = n2), this._open(i2, e2, t3));
+      });
+    })) && this._open(i2, e2, t2);
+  }, _open: function(t2, e2, i2) {
+    var s2, n2, o2, a2 = V.extend({}, this.options.position);
+    function r2(t3) {
+      a2.of = t3, s2.is(":hidden") || s2.position(a2);
+    }
+    i2 && ((o2 = this._find(e2)) ? o2.tooltip.find(".ui-tooltip-content").html(i2) : (e2.is("[title]") && (t2 && "mouseover" === t2.type ? e2.attr("title", "") : e2.removeAttr("title")), o2 = this._tooltip(e2), s2 = o2.tooltip, this._addDescribedBy(e2, s2.attr("id")), s2.find(".ui-tooltip-content").html(i2), this.liveRegion.children().hide(), (o2 = V("<div>").html(s2.find(".ui-tooltip-content").html())).removeAttr("name").find("[name]").removeAttr("name"), o2.removeAttr("id").find("[id]").removeAttr("id"), o2.appendTo(this.liveRegion), this.options.track && t2 && /^mouse/.test(t2.type) ? (this._on(this.document, { mousemove: r2 }), r2(t2)) : s2.position(V.extend({ of: e2 }, this.options.position)), s2.hide(), this._show(s2, this.options.show), this.options.track && this.options.show && this.options.show.delay && (n2 = this.delayedShow = setInterval(function() {
+      s2.is(":visible") && (r2(a2.of), clearInterval(n2));
+    }, 13)), this._trigger("open", t2, { tooltip: s2 })));
+  }, _registerCloseHandlers: function(t2, e2) {
+    var i2 = { keyup: function(t3) {
+      t3.keyCode === V.ui.keyCode.ESCAPE && ((t3 = V.Event(t3)).currentTarget = e2[0], this.close(t3, true));
+    } };
+    e2[0] !== this.element[0] && (i2.remove = function() {
+      var t3 = this._find(e2);
+      t3 && this._removeTooltip(t3.tooltip);
+    }), t2 && "mouseover" !== t2.type || (i2.mouseleave = "close"), t2 && "focusin" !== t2.type || (i2.focusout = "close"), this._on(true, e2, i2);
+  }, close: function(t2) {
+    var e2, i2 = this, s2 = V(t2 ? t2.currentTarget : this.element), n2 = this._find(s2);
+    n2 ? (e2 = n2.tooltip, n2.closing || (clearInterval(this.delayedShow), s2.data("ui-tooltip-title") && !s2.attr("title") && s2.attr("title", s2.data("ui-tooltip-title")), this._removeDescribedBy(s2), n2.hiding = true, e2.stop(true), this._hide(e2, this.options.hide, function() {
+      i2._removeTooltip(V(this));
+    }), s2.removeData("ui-tooltip-open"), this._off(s2, "mouseleave focusout keyup"), s2[0] !== this.element[0] && this._off(s2, "remove"), this._off(this.document, "mousemove"), t2 && "mouseleave" === t2.type && V.each(this.parents, function(t3, e3) {
+      V(e3.element).attr("title", e3.title), delete i2.parents[t3];
+    }), n2.closing = true, this._trigger("close", t2, { tooltip: e2 }), n2.hiding) || (n2.closing = false)) : s2.removeData("ui-tooltip-open");
+  }, _tooltip: function(t2) {
+    var e2 = V("<div>").attr("role", "tooltip"), i2 = V("<div>").appendTo(e2), s2 = e2.uniqueId().attr("id");
+    return this._addClass(i2, "ui-tooltip-content"), this._addClass(e2, "ui-tooltip", "ui-widget ui-widget-content"), e2.appendTo(this._appendTo(t2)), this.tooltips[s2] = { element: t2, tooltip: e2 };
+  }, _find: function(t2) {
+    t2 = t2.data("ui-tooltip-id");
+    return t2 ? this.tooltips[t2] : null;
+  }, _removeTooltip: function(t2) {
+    clearInterval(this.delayedShow), t2.remove(), delete this.tooltips[t2.attr("id")];
+  }, _appendTo: function(t2) {
+    t2 = t2.closest(".ui-front, dialog");
+    return t2 = t2.length ? t2 : this.document[0].body;
+  }, _destroy: function() {
+    var s2 = this;
+    V.each(this.tooltips, function(t2, e2) {
+      var i2 = V.Event("blur"), e2 = e2.element;
+      i2.target = i2.currentTarget = e2[0], s2.close(i2, true), V("#" + t2).remove(), e2.data("ui-tooltip-title") && (e2.attr("title") || e2.attr("title", e2.data("ui-tooltip-title")), e2.removeData("ui-tooltip-title"));
+    }), this.liveRegion.remove();
+  } }), false !== V.uiBackCompat && V.widget("ui.tooltip", V.ui.tooltip, { options: { tooltipClass: null }, _tooltip: function() {
+    var t2 = this._superApply(arguments);
+    return this.options.tooltipClass && t2.tooltip.addClass(this.options.tooltipClass), t2;
+  } }), V.ui.tooltip;
+});
+
+// app/javascript/jquery.pagination.js
+jQuery.fn.pagination = function(maxentries, opts) {
+  opts = jQuery.extend({
+    items_per_page: 10,
+    num_display_entries: 10,
+    current_page: 0,
+    num_edge_entries: 0,
+    link_to: "#",
+    prev_text: "<<",
+    next_text: ">>",
+    ellipse_text: "...",
+    prev_show_always: true,
+    next_show_always: true,
+    callback: function() {
       return false;
     }
-    i.lat = i.lng = 0;
-    return y.RotateTag(j, i);
-  };
-  y.RotateTag = function(aI, i) {
-    if (I(i) && y.tc[aI]) {
-      if (isNaN(i.time)) {
-        i.time = 500;
-      }
-      var j = y.tc[aI].FindTag(i);
-      if (j) {
-        y.tc[aI].RotateTag(j, i.lat, i.lng, i.time, i.callback, i.active);
-        return true;
-      }
+  }, opts || {});
+  return this.each(function() {
+    function numPages() {
+      return Math.ceil(maxentries / opts.items_per_page);
     }
-    return false;
-  };
-  y.Delete = function(aJ) {
-    var j, aI;
-    if (b[aJ]) {
-      aI = C.getElementById(aJ);
-      if (aI) {
-        for (j = 0; j < b[aJ].length; ++j) {
-          a(b[aJ][j][0], b[aJ][j][1], aI);
+    function getInterval() {
+      var ne_half = Math.ceil(opts.num_display_entries / 2);
+      var np = numPages();
+      var upper_limit = np - opts.num_display_entries;
+      var start3 = current_page2 > ne_half ? Math.max(Math.min(current_page2 - ne_half, upper_limit), 0) : 0;
+      var end2 = current_page2 > ne_half ? Math.min(current_page2 + ne_half, np) : Math.min(opts.num_display_entries, np);
+      return [start3, end2];
+    }
+    function pageSelected(page_id, evt) {
+      current_page2 = page_id;
+      drawLinks();
+      var continuePropagation = opts.callback(page_id, panel);
+      if (!continuePropagation) {
+        if (evt.stopPropagation) {
+          evt.stopPropagation();
+        } else {
+          evt.cancelBubble = true;
         }
       }
+      return continuePropagation;
     }
-    delete b[aJ];
-    delete y.tc[aJ];
-  };
-  y.NextFrameRAF = function() {
-    requestAnimationFrame(E);
-  };
-  y.NextFrameTimeout = function(i) {
-    setTimeout(O, i);
-  };
-  y.tc = {};
-  y.options = { z1: 2e4, z2: 2e4, z0: 2e-4, freezeActive: false, freezeDecel: false, activeCursor: "pointer", pulsateTo: 1, pulsateTime: 3, reverse: false, depth: 0.5, maxSpeed: 0.05, minSpeed: 0, decel: 0.95, interval: 20, minBrightness: 0.1, maxBrightness: 1, outlineColour: "#ffff99", outlineThickness: 2, outlineOffset: 5, outlineMethod: "outline", outlineRadius: 0, textColour: "#ff99ff", textHeight: 15, textFont: "Helvetica, Arial, sans-serif", shadow: "#000", shadowBlur: 0, shadowOffset: [0, 0], initial: null, hideTags: true, zoom: 1, weight: false, weightMode: "size", weightFrom: null, weightSize: 1, weightSizeMin: null, weightSizeMax: null, weightGradient: { 0: "#f00", 0.33: "#ff0", 0.66: "#0f0", 1: "#00f" }, txtOpt: true, txtScale: 2, frontSelect: false, wheelZoom: true, zoomMin: 0.3, zoomMax: 3, zoomStep: 0.05, shape: "sphere", lock: null, tooltip: null, tooltipDelay: 300, tooltipClass: "tctooltip", radiusX: 1, radiusY: 1, radiusZ: 1, stretchX: 1, stretchY: 1, offsetX: 0, offsetY: 0, shuffleTags: false, noSelect: false, noMouse: false, imageScale: 1, paused: false, dragControl: false, dragThreshold: 4, centreFunc: aB, splitWidth: 0, animTiming: "Smooth", clickToFront: false, fadeIn: 0, padding: 0, bgColour: null, bgRadius: 0, bgOutline: null, bgOutlineThickness: 0, outlineIncrease: 4, textAlign: "centre", textVAlign: "middle", imageMode: null, imagePosition: null, imagePadding: 2, imageAlign: "centre", imageVAlign: "middle", noTagsMessage: true, centreImage: null, pinchZoom: false, repeatTags: 0, minTags: 0, imageRadius: 0, scrollPause: false, outlineDash: 0, outlineDashSpace: 0, outlineDashSpeed: 1 };
-  for (M in y.options) {
-    y[M] = y.options[M];
-  }
-  window.TagCanvas = y;
-  jQuery.fn.tagcanvas = function(j, i) {
-    var aI = { pause: function() {
-      ap(this).each(function() {
-        az("Pause", ap(this)[0].id);
-      });
-    }, resume: function() {
-      ap(this).each(function() {
-        az("Resume", ap(this)[0].id);
-      });
-    }, reload: function() {
-      ap(this).each(function() {
-        az("Load", ap(this)[0].id);
-      });
-    }, update: function() {
-      ap(this).each(function() {
-        az("Update", ap(this)[0].id);
-      });
-    }, tagtofront: function() {
-      ap(this).each(function() {
-        y.TagToFront(ap(this)[0].id, i);
-      });
-    }, rotatetag: function() {
-      ap(this).each(function() {
-        y.RotateTag(ap(this)[0].id, i);
-      });
-    }, "delete": function() {
-      ap(this).each(function() {
-        y.Delete(ap(this)[0].id);
-      });
-    }, setspeed: function() {
-      ap(this).each(function() {
-        y.SetSpeed(ap(this)[0].id, i);
-      });
-    } };
-    if (typeof j == "string" && aI[j]) {
-      aI[j].apply(this);
-      return this;
-    } else {
-      y.jquery = 1;
-      ap(this).each(function() {
-        y.Start(ap(this)[0].id, i, j);
-      });
-      return y.started;
+    function drawLinks() {
+      panel.empty();
+      var interval = getInterval();
+      var np = numPages();
+      var getClickHandler = function(page_id) {
+        return function(evt) {
+          return pageSelected(page_id, evt);
+        };
+      };
+      var appendItem = function(page_id, appendopts) {
+        page_id = page_id < 0 ? 0 : page_id < np ? page_id : np - 1;
+        appendopts = jQuery.extend({ text: page_id + 1, classes: "" }, appendopts || {});
+        if (page_id == current_page2) {
+          var lnk = jQuery("<span class='active'>" + appendopts.text + "</span>");
+        } else {
+          var lnk = jQuery("<a>" + appendopts.text + "</a>").bind("click", getClickHandler(page_id)).attr("href", opts.link_to.replace(/__id__/, page_id));
+        }
+        if (appendopts.classes) {
+          lnk.addClass(appendopts.classes);
+        }
+        panel.append(lnk);
+      };
+      if (opts.prev_text && (current_page2 > 0 || opts.prev_show_always)) {
+        appendItem(current_page2 - 1, { text: opts.prev_text, classes: "prev" });
+      }
+      if (interval[0] > 0 && opts.num_edge_entries > 0) {
+        var end2 = Math.min(opts.num_edge_entries, interval[0]);
+        for (var i = 0; i < end2; i++) {
+          appendItem(i);
+        }
+        if (opts.num_edge_entries < interval[0] && opts.ellipse_text) {
+          jQuery("<span>" + opts.ellipse_text + "</span>").appendTo(panel);
+        }
+      }
+      for (var i = interval[0]; i < interval[1]; i++) {
+        appendItem(i);
+      }
+      if (opts.next_text && (current_page2 < np - 1 || opts.next_show_always)) {
+        appendItem(current_page2 + 1, { text: opts.next_text, classes: "next" });
+      }
     }
-  };
-  ad("load", function() {
-    y.loaded = 1;
-  }, window);
-})(jQuery);
+    var current_page2 = opts.current_page;
+    maxentries = !maxentries || maxentries < 0 ? 1 : maxentries;
+    opts.items_per_page = !opts.items_per_page || opts.items_per_page < 0 ? 1 : opts.items_per_page;
+    var panel = jQuery(this);
+    this.selectPage = function(page_id) {
+      pageSelected(page_id);
+    };
+    this.prevPage = function() {
+      if (current_page2 > 0) {
+        pageSelected(current_page2 - 1);
+        return true;
+      } else {
+        return false;
+      }
+    };
+    this.nextPage = function() {
+      if (current_page2 < numPages() - 1) {
+        pageSelected(current_page2 + 1);
+        return true;
+      } else {
+        return false;
+      }
+    };
+    drawLinks();
+    opts.callback(current_page2, this);
+  });
+};
 
 // app/javascript/common.js
 (() => {
@@ -23131,68 +15629,366 @@ window.$ = import_jquery.default;
 })();
 
 // app/javascript/index.js
+function setDateInput(obj) {
+  if (obj != void 0) {
+    var datediff = -parseInt(obj);
+    var newDate = /* @__PURE__ */ new Date();
+    var now = /* @__PURE__ */ new Date();
+    newDate.setDate(now.getDate() + datediff);
+    var newYear = newDate.getFullYear();
+    var newMonth = newDate.getMonth() + 1;
+    if (newMonth.toString().length == 1) newMonth = "0" + newMonth;
+    endMonth = now.getMonth() + 1;
+    if (endMonth.toString().length == 1) endMonth = "0" + endMonth;
+    var newDay = newDate.getDate();
+    if (newDay.toString().length == 1) {
+      newDay = "0" + newDay;
+    }
+    ;
+    var txtSDate = newYear + "-" + newMonth + "-" + newDay;
+    endDay = now.getDate();
+    if (endDay.toString().length == 1) {
+      endDay = "0" + endDay;
+    }
+    ;
+    var txtEDate = now.getFullYear() + "-" + endMonth + "-" + endDay;
+    $('input[name="start_date"]').val(txtSDate).effect("highlight");
+    $('input[name="end_date"]').val(txtEDate).effect("highlight");
+  } else {
+    alert("\uC7A0\uC2DC \uD6C4 \uC774\uC6A9\uD574 \uC8FC\uC2DC\uAE30 \uBC14\uB78D\uB2C8\uB2E4.");
+    return false;
+  }
+}
+function add_hyphen(v) {
+  if (!v) {
+    return v;
+  }
+  v = v.replace(/[^0-9]/g, "");
+  return v.replace(/^(0(?:2|[0-9]{2}))([0-9]+)([0-9]{4}$)/, "$1-$2-$3");
+}
+function initPagination(num_entries, items_per_page, current_page2) {
+  if (!current_page2) {
+    var current_page2 = 0;
+  }
+  if (num_entries <= items_per_page) {
+    return false;
+  }
+  $(".sl_pagination").pagination(num_entries, {
+    current_page: current_page2,
+    num_edge_entries: 2,
+    num_display_entries: 8,
+    callback: pageselectCallback,
+    items_per_page
+  });
+  return false;
+}
+function pageselectCallback(page_index, jq) {
+  if ($(jq).data("load") == true)
+    getList(page_index, jq);
+  else
+    $(jq).data("load", true);
+  return false;
+}
+var current_page = 0;
+function getList(current_page2, jq) {
+  if (!current_page2)
+    current_page2 = 0;
+  var perPage = 10;
+  var pageID = current_page2 + 1;
+  var searchType = null;
+  var searchField = null;
+  var searchWord = null;
+  if ($.trim($("#search-word").val()) != "") {
+    searchField = $('input[name="search_type"]:checked').val();
+    searchWord = $.trim($("#search-word").val());
+  }
+  $.getJSON("/admin/users.json", { "search_field": searchField, "search_word": searchWord, "per_page": perPage, "page": pageID }, function(data) {
+    $("#user-select-list tbody").empty();
+    $("#user-select-list_count").val(data.total);
+    if (data.length == 1) {
+      $.each(data, function(index, value) {
+        if (value.left_coupon) {
+          var left_coupon = value.left_coupon;
+        } else {
+          var left_coupon = 0;
+        }
+        $("#user-select-list tbody").append("<tr>" + input + '<td class="name">' + value["name"] + '</td><td class="phone">' + add_hyphen(value["phone"]) + "</td></tr>");
+      });
+      $("#user-select-list tbody td").click(m_td_click);
+      $("#user-select-list tbody tr td input").click(function(e) {
+        e.stopPropagation();
+      }).change(function() {
+        var tr = $(this).closest("tr");
+        var u_id = tr.find("td:first input").val();
+        var u_name = tr.find("td:eq(1)").text();
+        var u_phone = tr.find("td:eq(3)").text();
+        var left_coupon = tr.find("td input:eq(1)").val();
+        var black_list_exists = tr.find("td input:eq(2)").val();
+        var black_list = tr.find("td input:eq(3)").val();
+        var content = { "id": u_id, "name": u_name, "left_coupon": left_coupon, "phone": u_phone, "black_list_exists": black_list_exists, "black_list": black_list };
+        select_user(content);
+      });
+    } else {
+      $("#user-select-list tbody").append('<tr><td colspan="4" style="text-align:center">\uD574\uB2F9 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</td></tr>');
+    }
+    $(".sl_pagination").removeData("load").empty();
+    initPagination(data.length, 10, current_page2);
+  });
+}
+function m_td_click() {
+  var i_checkbox = $(this).parent().find("input:first").prop("checked", true).change();
+}
+function select_user(content) {
+  $("#order-user-id").val(content.id);
+  $("#user-info").show();
+  $("#user-search").hide();
+  var user_name = content.name;
+  if ($("#display_coupon").val() == 1) {
+    user_name += "<br />(" + content.left_coupon + '\uD68C \uB0A8\uC74C)<input type="hidden" id="left_coupon" value="' + content.left_coupon + '">';
+  }
+  $("#user_name").html(user_name);
+  if (content.phone) {
+    var phone = content.phone;
+  } else {
+    var phone = "\uBBF8\uC785\uB825";
+  }
+  $("#user_phone").text(phone);
+  if (content.black_list_exists > 0) {
+    $("#user-search-form .card").addClass("border-warning");
+    var card_footer = $("<div>");
+    card_footer.addClass("card-footer bg-warning border-warning");
+    card_footer.html('<span class="text text-white">' + content.black_list + "</span>");
+    $("#user-search-form .card").append(card_footer);
+  } else {
+    if ($("#user-search-form .card").hasClass("border-warning")) {
+      $("#user-search-form .card").removeClass("border-warning");
+    }
+  }
+  if ($("#order_complete").length) {
+    if (phone != "\uBBF8\uC785\uB825") {
+      $('#order_form input[name="CashNumber"]').val(phone.replace(/-/g, ""));
+    }
+  }
+  localStorage.setItem("user", JSON.stringify(content));
+}
 var ready = function() {
-  $("a.simple_image").fancybox({
-    "opacity": true,
-    "overlayShow": true,
-    "overlayColor": "#000000",
-    "overlayOpacity": 0.9,
-    "titleShow": true,
-    "openEffect": "elastic",
-    "closeEffect": "elastic"
+  var p_index = 0;
+  var no_exists_order_t = $("#no_data_t").val();
+  $("#order_form .delete").click(delete_order);
+  $("#order_form .plus").click(plus_click);
+  $("#order_form .minus").click(minus_click);
+  $('input[name="search_field"]').change(function() {
+    $("#search_label").text($(this).parent().find("label").text());
+    $("#search-word").val("");
+    $("#search-word").focus();
   });
-  $("#sl_main_gallery").on("slide.bs.carousel", function(e) {
-    var $nextImage = $(e.relatedTarget).find("img");
-    $nextImage.each(function() {
-      if ($(this).attr("data-original")) {
-        $(this).attr("src", $(this).attr("data-original"));
-        $(this).removeAttr("data-original");
+  function delete_order() {
+    var tr = $(this).closest("tr");
+    var tbody = $(this).closest("tbody");
+    var product_id = tr.find("input:first").val();
+    var product_ele = $('#order-new .list input.product_id[value="' + product_id + '"]');
+    var ele = product_ele.closest(".card").find(".quantity");
+    ele.val(0);
+    make_order();
+  }
+  function plus_click() {
+    var tr = $(this).closest("tr");
+    var product_id = tr.find("input:first").val();
+    var product_ele = $('#order-new .list input.product_id[value="' + product_id + '"]');
+    var ele = product_ele.closest(".card").find(".quantity");
+    ele.val(Number(ele.val()) + 1);
+    make_order();
+  }
+  function minus_click() {
+    var tr = $(this).closest("tr");
+    var product_id = tr.find("input:first").val();
+    var product_ele = $('#order-new .list input.product_id[value="' + product_id + '"]');
+    var ele = product_ele.closest(".card").find(".quantity");
+    ele.val(Number(ele.val()) - 1);
+    make_order();
+  }
+  function make_order() {
+    if ($("#order_form tbody .no_data").length) {
+      $("#order_form tbody tr").remove();
+    }
+    $("#order_form tbody .order").remove();
+    var total_quantity = new Array();
+    var total_price = new Array();
+    $("#order-new .list article .card").each(function() {
+      var quantity = $(this).find("input.quantity").val();
+      if (quantity == 0) {
+        return true;
       }
+      var title = $(this).find(".card-header").text();
+      var product_id = $(this).find("input.product_id").val();
+      var price = $(this).find('input[name="price[]"]').val();
+      var dc_rate = 0;
+      var last_price = Number(quantity * (price - price * (dc_rate / 100)));
+      total_quantity.push(quantity);
+      total_price.push(last_price);
+      var tr = $('<tr class="order"><td><input type="hidden" value="' + product_id + '">' + title + '</td><td class="price text-right"><span class="price_t">' + last_price.toLocaleString() + '</span></td><td class="text-center"><span class="btn btn-success plus">+</span>&nbsp;<span class="quantity">' + quantity + '</span>&nbsp;<span class="btn btn-warning minus">-</span></td><td class="text-right"><span class="btn btn-danger delete">' + $("#cancel_s").text() + "</span></td></tr>");
+      tr.find(".delete").click(delete_order);
+      tr.find(".plus").click(plus_click);
+      tr.find(".minus").click(minus_click);
+      $("#order_form tbody").append(tr);
+      tr.effect("highlight", 1e3);
+      p_index++;
     });
+    var total_result_price = total_price.reduce((a, b) => a + b, 0);
+    $("#total-price").text(Number(total_result_price).toLocaleString("ko-KR", { style: "currency", currency: "KRW" }));
+    if ($("#order_form table tbody tr.order").length) {
+      $("#select-complete").removeClass("disabled");
+    } else {
+      $("#select-complete").addClass("disabled");
+      $("#order_form tbody").append('<tr><td colspan="4" class="no_data">' + no_exists_order_t + "</td></tr>");
+    }
+  }
+  $("#order-new .list article .card input.quantity").change(function(event) {
+    make_order();
   });
-  $("#sl_main_gallery .carousel-inner .active img").each(function() {
-    if ($(this).attr("data-original")) {
-      $(this).attr("src", $(this).attr("data-original"));
-      $(this).removeAttr("data-original");
+  $("#order-new .list article .card-header,#order-new .list article .card-body").click(function() {
+    $(this).closest(".card").find("input.quantity").val(Number($(this).closest(".card").find("input.quantity").val()) + 1).change();
+  }).css("cursor", "pointer");
+  $("#user-select-list tbody tr,#order_add article .card").css("cursor", "pointer");
+  $("#user-select-list tbody td").click(m_td_click);
+  $("#user-select-list tbody tr td input").change(function() {
+    var tr = $(this).closest("tr");
+    var u_id = tr.find("td:first input").val();
+    var u_name = tr.find("td:eq(1)").text();
+    var u_phone = tr.find("td:eq(2)").text();
+    var left_coupon = tr.find("td input:eq(1)").val();
+    var black_list_exists = tr.find("td input:eq(3)").val();
+    var black_list = tr.find("td input:eq(4)").val();
+    var content = { "id": u_id, "name": u_name, "left_coupon": left_coupon, "phone": u_phone, "black_list_exists": black_list_exists, "black_list": black_list };
+    select_user(content);
+  });
+  initPagination(Number($("#user-select-list-count").val()), 10, 0);
+  $("#user_select_cancel").click(function() {
+    $("#user-info").hide();
+    $("#user-search").show();
+    $("#order-user-id").val("");
+    if ($(this).closest(".card").hasClass("border-warning")) {
+      $(this).closest(".card").removeClass("border-warning");
+      $(this).closest(".card").find(".card-footer").remove();
+    }
+    localStorage.removeItem("user");
+  });
+  $('input[name="search_field"]').change(function() {
+    $("#search_label").text($(this).parent().find("label").text());
+  });
+  $('input[name="search_field"]').each(function() {
+    if ($(this).is(":checked")) {
+      $("#search_label").text($(this).parent().find("label").text());
     }
   });
-  $(".sl_gallery .carousel-item a").click(function() {
-    $.getJSON($(this).attr("href"), { "json": true }, function(data) {
-      $("#sl_gallery_left a").attr("href", data.photo.url).attr("title", data.title);
-      $("#sl_gallery_left span").text(data.title);
-      $("#sl_gallery_left figcaption").text(data.title).css("bottom", -30);
-      $("#sl_gallery_left img").attr("src", data.photo.large_thumb.url).animate({ opacity: "1" }, 400, function() {
-        $("#sl_gallery_left figcaption").animate({ bottom: 0, opacity: "0.8" }, 400);
-      });
-      $("#sl_gallery_right div:first p").html(nl2br(data.content)).effect("highlight");
-      $("#sl_gallery_right div.add_info span[itemprop='dateCreated']").text(data.created_date).effect("highlight");
-      $("#sl_gallery_menu a:first").attr("href", "/galleries/edit/" + data.id);
-      $("#sl_gallery_menu a:eq(1)").attr("href", "/galleries/confirm_delete/" + data.id);
-      document.title = data.title + "title_separatorapplication_name";
-      if (history && history.pushState) {
-        history.pushState("", "gallery_" + data.id, "/galleries/" + data.id);
+  $("#user-search-form").submit(function() {
+    var search_field = $(this).find('input[name="search_field"]:checked').val();
+    var search_word = $(this).find("#search-word").val();
+    $.getJSON("/admin/users.json", { "search_field": search_field, "search_word": search_word, "per_page": 10, "page": 1 }, function(data) {
+      if (data.length == 1) {
+        $("#user-select-list").hide();
+        var content = data[0];
+        select_user(content);
+        $("#user-search-form h3 span:first").hide();
+        $("#user-search-form h3 span:eq(1)").show();
+      } else {
+        if (data.length) {
+          $("#user-select-list").show();
+          $("#user-select-list tbody").empty();
+          $("#user-select-list_count").val(data.total);
+          $.each(data, function(index, value) {
+            if (value.left_coupon) {
+              var left_coupon = value.left_coupon;
+            } else {
+              var left_coupon = 0;
+            }
+            var input2 = '<td class="text-center"><input name="id" value="' + value.id + '" type="radio"><input type="hidden" value="' + left_coupon + '"><input type="hidden" value="' + value.black_list_exists + '"><input type="hidden" value="' + value.black_list + '"></td>';
+            $("#user-select-list tbody").append("<tr>" + input2 + '<td class="name">' + value["name"] + '</td><td class="phone">' + add_hyphen(value["phone"]) + "</td></tr>");
+          });
+          $("#user-select-list tbody td").click(m_td_click);
+          $("#user-select-list tbody tr td input").click(function(e) {
+            e.stopPropagation();
+          }).change(function() {
+            var tr = $(this).closest("tr");
+            var u_id = tr.find("td:first input").val();
+            var u_name = tr.find("td:eq(1)").text();
+            var u_phone = tr.find("td:eq(2)").text();
+            var left_coupon = tr.find("td input:eq(1)").val();
+            var black_list_exists = tr.find("td input:eq(3)").val();
+            var black_list = tr.find("td input:eq(4)").val();
+            var content2 = { "id": u_id, "name": u_name, "left_coupon": left_coupon, "phone": u_phone, "black_list_exists": black_list_exists, "black_list": black_list };
+            select_user(content2);
+          });
+        } else {
+          $("#user-select-list").show();
+          $("#user-select-list tbody").empty();
+          $("#user-select-list tbody").append('<tr><td colspan="4" style="text-align:center">\uD574\uB2F9 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</td></tr>');
+        }
+        $(".sl_pagination").removeData("load").empty();
+        initPagination(data.total, 10, current_page);
       }
     });
     return false;
   });
-  $("#sl_main_gallery .carousel-inner .active img,#sl_main_blog img").each(function() {
-    if ($(this).attr("data-original")) {
-      $(this).attr("src", $(this).attr("data-original"));
-      $(this).removeAttr("data-original");
+  $("#select-complete").click(function() {
+    if ($(this).hasClass("disabled")) {
+      alert("\uBA3C\uC800 \uC0C1\uD488\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694");
+      return false;
+    }
+    $(".order-layer").hide();
+    $(".payment-layer").show();
+  });
+  $("#cancel_all").click(function() {
+    $("#order-new .list article .card input.quantity").val(0);
+    $("#order_form tbody").empty();
+    var no_eo_tr = $('<tr><td colspan="4" class="no_data">' + no_exists_order_t + "</td></tr>");
+    $("#order_form tbody").append(no_eo_tr);
+    make_order();
+  });
+  $("#order_form").submit(function() {
+    localStorage.removeItem("user");
+    localStorage.removeItem("orders");
+  });
+  $("#anon").change(function() {
+    if ($(this).is(":checked")) {
+      $("#order-user-id").val($("#anon_id").val());
+      $(".non-anon").hide();
+      $("#p_type2").click();
+      $("#p_type1").attr("disabled", "disabled");
+    } else {
+      $("#order-user-id").val("");
+      $(".non-anon").show();
+      $("#user-select-list").hide();
+      $("#p_type1").removeAttr("disabled");
     }
   });
-  if (!$("#myCanvas").tagcanvas({
-    outlineThickness: 1,
-    maxSpeed: 0.05,
-    textFont: null,
-    textColour: null,
-    weight: true,
-    depth: 1
-  }, "tags")) {
-    $("#myCanvasContainer").hide();
-    $("#tags ul").css({ "margin": 0, "padding": 0, "list-style": "none" });
-    $("#tags ul li").css({ "float": "left", "margin": "0 10px" });
-  }
+  $('input[name="date_p"]').change(function() {
+    if ($("#future_search").length) {
+      if ($("#future_search").val() == 1) {
+        if ($(this).val() == "all") {
+          $('input[name="start_date"]').val("").effect("highlight");
+          $('input[name="end_date"]').val("").effect("highlight");
+        } else {
+          setDateInput($(this).val());
+        }
+        return true;
+      }
+    }
+    if ($(this).val() == "all") {
+      $('input[name="start_date"]').val("").effect("highlight");
+      $('input[name="end_date"]').val("").effect("highlight");
+    } else {
+      setDateInput($(this).val());
+    }
+  });
+  $(".input-daterange input").each(function() {
+    $(this).datepicker({ language: "ko", todayHighlight: true, maxViewMode: "decades" });
+  });
+  $("#no-sns-id").click(function() {
+    $("#no-sns-login").show();
+    $("#sns-login,#no-sns-id").hide();
+    $("#no-sns-id").parent().hide();
+  });
   $("#myModal").on("hidden.bs.modal", function() {
     $(this).removeData("bs.modal");
   });
@@ -23204,40 +16000,14 @@ var ready = function() {
     });
     return false;
   });
-  $(".btn_minimize").click(function() {
-    var i = $(this).find("i:first");
-    if (i.text() == "expand_more") {
-      i.text("expand_less");
-      $(this).parent().parent().parent().find(".box_content").slideDown();
-    } else {
-      i.text("expand_more");
-      $(this).parent().parent().parent().find(".box_content").slideUp();
-    }
-    return false;
-  });
-  $(".btn_close").click(function() {
-    $(this).parent().parent().parent().remove();
-    if (!$(".sl_aside").length) {
-      $(".sub_main").css("width", "100%");
-    }
-    return false;
-  });
-  $("#sl_blog_categories .box_content ul span.c_pointer").click(function() {
-    if ($(this).parent().find("ul").is(":visible")) {
-      $(this).parent().find("ul").hide();
-      $(this).find("span:eq(1)").html("&nbsp;&lt;&lt;");
-    } else {
-      $(this).parent().find("ul").show();
-      $(this).find("span:eq(1)").html("&nbsp;&gt;&gt;");
-    }
-  });
 };
-function nl2br(str, is_xhtml) {
-  var breakTag = is_xhtml || typeof is_xhtml === "undefined" ? "<br />" : "<br>";
-  return (str + "").replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, "$1" + breakTag + "$2");
-}
 $(document).ready(ready);
-document.addEventListener("turbo:load", ready);
+document.addEventListener("DOMContentLoaded", (event) => {
+  Rails.start();
+});
+
+// app/javascript/application.js
+window.Rails = Rails2;
 /*! Bundled license information:
 
 jquery/dist/jquery.js:
@@ -23252,17 +16022,17 @@ jquery/dist/jquery.js:
    * Date: 2023-08-28T13:37Z
    *)
 
-@hotwired/turbo/dist/turbo.es2017-esm.js:
-  (*!
-  Turbo 8.0.4
-  Copyright © 2024 37signals LLC
-   *)
-
 bootstrap/dist/js/bootstrap.esm.js:
   (*!
     * Bootstrap v5.3.3 (https://getbootstrap.com/)
     * Copyright 2011-2024 The Bootstrap Authors (https://github.com/twbs/bootstrap/graphs/contributors)
     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
     *)
+
+jquery-ui-dist/jquery-ui.min.js:
+  (*! jQuery UI - v1.13.3 - 2024-04-26
+  * https://jqueryui.com
+  * Includes: widget.js, position.js, data.js, disable-selection.js, effect.js, effects/effect-blind.js, effects/effect-bounce.js, effects/effect-clip.js, effects/effect-drop.js, effects/effect-explode.js, effects/effect-fade.js, effects/effect-fold.js, effects/effect-highlight.js, effects/effect-puff.js, effects/effect-pulsate.js, effects/effect-scale.js, effects/effect-shake.js, effects/effect-size.js, effects/effect-slide.js, effects/effect-transfer.js, focusable.js, form-reset-mixin.js, jquery-patch.js, keycode.js, labels.js, scroll-parent.js, tabbable.js, unique-id.js, widgets/accordion.js, widgets/autocomplete.js, widgets/button.js, widgets/checkboxradio.js, widgets/controlgroup.js, widgets/datepicker.js, widgets/dialog.js, widgets/draggable.js, widgets/droppable.js, widgets/menu.js, widgets/mouse.js, widgets/progressbar.js, widgets/resizable.js, widgets/selectable.js, widgets/selectmenu.js, widgets/slider.js, widgets/sortable.js, widgets/spinner.js, widgets/tabs.js, widgets/tooltip.js
+  * Copyright OpenJS Foundation and other contributors; Licensed MIT *)
 */
 //# sourceMappingURL=/assets/application.js.map

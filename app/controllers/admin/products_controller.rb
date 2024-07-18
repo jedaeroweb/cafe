@@ -45,6 +45,8 @@ class Admin::ProductsController < Admin::AdminController
 
   # GET /Products/1/edit
   def edit
+
+    @product.build_product_picture
   end
 
   # POST /Products
@@ -66,6 +68,7 @@ class Admin::ProductsController < Admin::AdminController
   # PATCH/PUT /Products/1
   # PATCH/PUT /Products/1.json
   def update
+
     respond_to do |format|
       if @product.update(product_params)
         format.html { redirect_to admin_product_path(@product), notice: 'product was successfully updated.' }

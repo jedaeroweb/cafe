@@ -6,7 +6,7 @@ class Admin::UsersController < Admin::AdminController
   def index
     params[:per_page] = 10 unless params[:per_page].present?
 
-    condition = { branch_id: session[:branch_id], enable: true, 'user_anons.id': nil}
+    condition = { branch_id: session[:branch_id], enable: true}
 
     like = false
 
@@ -25,11 +25,11 @@ class Admin::UsersController < Admin::AdminController
     end
 
     if like
-      @user_count = User.includes(:user_anon).includes(:user_unique_number).where(condition).where(condition_sql, '%' + params[:search_word].strip + '%').count
-      @users = User.select('users.*').includes(:user_anon).includes(:user_unique_number).where(condition).where(condition_sql, '%' + params[:search_word].strip + '%').page(params[:page]).per(params[:per_page]).order('id desc')
+      @user_count = User.includes(:user_unique_number).where(condition).where(condition_sql, '%' + params[:search_word].strip + '%').count
+      @users = User.select('users.*').includes(:user_unique_number).where(condition).where(condition_sql, '%' + params[:search_word].strip + '%').page(params[:page]).per(params[:per_page]).order('id desc')
     else
-      @user_count = User.includes(:user_anon).includes(:user_unique_number).where(condition).count
-      @users = User.select('users.*').includes(:user_anon).includes(:user_unique_number).where(condition).page(params[:page]).per(params[:per_page]).order('id desc')
+      @user_count = User.includes(:user_unique_number).where(condition).count
+      @users = User.select('users.*').includes(:user_unique_number).where(condition).page(params[:page]).per(params[:per_page]).order('id desc')
     end
   end
 
