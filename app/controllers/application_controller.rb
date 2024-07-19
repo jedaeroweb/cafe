@@ -42,7 +42,7 @@ class ApplicationController < ActionController::Base
   protected
 
   def set_branch_setting
-    @current_branch = Branch.where(id: session[:branch_id], enable: true).first
+    @current_branch = Branch.where(id: current_user.branch_id, enable: true).first
     @current_branch_setting = BranchSetting.where(branch_id: @current_branch, enable: true).first
 
     @use_point = false

@@ -37,7 +37,7 @@ class OrdersController < ApplicationController
     @order = Order.new
     @order.order_products.build
 
-    condition = { branch_id: session[:branch_id], enable: true }
+    condition = { branch_id: current_user.branch_id, enable: true }
 
     if @current_branch_setting.use_product_category
       @product_categories = ProductCategory.where(condition)
@@ -157,6 +157,6 @@ class OrdersController < ApplicationController
       params[:order][:user_id] = current_user.id
     end
 
-    params.require(:order).permit(:user_id, :transaction_date, :price, :discount, :payment, order_products_attributes: [:product_id, :price, :quantity]).merge(branch_id: session[:branch_id])
+    params.require(:order).permit(:user_id, :transaction_date, :price, :discount, :payment, order_products_attributes: [:product_id, :price, :quantity]).merge(branch_id: current_user.branch_id)
   end
 end
