@@ -69,19 +69,15 @@ class Admin::OrdersController < Admin::AdminController
     end
 
     if like
-      @user_count = User.includes(:user_anon).includes(:user_unique_number).where(condition).where(condition_sql, '%' + params[:search_word].strip + '%').count
-      @users = User.select('users.*,user_anons.id as anon_id').includes(:user_anon).includes(:user_unique_number).where(condition).where(condition_sql, '%' + params[:search_word].strip + '%').page(params[:page]).per(params[:per_page]).order('id desc')
+      @user_count = User.includes(:user_unique_number).where(condition).where(condition_sql, '%' + params[:search_word].strip + '%').count
+      @users = User.includes(:user_unique_number).where(condition).where(condition_sql, '%' + params[:search_word].strip + '%').page(params[:page]).per(params[:per_page]).order('id desc')
     else
-      @user_count = User.includes(:user_anon).includes(:user_unique_number).where(condition).count
-      @users = User.select('users.*,user_anons.id as anon_id').includes(:user_anon).includes(:user_unique_number).where(condition).page(params[:page]).per(params[:per_page]).order('id desc')
+      @user_count = User.includes(:user_unique_number).where(condition).count
+      @users = User.includes(:user_unique_number).where(condition).page(params[:page]).per(params[:per_page]).order('id desc')
     end
 
     if @user_counts == 1
       @user = @users[0]
-    end
-
-    unless @current_branch_setting.user_type.id == 1
-      @user = User.joins(:user_anon).where(condition).first
     end
 
     if @current_branch_setting.use_product_category

@@ -25,13 +25,32 @@ class Users::RegistrationsController < Devise::RegistrationsController
 
   # POST /resource
   def create
-    build_resource(resource_params)
+    title='내가게'
+
+    if params[:title].present?
+      title=params[:title]
+    end
+
+    @company = Company.create!(title: title)
+    @branch = Branch.create!(company_id: @company.id, title: '본점', branch_setting_attributes: { use_unique_number: true, branch_setting_user_type_attributes: { user_type_id: 1 }, branch_setting_payments_attributes: [{ payment_id: 1 }, { payment_id: 2 }] })
+
+    ap=user_params.merge(branch_id: @branch.id)
+
+    @user = User.new(ap)
 
     if Rails.env.production?
-      result=verify_recaptcha(:model => resource) && resource.save
+      result=verify_recaptcha(:model =>@user) && @user.save
     else
-      result=resource.save
+      result=@user.save!
     end
+
+    @admin=Admin.create!(branch_id: @branch.id, name: title+' 관리자', role_admin_attributes: { role_id: 1 })
+    UserAdmin.create!(user_id: @user.id, admin_id: @admin.id)
+
+    @branch.branch_setting.user_id=@user.id
+    @branch.branch_setting.save!
+
+    session[:admin_id] = @admin.id
 
     if result
       if resource.active_for_authentication?
@@ -75,13 +94,7 @@ class Users::RegistrationsController < Devise::RegistrationsController
 
   protected
 
-  def account_update_params
-    params.require(:user).permit(:name, :email, :password, :password_confirmation, :current_password, user_picture_attributes: [:picture])
-  end
-
-  private
-
-  def resource_params
-    params.require(:user).permit(:name, :email, :password, :password_confirmation, :current_password, user_picture_attributes: [:picture])
+  def user_params
+    params.require(:user).permit( :name, :email, :password, :password_confirmation, :salt, :encrypted_password, user_picture_attributes: [:picture])
   end
 end

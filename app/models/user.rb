@@ -8,7 +8,7 @@ class User < ApplicationRecord
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
   validates_uniqueness_of :email
   validates_length_of :email, within: 4..150, allow_blank: true
-  validates_uniqueness_of :phone
+  validates_uniqueness_of :phone, allow_blank: true
   validates :password, length: { within: 5..255}, allow_blank: true
   validates_confirmation_of :password, allow_blank: true
 
@@ -19,7 +19,6 @@ class User < ApplicationRecord
   has_one :user_group, dependent: :destroy
   has_one :user_unique_number, dependent: :destroy
   has_one :group, through: :user_group
-  has_one :user_anon
   has_one :user_point, dependent: :destroy
   has_many :orders, dependent: :nullify
   has_many :accounts, dependent: :nullify

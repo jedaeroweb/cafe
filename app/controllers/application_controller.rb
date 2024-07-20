@@ -42,6 +42,10 @@ class ApplicationController < ActionController::Base
   protected
 
   def set_branch_setting
+    unless current_user
+      return false
+    end
+
     @current_branch = Branch.where(id: current_user.branch_id, enable: true).first
     @current_branch_setting = BranchSetting.where(branch_id: @current_branch, enable: true).first
 
