@@ -102,9 +102,6 @@ mark, rp, rt, ruby, summary, time {display:inline;}
 .h4, h4 {font-size:1rem}
 
 
-#home nav ul {padding-left:0;margin-top:2rem}
-#home nav ul li {list-style:none;margin-bottom:1.5rem}
-#home nav ul li a {display:block;min-height:5rem;font-size:20px}
 
 #user-list a {color:#333}
 .user-index {color:#999}
@@ -120,19 +117,6 @@ mark, rp, rt, ruby, summary, time {display:inline;}
   font-weight: bold;
 }
 
-.nav-pills > li > a {
-  background: $secondary-bg;
-}
-
-.nav-pills > li + li {
-  margin-left: 5px;
-}
-
-.nav > li > a:hover,
-.nav > li > a:focus {
-  color: #212121;
-  background: #E0E0E0;
-}
 
 .close {
   position:absolute;
@@ -210,11 +194,6 @@ mark, rp, rt, ruby, summary, time {display:inline;}
   background-color:#fff;
 }
 
-.nav-pills .nav-link.active, .show > .nav-pills .nav-link {
-  background: #fff;
-  color:#333;
-  border:1px solid rgba(0,0,0,.125);
-}
 
 .no-display-title {font-size:18px;text-indent:-9999px}
 

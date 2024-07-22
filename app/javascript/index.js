@@ -138,6 +138,7 @@ function getList(current_page, jq) {
     });
 }
 
+
 function m_td_click() {
     var i_checkbox = $(this).parent().find('input:first').prop('checked',true).change();
 }
@@ -182,12 +183,10 @@ function select_user(content) {
             $('#order_form input[name="CashNumber"]').val(phone.replace(/-/g, ""));
         }
     }
-
-    localStorage.setItem('user', JSON.stringify(content));
 }
 
 var ready=function(){
-    var p_index=0;
+    var product_category_id;
     var no_exists_order_t=$('#no_data_t').val();
     $('#order_form .delete').click(delete_order);
     $('#order_form .plus').click(plus_click);
@@ -198,6 +197,48 @@ var ready=function(){
         $("#search-word").val('');
         $("#search-word").focus();
     });
+
+    $('.product-category-link').click(function(event){
+        event.preventDefault();
+        product_category_id=$(this).attr('href').split('?product_category_id=')[1];
+
+        getProductList();
+    });
+
+    function getProductList(current_page, jq) {
+        if(!current_page)
+            current_page = 0;
+
+        var perPage =10;
+        var pageID=current_page+1;
+
+        $.getJSON('/products.json',{product_category_id: product_category_id, 'per_page':perPage,'page':pageID},function(data) {
+            var product=$("#order-product-list article:first").clone(true);
+
+            $("#order-product-list").empty();
+            $.each(data,function(index,value) {
+                var product_c=product.clone(true);
+
+                var exists_product=check_exists_product(value.id);
+
+                product_c.find('.card-header').text(value.title);
+                product_c.find('input:first').val(value.id);
+                product_c.find('input:eq(1)').val(value.price);
+                product_c.find('p:first').text(value.price.toLocaleString( 'ko-KR',{style:"currency", currency:"KRW"}));
+
+                if(exists_product) {
+                    product_c.find('.quantity').val(exists_product.find('.quantity-l input:first').val());
+                } else {
+                    product_c.find('.quantity').val(0);
+                }
+
+                $("#order-product-list").append(product_c);
+            });
+
+            //$(".sl_pagination").removeData("load").empty();
+            // initPagination(data.length,10,current_page);
+        });
+    }
 
     function delete_order(){
         var tr=$(this).closest('tr');
@@ -231,46 +272,72 @@ var ready=function(){
         make_order();
     }
 
+    function check_exists_product(product_id) {
+        var product_exists = false;
+
+        $("#order_form tbody tr").each(function(){
+            if(product_id==Number($(this).find('input:first').val())) {
+                product_exists=$(this);
+                return true;
+            }
+        });
+
+        return product_exists;
+    }
+
     function make_order(){
         if($("#order_form tbody .no_data").length) {
             $("#order_form tbody tr").remove();
         }
 
-        $("#order_form tbody .order").remove();
-
-
-        var total_quantity=new Array();
-        var total_price=new Array();
-
         $("#order-new .list article .card").each(function(){
             var quantity = $(this).find('input.quantity').val();
+            var exists_tr=false;
 
             if(quantity==0) {
                 return true;
             }
 
-            var title=$(this).find('.card-header').text();
-            var product_id = $(this).find('input.product_id').val();
-            var price=$(this).find('input[name="price[]"]').val();
-            var dc_rate=0;
+            var product_id = Number($(this).find('input[name="product_id[]"]').val());
+
+            exists_tr=check_exists_product(product_id);
+
+            if(exists_tr) {
+                exists_tr.effect('highlight', 1000).find('.quantity-l input:first').val(quantity);
+                exists_tr.find('.quantity').text(quantity);
+            } else {
+                var title = $(this).find('.card-header').text();
+
+                var price = $(this).find('input[name="price[]"]').val();
+                var dc_rate = 0;
+
+                var last_price = Number(quantity * (price - (price * (dc_rate / 100))));
 
 
-            var last_price=Number(quantity*(price-(price*(dc_rate/100))));
+
+                var tr = $('<tr class="order"><td><input type="hidden" name="order[order_products_attributes]['+product_id+'][product_id]" value="' + product_id + '">' + title + '</td><td class="price text-right"><span class="price_t"><input type="hidden" value="' + last_price + '">' + last_price.toLocaleString() + '</span></td><td class="text-center quantity-l"><span class="btn btn-success plus">+</span>&nbsp;<input type="hidden" name="order[order_products_attributes]['+product_id+'][quantity]" value="' + quantity + '"><span class="quantity">' + quantity + '</span>&nbsp;<span class="btn btn-warning minus">-</span></td><td class="text-right"><span class="btn btn-danger delete">' + $('#cancel_s').text() + '</span></td></tr>');
+                tr.find('.delete').click(delete_order);
+                tr.find('.plus').click(plus_click);
+                tr.find('.minus').click(minus_click);
+
+                $("#order_form tbody").append(tr);
+                tr.effect('highlight', 1000);
+            }
+        });
+
+
+        var total_quantity=new Array();
+        var total_price=new Array();
+
+        $("#order_form tbody tr").each(function(){
+            var price=$(this).find('.price input:first').val();
+            var quantity=$(this).find('.quantity-l input:first').val();
+            var dc_rate = 0;
+
+            var last_price = Number(quantity * (price - (price * (dc_rate / 100))));
 
             total_quantity.push(quantity)
             total_price.push(last_price);
-
-            // total_dc.push(dc_rate);
-
-
-            var tr=$('<tr class="order"><td><input type="hidden" value="'+product_id+'">'+title+'</td><td class="price text-right"><span class="price_t">'+last_price.toLocaleString()+'</span></td><td class="text-center"><span class="btn btn-success plus">+</span>&nbsp;<span class="quantity">'+quantity+'</span>&nbsp;<span class="btn btn-warning minus">-</span></td><td class="text-right"><span class="btn btn-danger delete">'+$('#cancel_s').text()+'</span></td></tr>');
-            tr.find('.delete').click(delete_order);
-            tr.find('.plus').click(plus_click);
-            tr.find('.minus').click(minus_click);
-
-            $("#order_form tbody").append(tr);
-            tr.effect('highlight',1000);
-            p_index++;
         });
 
         var total_result_price=total_price.reduce((a, b) => a + b, 0);
@@ -321,8 +388,6 @@ var ready=function(){
             $(this).closest('.card').removeClass('border-warning');
             $(this).closest('.card').find('.card-footer').remove();
         }
-
-        localStorage.removeItem('user');
     });
 
     $('input[name="search_field"]').change(function(){
@@ -419,11 +484,6 @@ var ready=function(){
         make_order();
     });
 
-    $("#order_form").submit(function(){
-        localStorage.removeItem('user');
-        localStorage.removeItem('orders');
-    });
-
     $("#anon").change(function(){
         if($(this).is(":checked")) {
             $("#order-user-id").val($("#anon_id").val());
@@ -463,7 +523,6 @@ var ready=function(){
     $('.input-daterange input').each(function() {
         $(this).datepicker({language: "ko",todayHighlight: true, maxViewMode : 'decades'});
     });
-
 
     $('#no-sns-id').click(function(){
         $("#no-sns-login").show();

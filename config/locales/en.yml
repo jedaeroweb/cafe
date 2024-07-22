@@ -25,6 +25,8 @@ en:
   display : 'display'
   hidden : 'hidden'
 
+  sign : 'sign'
+  close_now : 'colose now'
   start_order : 'start order'
   order_complete : 'order complete'
   select_again : 'select again'

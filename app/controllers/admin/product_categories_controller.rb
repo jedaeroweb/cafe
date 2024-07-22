@@ -31,6 +31,8 @@ class Admin::ProductCategoriesController < Admin::AdminController
   def create
     @product_category = ProductCategory.new(product_category_params)
 
+    puts 'good'
+
     respond_to do |format|
       if @product_category.save
         format.html { redirect_to admin_product_categories_path, notice: 'product category was successfully created.' }
@@ -75,6 +77,6 @@ class Admin::ProductCategoriesController < Admin::AdminController
 
   # Only allow a list of trusted parameters through.
   def product_category_params
-    params.require(:product_category).permit(:title, :enable).merge(branch_id: session[:branch_id])
+    params.require(:product_category).permit(:title, :order_no, :enable).merge(branch_id: session[:branch_id])
   end
 end

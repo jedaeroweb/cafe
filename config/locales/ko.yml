@@ -29,6 +29,7 @@ ko:
   setting: '설정'
 
   sign : '등록'
+  close_now : '지금 닫기'
   start_order : '주문시작'
   order_complete : '주문완료'
   select_again : '다시선택'
@@ -332,12 +333,12 @@ ko:
     currency:
       format:
         delimiter: ! ','
-        format: ! '%n%u'
+        format: ! '%u%n'
         precision: 0
         separator: .
         significant: false
         strip_insignificant_zeros: false
-        unit: 원
+        unit: ₩
     format:
       delimiter: ! ','
       precision: 3

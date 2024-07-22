@@ -5,7 +5,8 @@
      <% unless @current_branch_setting.branch_setting_user_type.user_type_id==1 %>
       <%= render 'search_user_form' %>
       <% end  %>
-    <%= render 'products/product_list' %>
+    <%= render 'product_categories/list' %>
+    <%= render 'products/list' %>
     <aside class="col-12 col-lg-4 left-form order-layer">
       <div class="row">
         <%= render 'order_list',:order => @order %>

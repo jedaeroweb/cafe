@@ -4,6 +4,9 @@ Rails.application.routes.draw do
   if Rails.env.production?
     mount LetsEncrypt::Engine => '/.well-known'
   end
+
+
+  resources :products
   resources :orders
   resources :points
   resources :user_branches

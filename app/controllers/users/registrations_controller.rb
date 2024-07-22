@@ -50,6 +50,7 @@ class Users::RegistrationsController < Devise::RegistrationsController
     @branch.branch_setting.user_id=@user.id
     @branch.branch_setting.save!
 
+    session[:branch_id] = @branch.id
     session[:admin_id] = @admin.id
 
     if result
