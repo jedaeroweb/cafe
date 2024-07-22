@@ -1,5 +1,5 @@
 <div class="col-12 col-lg-8 list order-layer">
-  <div class="row">
+  <div id="order-product-list" class="row">
     <h3 class="col-12 no-display-title"><%= t(:product_list) %></h3>
     <% unless @products.empty? %>
       <% @products.each_with_index do |product,index| %>

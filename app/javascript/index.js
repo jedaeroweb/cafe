@@ -202,6 +202,9 @@ var ready=function(){
         event.preventDefault();
         product_category_id=$(this).attr('href').split('?product_category_id=')[1];
 
+        $('.product-category-link').removeClass('active');
+        $(this).addClass('active');
+
         getProductList();
     });
 
@@ -240,35 +243,62 @@ var ready=function(){
         });
     }
 
-    function delete_order(){
-        var tr=$(this).closest('tr');
-        var tbody=$(this).closest('tbody');
+    function delete_order(event,ele){
+        var tr = $(this).closest('tr');
+
+        if(ele) {
+            tr = ele;
+        }
 
         var product_id=tr.find('input:first').val();
-        var product_ele=$('#order-new .list input.product_id[value="'+product_id+'"]');
-        var ele=product_ele.closest('.card').find('.quantity');
-        ele.val(0);
+        var product_ele=$('#order-product-list article input[name="product_id[]"][value="'+product_id+'"]');
+
+        if(product_ele) {
+            product_ele.closest('.card').find('.quantity').val(0);
+        }
+
+        tr.remove();
+        make_order();
+    }
+
+    function plus_click(event){
+        var tr=$(this).closest('tr');
+        var product_id=tr.find('input:first').val();
+        var product_ele=$('#order-product-list article input[name="product_id[]"][value="'+product_id+'"]');
+
+        var plus_value  = Number(tr.find('.quantity-l input:first').val())+1;
+
+        tr.find('.quantity-l input:first').val(plus_value);
+        tr.find('.quantity').text(plus_value);
+
+        if(product_ele) {
+            var ele = product_ele.closest('.card').find('.quantity');
+            ele.val(plus_value);
+        }
 
         make_order();
     }
 
-    function plus_click(){
+    function minus_click(event){
         var tr=$(this).closest('tr');
         var product_id=tr.find('input:first').val();
-        var product_ele=$('#order-new .list input.product_id[value="'+product_id+'"]');
-        var ele=product_ele.closest('.card').find('.quantity');
+        var product_ele=$('#order-product-list article input[name="product_id[]"][value="'+product_id+'"]');
 
-        ele.val(Number(ele.val())+1);
-        make_order();
-    }
 
-    function minus_click(){
-        var tr=$(this).closest('tr');
-        var product_id=tr.find('input:first').val();
-        var product_ele=$('#order-new .list input.product_id[value="'+product_id+'"]');
-        var ele=product_ele.closest('.card').find('.quantity');
+        var minus_value=Number(tr.find('.quantity-l input:first').val())-1;
 
-        ele.val(Number(ele.val())-1);
+        tr.find('.quantity-l input:first').val(minus_value);
+        tr.find('.quantity').text(minus_value);
+
+        if(product_ele) {
+            var ele = product_ele.closest('.card').find('.quantity');
+            ele.val(minus_value);
+        }
+
+        if(minus_value==0) {
+            delete_order(event,tr);
+        }
+
         make_order();
     }
 
@@ -315,7 +345,7 @@ var ready=function(){
 
 
 
-                var tr = $('<tr class="order"><td><input type="hidden" name="order[order_products_attributes]['+product_id+'][product_id]" value="' + product_id + '">' + title + '</td><td class="price text-right"><span class="price_t"><input type="hidden" value="' + last_price + '">' + last_price.toLocaleString() + '</span></td><td class="text-center quantity-l"><span class="btn btn-success plus">+</span>&nbsp;<input type="hidden" name="order[order_products_attributes]['+product_id+'][quantity]" value="' + quantity + '"><span class="quantity">' + quantity + '</span>&nbsp;<span class="btn btn-warning minus">-</span></td><td class="text-right"><span class="btn btn-danger delete">' + $('#cancel_s').text() + '</span></td></tr>');
+                var tr = $('<tr class="order"><td><input type="hidden" name="order[order_products_attributes]['+product_id+'][product_id]" value="' + product_id + '">' + title + '</td><td class="price text-right"><span class="price_t"><input type="hidden" value="' + last_price + '">' + last_price.toLocaleString() + '</span></td><td class="text-center quantity-l"><span class="btn btn-success plus">+</span>&nbsp;<input type="hidden" name="order[order_products_attributes]['+product_id+'][quantity]" value="' + quantity + '"><span class="quantity">' + quantity + '</span>&nbsp;<span class="btn btn-warning minus">-</span></td><td class="text-center"><span class="btn btn-danger delete">' + $('#cancel_s').text() + '</span></td></tr>');
                 tr.find('.delete').click(delete_order);
                 tr.find('.plus').click(plus_click);
                 tr.find('.minus').click(minus_click);
@@ -348,12 +378,16 @@ var ready=function(){
             $('#select-complete').removeClass('disabled');
         } else {
             $('#select-complete').addClass('disabled');
-            $('#order_form tbody').append('<tr><td colspan="4" class="no_data">'+no_exists_order_t+'</td></tr>');
+            $('#order_form tbody').append('<tr><td colspan="4" class="text-center no_data">'+no_exists_order_t+'</td></tr>');
         }
     }
 
 
     $("#order-new .list article .card input.quantity").change(function(event){
+        if($(this).val()==0) {
+            var ele=check_exists_product($(this).closest('.card').find('input:first').val());
+            delete_order(event,ele);
+        }
         make_order();
     });
     $("#order-new .list article .card-header,#order-new .list article .card-body").click(function () {
@@ -478,7 +512,7 @@ var ready=function(){
         $("#order-new .list article .card input.quantity").val(0);
 
         $("#order_form tbody").empty();
-        var no_eo_tr=$('<tr><td colspan="4" class="no_data">'+no_exists_order_t+'</td></tr>');
+        var no_eo_tr=$('<tr><td colspan="4" class="text-center no_data">'+no_exists_order_t+'</td></tr>');
         $("#order_form tbody").append(no_eo_tr);
 
         make_order();
