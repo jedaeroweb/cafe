@@ -5,7 +5,7 @@
       <% @products.each_with_index do |product,index| %>
         <article class="col-12 col-sm-6 col-xxl-3">
           <div class="card">
-            <h3 class="card-header text-center"><%= product.title %></h3>
+            <h3 class="card-header text-center"><span><%= product.title %></span><i title="정보보기" class="material-icons float-end" data-info="/products/<%=product.id %>">info</i></h3>
             <div class="card-body">
               <input type="hidden" name="product_id[]" value="<%= product.id %>">
               <input type="hidden" name="price[]" value="<%= product.price %>">

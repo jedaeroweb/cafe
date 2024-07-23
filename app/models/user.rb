@@ -2,7 +2,7 @@ class User < ApplicationRecord
   after_initialize :default_values
 
   include OmniauthAttributesConcern
-  devise :database_authenticatable, :registerable, :recoverable, :rememberable,  :validatable, :omniauthable, omniauth_providers: [:kakao, :naver, :twitter, :facebook, :apple, :google_oauth2, :github]
+  devise :database_authenticatable, :registerable, :recoverable, :validatable, :omniauthable, omniauth_providers: [:kakao, :naver, :twitter, :facebook, :apple, :google_oauth2, :github]
 
   validates_length_of :name, within: 1..60
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
@@ -12,6 +12,7 @@ class User < ApplicationRecord
   validates :password, length: { within: 5..255}, allow_blank: true
   validates_confirmation_of :password, allow_blank: true
 
+  belongs_to :branch
   has_one :point, dependent: :destroy
   has_one :user_admin, dependent: :destroy
   has_one :admin, through: :user_admin
@@ -29,10 +30,6 @@ class User < ApplicationRecord
 
   def self.create_from_omniauth(params)
     self.__send__(params.provider, params)
-  end
-
-  def remember_me
-    true
   end
 
   private

@@ -25,6 +25,35 @@ zh-CN:
   display : '표시함'
   hidden : '표시안함'
 
+  setting: '설정'
+
+  confirm : '확인'
+  sign : '등록'
+  close : '닫기'
+  close_now : '지금 닫기'
+  start_order : '주문시작'
+  order_complete : '주문완료'
+  select_again : '다시선택'
+  select_complete : '선택완료'
+  search_order : "주문내역"
+  search_user : "회원검색"
+  select_user : "회원선택"
+  select_product : "상품선택"
+  deleted_user: '삭제된 회원'
+  unique_number : '고유번호'
+  name : "이름"
+  phone : "전화번호"
+  payment_n_total : "결제방법, 합계"
+  manage : "관리"
+  image : "이미지"
+  check : "선택"
+  transaction_date: '거래일'
+  display: '표시함'
+  hidden: '숨김'
+  none: '없음'
+  use: '사용'
+  not_use: '사용안함'
+
   add_order : "주문추가"
   order : "订单"
   product : "商品"

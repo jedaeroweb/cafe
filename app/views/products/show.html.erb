@@ -1,31 +1,15 @@
-<section id="show-product" class="col-12">
-  <div class="row">
-    <%= render :partial => 'layouts/notice', :locals => { :errors => @product.errors, :notice => notice, :alert => alert } %>
+
+  <div class="modal-header">
+    <h4 class="modal-title text-left" id="myModalLabel"><%=@product.title %></h4>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
   </div>
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <h3 class="card-header"><%=@product.title %></h3>
-        <div class="card-body">
-          <dl>
-            <dt><%= t(:price, scope: [:activerecord, :attributes, :product]) %></dt>
-            <dd><%= number_to_currency @product.price %></dd>
-            <dt><%= t(:created_at, scope: [:activerecord, :attributes, :product]) %></dt>
-            <dd><%= I18n.l @product.created_at.to_date, :format => :long %></dd>
-            <dt><%= t(:updated_at, scope: [:activerecord, :attributes, :product]) %></dt>
-            <dd><%= I18n.l @product.updated_at.to_date, :format => :long %></dd>
-          </dl>
-        </div>
-      </div>
-    </div>
+  <div class="modal-body">
+    <p><%= number_to_currency @product.price %>
+    </p>
+    <% if @product.content.present? %>
+    <p><%=simple_format @product.content.to_s %></p>
+    <% end%>
   </div>
-  <div class="row">
-    <div class="col-12 col-xl-6">
-      <%= link_to t(:link_list), admin_products_path, class: 'btn btn-secondary' %>
-    </div>
-    <div class="col-12 col-xl-6 text-right">
-      <%= link_to t(:edit), edit_admin_product_path(@product), class: 'btn btn-secondary' %>
-      <%= link_to t(:delete), admin_product_path(@product), class: 'btn btn-danger' %>
-    </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t(:confirm) %></button>
   </div>
-</section>

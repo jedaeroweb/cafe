@@ -28,7 +28,9 @@ ko:
   browse: '찾기'
   setting: '설정'
 
+  confirm : '확인'
   sign : '등록'
+  close : '닫기'
   close_now : '지금 닫기'
   start_order : '주문시작'
   order_complete : '주문완료'

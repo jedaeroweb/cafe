@@ -5,11 +5,10 @@ class Users::SessionsController < Devise::SessionsController
         #require 'ipaddr'
         #UserLoginLog.create!(admin_id: current_user.id, client_ip: IPAddr.new(request.remote_ip).to_i)
 
-        branch_id=current_user.branch_id
-        session[:branch_id]=branch_id
 
         unless current_user.user_admins_count.zero?
             user=User.find(current_user.id)
+            session[:branch_id]= user.branch_id
             session[:admin_id] = user.admin.id
         end
     end

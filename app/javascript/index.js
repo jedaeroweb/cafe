@@ -224,7 +224,8 @@ var ready=function(){
 
                 var exists_product=check_exists_product(value.id);
 
-                product_c.find('.card-header').text(value.title);
+                product_c.find('.card-header span:first').text(value.title);
+                product_c.find('.card-header i').data('info','/products/'+value.id);
                 product_c.find('input:first').val(value.id);
                 product_c.find('input:eq(1)').val(value.price);
                 product_c.find('p:first').text(value.price.toLocaleString( 'ko-KR',{style:"currency", currency:"KRW"}));
@@ -336,7 +337,7 @@ var ready=function(){
                 exists_tr.effect('highlight', 1000).find('.quantity-l input:first').val(quantity);
                 exists_tr.find('.quantity').text(quantity);
             } else {
-                var title = $(this).find('.card-header').text();
+                var title = $(this).find('.card-header span:first').text();
 
                 var price = $(this).find('input[name="price[]"]').val();
                 var dc_rate = 0;
@@ -393,6 +394,20 @@ var ready=function(){
     $("#order-new .list article .card-header,#order-new .list article .card-body").click(function () {
         $(this).closest('.card').find('input.quantity').val(Number($(this).closest('.card').find('input.quantity').val())+1).change();
     }).css('cursor','pointer');
+
+    $("#order-new .list article .card-header i").click(function(event){
+        event.stopPropagation();
+
+        $('#myModal').removeData("modal");
+        var url = $(this).data('info') + '?popup=true';
+        console.log(url);
+
+        $('#myModal').load(url, function () {
+            let myModal = new Modal(document.getElementById('myModal'));
+            myModal.show();
+        });
+    }).css('cursor','help');
+
 
 
     // 자바스크립트가 지원될때 Tr 커서 선택

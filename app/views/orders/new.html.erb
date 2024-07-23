@@ -1,17 +1,16 @@
 <div class="row">
 <div id="order-new" class="col-12">
   <h1 class="order-layer mt-3""><%= t(:select_product) %></h1>
-    <%= form_with(model: @order, local: true, :html=>{:id=>"order_form", :class=>"row"}) do |form| %>
      <% unless @current_branch_setting.branch_setting_user_type.user_type_id==1 %>
       <%= render 'search_user_form' %>
       <% end  %>
+  <%= form_with(model: @order, local: true, :html=>{:id=>"order_form", class: 'row'}) do |form| %>
     <%= render 'product_categories/list' %>
     <%= render 'products/list' %>
     <aside class="col-12 col-lg-4 left-form order-layer">
       <div class="row">
         <%= render 'order_list',:order => @order %>
-        </div>
-
+      </div>
     </aside>
     <div  class="col-12 order-layer">
     <div class="d-grid gap-2 mt-3">

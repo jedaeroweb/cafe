@@ -1,5 +1,7 @@
 class Product < ApplicationRecord
   translates :title
+
+  has_rich_text :content
   validates_presence_of :title, :price
   belongs_to :branch, counter_cache: true
   belongs_to :product_category, counter_cache: true, optional: true

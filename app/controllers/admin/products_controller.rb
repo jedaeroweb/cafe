@@ -99,6 +99,6 @@ class Admin::ProductsController < Admin::AdminController
 
   # Only allow a list of trusted parameters through.
   def product_params
-    params.require(:product).permit(:product_category_id, :title, :price, :enable, product_picture_attributes: [:picture]).merge(branch_id: session[:branch_id])
+    params.require(:product).permit(:product_category_id, :title, :price, :content, :enable, product_picture_attributes: [:picture]).merge(branch_id: session[:branch_id])
   end
 end
