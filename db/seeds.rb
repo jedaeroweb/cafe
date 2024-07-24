@@ -129,9 +129,13 @@ ProductPicture.create!(product_id: 1, picture: File.open(Rails.root.join("app", 
 ProductPicture.create!(product_id: 1, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
 ProductPicture.create!(product_id: 1, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
 
-ProductPicture.create!(product_id: 2, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
-ProductPicture.create!(product_id: 2, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
-ProductPicture.create!(product_id: 2, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
+ProductPicture.create!(product_id: 2, picture: File.open(Rails.root.join("app", "assets", "images","latte.png")))
+ProductPicture.create!(product_id: 2, picture: File.open(Rails.root.join("app", "assets", "images","latte.png")))
+ProductPicture.create!(product_id: 2, picture: File.open(Rails.root.join("app", "assets", "images","latte.png")))
+
+ProductPicture.create!(product_id: 5, picture: File.open(Rails.root.join("app", "assets", "images","cider.jpg")))
+ProductPicture.create!(product_id: 5, picture: File.open(Rails.root.join("app", "assets", "images","cider.jpg")))
+ProductPicture.create!(product_id: 5, picture: File.open(Rails.root.join("app", "assets", "images","cider.jpg")))
 
 Group.create!(id: 1, branch_id: 1, title: 'VIP')
 Group.create!(id: 2, branch_id: 1, title: 'Special')

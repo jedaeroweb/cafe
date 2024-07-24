@@ -230,6 +230,13 @@ var ready=function(){
                 product_c.find('input:eq(1)').val(value.price);
                 product_c.find('p:first').text(value.price.toLocaleString( 'ko-KR',{style:"currency", currency:"KRW"}));
 
+                if(value.product_pictures_count>0) {
+                    product_c.find('.product-pictures').empty();
+                    product_c.find('.product-pictures').append('<img src="'+value.product_pictures[0].picture.medium_thumb.url +'">');
+                } else {
+                    product_c.find('.product-pictures').empty();
+                }
+
                 if(exists_product) {
                     product_c.find('.quantity').val(exists_product.find('.quantity-l input:first').val());
                 } else {
@@ -343,9 +350,6 @@ var ready=function(){
                 var dc_rate = 0;
 
                 var last_price = Number(quantity * (price - (price * (dc_rate / 100))));
-
-
-
                 var tr = $('<tr class="order"><td><input type="hidden" name="order[order_products_attributes]['+product_id+'][product_id]" value="' + product_id + '">' + title + '</td><td class="price text-right"><span class="price_t"><input type="hidden" value="' + last_price + '">' + last_price.toLocaleString() + '</span></td><td class="text-center quantity-l"><span class="btn btn-success plus">+</span>&nbsp;<input type="hidden" name="order[order_products_attributes]['+product_id+'][quantity]" value="' + quantity + '"><span class="quantity">' + quantity + '</span>&nbsp;<span class="btn btn-warning minus">-</span></td><td class="text-center"><span class="btn btn-danger delete">' + $('#cancel_s').text() + '</span></td></tr>');
                 tr.find('.delete').click(delete_order);
                 tr.find('.plus').click(plus_click);
