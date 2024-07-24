@@ -61,6 +61,7 @@ ko:
   product : "상품"
   price : "가격"
   quantity : "수량"
+  cancel_all : "전부 취소"
   cancel : "취소"
   cash : "현금"
   credit : "신용카드"

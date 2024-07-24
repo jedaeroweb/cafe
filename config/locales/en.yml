@@ -38,6 +38,7 @@ en:
   product : "product"
   price : "price"
   quantity : "quantity"
+  cancel_all : "cancel all"
   cancel : "cancel"
   cash : "cash"
   credit : "credit"

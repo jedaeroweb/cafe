@@ -60,6 +60,7 @@ ja:
   product : "商品"
   price : "価格"
   quantity : "数量"
+  cancel_all : "전부 취소"
   cancel : "キャンセル"
   cash : "현금"
   credit : "신용카드"
