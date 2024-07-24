@@ -340,17 +340,19 @@ var ready=function(){
 
             exists_tr=check_exists_product(product_id);
 
+            var price = $(this).find('input[name="price[]"]').val();
+            var dc_rate = 0;
+            var last_price = Number(quantity * (price - (price * (dc_rate / 100))));
+
             if(exists_tr) {
                 exists_tr.effect('highlight', 1000).find('.quantity-l input:first').val(quantity);
                 exists_tr.find('.quantity').text(quantity);
+
+                exists_tr.find('.price input:first').val(last_price);
+                exists_tr.find('.price_t').text(last_price.toLocaleString( 'ko-KR',{style:"currency", currency:"KRW"}));
             } else {
                 var title = $(this).find('.card-header span:first').text();
-
-                var price = $(this).find('input[name="price[]"]').val();
-                var dc_rate = 0;
-
-                var last_price = Number(quantity * (price - (price * (dc_rate / 100))));
-                var tr = $('<tr class="order"><td><input type="hidden" name="order[order_products_attributes]['+product_id+'][product_id]" value="' + product_id + '">' + title + '</td><td class="price text-right"><span class="price_t"><input type="hidden" value="' + last_price + '">' + last_price.toLocaleString( 'ko-KR',{style:"currency", currency:"KRW"}) + '</span></td><td class="text-center quantity-l"><span class="btn btn-success plus">+</span>&nbsp;<input type="hidden" name="order[order_products_attributes]['+product_id+'][quantity]" value="' + quantity + '"><span class="quantity">' + quantity + '</span>&nbsp;<span class="btn btn-warning minus">-</span></td><td class="text-center"><span class="btn btn-danger delete">' + $('#cancel_s').text() + '</span></td></tr>');
+                var tr = $('<tr class="order"><td><input type="hidden" name="order[order_products_attributes]['+product_id+'][product_id]" value="' + product_id + '">' + title + '</td><td class="price text-right"><input type="hidden" value="' + last_price + '"><span class="price_t">' + last_price.toLocaleString( 'ko-KR',{style:"currency", currency:"KRW"}) + '</span></td><td class="text-center quantity-l"><span class="btn btn-success plus">+</span>&nbsp;<input type="hidden" name="order[order_products_attributes]['+product_id+'][quantity]" value="' + quantity + '"><span class="quantity">' + quantity + '</span>&nbsp;<span class="btn btn-warning minus">-</span></td><td class="text-center"><span class="btn btn-danger delete">' + $('#cancel_s').text() + '</span></td></tr>');
                 tr.find('.delete').click(delete_order);
                 tr.find('.plus').click(plus_click);
                 tr.find('.minus').click(minus_click);

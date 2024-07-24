@@ -35,11 +35,12 @@ ja:
   start_order : '주문시작'
   order_complete : '注文完了'
   select_again : '再選択'
+  select_language : '言語選択'
   select_complete : '選択完了'
   search_order : "주문내역"
   search_user : "회원검색"
   select_user : "회원선택"
-  select_product : "상품선택"
+  select_product : "商品選択"
   deleted_user: '삭제된 회원'
   unique_number : '고유번호'
   name : "이름"
@@ -69,9 +70,8 @@ ja:
   currency : "원"
   address : "주소"
   jedearoweb : '제대로웹'
-  payment_method : '결제방법'
-  total : '합계'
-  amount : '합계액'
+  payment_method : '決済方法'
+  total : '合計'
 
   login_first : "먼저 로그인 해주세요"
   no_exists_order : "주문이 없습니다"

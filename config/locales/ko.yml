@@ -33,14 +33,15 @@ ko:
   sign : '등록'
   close : '닫기'
   close_now : '지금 닫기'
-  start_order : '주문시작'
-  order_complete : '주문완료'
-  select_again : '다시선택'
-  select_complete : '선택완료'
+  start_order : '주문 시작'
+  order_complete : '주문 완료'
+  select_language : '언어 선택'
+  select_again : '다시 선택'
+  select_complete : '선택 완료'
   search_order : "주문내역"
-  search_user : "회원검색"
-  select_user : "회원선택"
-  select_product : "상품선택"
+  search_user : "회원 검색"
+  select_user : "회원 선택"
+  select_product : "상품 선택"
   deleted_user: '삭제된 회원'
   unique_number : '고유번호'
   name : "이름"

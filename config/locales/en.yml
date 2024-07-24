@@ -32,7 +32,9 @@ en:
   start_order : 'start order'
   order_complete : 'order complete'
   select_again : 'select again'
-  select_complete : 'select complete'
+  select_language : 'language selection'
+  select_complete : 'selection complete'
+  select_product : "Pick a product"
   add_order : "add order"
   order : "order"
   product : "product"

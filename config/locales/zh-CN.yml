@@ -34,11 +34,11 @@ zh-CN:
   start_order : '주문시작'
   order_complete : '주문완료'
   select_again : '重新选择'
+  select_language : '语言选择'
   select_complete : '选择完成'
   search_order : "주문내역"
   search_user : "회원검색"
-  select_user : "회원선택"
-  select_product : "상품선택"
+  select_product : "选择商品"
   deleted_user: '삭제된 회원'
   unique_number : '고유번호'
   name : "이름"
