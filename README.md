@@ -15,7 +15,7 @@ This Application is composed of [Rails](http://rubyonrails.org/)(user-pages,admi
 먼저 관리자 페이지로 admin@jedaeroweb.co.kr : a12345로 로그인 한뒤
 회원 관리메뉴에서 회원을 생성하고(아이디:비밀번호등 설정)
 
-Go Page(Login Use Email:admin@jedaeroweb.co.kr / Password:a12345 ) And Order
+Go Page(Login Use Email:user@jedaeroweb.co.kr / Password:a12345 ) And Order
 
 ## License
 
