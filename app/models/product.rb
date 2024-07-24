@@ -8,8 +8,6 @@ class Product < ApplicationRecord
   has_many :order_products
   has_many :orders, through: :order_products
   has_many :account_products, dependent: :nullify
-  has_one :product_picture, dependent: :destroy
-  has_one :product_content, dependent: :destroy
-  accepts_nested_attributes_for :product_picture, allow_destroy: true
-  accepts_nested_attributes_for :product_content, allow_destroy: true, :reject_if => lambda { |c| c[:content].blank? }
+  has_many :product_pictures, dependent: :destroy
+  accepts_nested_attributes_for :product_pictures, allow_destroy: true
 end

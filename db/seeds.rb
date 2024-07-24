@@ -28,7 +28,7 @@ Company.create!(id: 1, title: '피씨방')
 Company.create!(id: 2, title: '매점')
 Company.create!(id: 3, title: '임시 매점')
 
-Branch.create!(id: 1, company_id: 1, title: '피씨방', sample: true, branch_setting_attributes: { use_unique_number: true, branch_setting_user_type_attributes: { user_type_id: 3 }, branch_setting_payments_attributes: [{ payment_id: 1 }, { payment_id: 2 }, { payment_id: 3 }, { payment_id: 4 }] })
+Branch.create!(id: 1, company_id: 1, title: '피씨방', sample: true, branch_setting_attributes: { use_unique_number: true, branch_setting_user_type_attributes: { user_type_id: 1 }, branch_setting_payments_attributes: [{ payment_id: 1 }, { payment_id: 2 }, { payment_id: 3 }, { payment_id: 4 }] })
 Branch.create!(id: 2, company_id: 2, title: '매점', branch_setting_attributes: { use_unique_number: true, branch_setting_user_type_attributes: { user_type_id: 2 }, branch_setting_payments_attributes: [{ payment_id: 1 }, { payment_id: 2 }] })
 Branch.create!(id: 3, company_id: 3, title: '임시 매점', branch_setting_attributes: { use_unique_number: false, branch_setting_user_type_attributes: { user_type_id: 1 }, branch_setting_payments_attributes: [{ payment_id: 3 }, { payment_id: 4 }] })
 
@@ -125,6 +125,14 @@ Product.create!(id: 15, branch_id: 2, product_category_id: 6, title: '공갈빵'
 Product.create!(id: 16, branch_id: 3, product_category_id: 7, title: '콜라', price: 2000, enable: true)
 Product.create!(id: 17, branch_id: 3, product_category_id: 8, title: '감자칩', price: 2000, enable: true)
 
+ProductPicture.create!(product_id: 1, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
+ProductPicture.create!(product_id: 1, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
+ProductPicture.create!(product_id: 1, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
+
+ProductPicture.create!(product_id: 2, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
+ProductPicture.create!(product_id: 2, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
+ProductPicture.create!(product_id: 2, picture: File.open(Rails.root.join("app", "assets", "images","ice_coffee.jpg")))
+
 Group.create!(id: 1, branch_id: 1, title: 'VIP')
 Group.create!(id: 2, branch_id: 1, title: 'Special')
 Group.create!(id: 3, branch_id: 1, title: 'Normal')
@@ -215,6 +223,48 @@ account_category = AccountCategory.find(4)
 account_category.title = 'refund point'
 account_category.save!
 
+
+product_category = ProductCategory.find(1)
+product_category.title = 'coffee'
+product_category.save!
+
+product_category = ProductCategory.find(2)
+product_category.title = 'beverage'
+product_category.save!
+
+product_category = ProductCategory.find(3)
+product_category.title = 'snack'
+product_category.save!
+
+product = Product.find(1)
+product.title = 'coffee'
+product.save!
+
+product = Product.find(2)
+product.title = 'latte'
+product.save!
+
+product = Product.find(3)
+product.title = 'milk'
+product.save!
+
+product = Product.find(4)
+product.title = 'coke'
+product.save!
+
+product = Product.find(5)
+product.title = 'cider'
+product.save!
+
+product = Product.find(6)
+product.title = 'ramen(noodle)'
+product.save!
+
+product = Product.find(7)
+product.title = 'bread'
+product.save!
+
+
 I18n.locale = :'zh-CN'
 
 payment = Payment.find(1)
@@ -300,3 +350,43 @@ role.save!
 role = Role.find(6)
 role.title = 'reader'
 role.save!
+
+product_category = ProductCategory.find(1)
+product_category.title = '咖啡'
+product_category.save!
+
+product_category = ProductCategory.find(2)
+product_category.title = '饮料'
+product_category.save!
+
+product_category = ProductCategory.find(3)
+product_category.title = '小吃'
+product_category.save!
+
+product = Product.find(1)
+product.title = '美式咖啡'
+product.save!
+
+product = Product.find(2)
+product.title = '拿铁'
+product.save!
+
+product = Product.find(3)
+product.title = '牛奶'
+product.save!
+
+product = Product.find(4)
+product.title = '可乐'
+product.save!
+
+product = Product.find(5)
+product.title = '雪碧'
+product.save!
+
+product = Product.find(6)
+product.title = '拉面'
+product.save!
+
+product = Product.find(7)
+product.title = '面包'
+product.save!
