@@ -394,3 +394,132 @@ product.save!
 product = Product.find(7)
 product.title = '面包'
 product.save!
+
+
+
+I18n.locale = :ja
+
+role = Role.find(1)
+role.title = 'super administrator'
+role.save!
+
+role = Role.find(2)
+role.title = 'administrator'
+role.save!
+
+role = Role.find(3)
+role.title = 'sub administrator'
+role.save!
+
+role = Role.find(4)
+role.title = 'operator'
+role.save!
+
+role = Role.find(5)
+role.title = 'sub operator'
+role.save!
+
+role = Role.find(6)
+role.title = 'reader'
+role.save!
+
+payment = Payment.find(1)
+payment.title = 'cash'
+payment.save!
+
+payment = Payment.find(2)
+payment.title = 'card'
+payment.save!
+
+payment = Payment.find(3)
+payment.title = 'point'
+payment.save!
+
+payment = Payment.find(4)
+payment.title = 'admin'
+payment.save!
+
+payment = Payment.find(5)
+payment.title = 'cellphone'
+payment.save!
+
+payment = Payment.find(6)
+payment.title = 'account transaction'
+payment.save!
+
+payment = Payment.find(7)
+payment.title = 'admin'
+payment.save!
+
+payment = Payment.find(8)
+payment.title = 'admin'
+payment.save!
+
+user_type = UserType.find(1)
+user_type.title = 'use members only'
+user_type.save!
+
+user_type = UserType.find(2)
+user_type.title = 'not use members / only anon'
+user_type.save!
+
+user_type = UserType.find(3)
+user_type.title = 'use members and anon'
+user_type.save!
+
+account_category = AccountCategory.find(1)
+account_category.title = 'buy'
+account_category.save!
+
+account_category = AccountCategory.find(2)
+account_category.title = 'refund'
+account_category.save!
+
+account_category = AccountCategory.find(3)
+account_category.title = 'charge_point'
+account_category.save!
+
+account_category = AccountCategory.find(4)
+account_category.title = 'refund point'
+account_category.save!
+
+
+product_category = ProductCategory.find(1)
+product_category.title = 'コーヒー'
+product_category.save!
+
+product_category = ProductCategory.find(2)
+product_category.title = '飲み物'
+product_category.save!
+
+product_category = ProductCategory.find(3)
+product_category.title = 'スナック'
+product_category.save!
+
+product = Product.find(1)
+product.title = 'コーヒー'
+product.save!
+
+product = Product.find(2)
+product.title = 'カフェーオレ'
+product.save!
+
+product = Product.find(3)
+product.title = '牛乳'
+product.save!
+
+product = Product.find(4)
+product.title = 'coke'
+product.save!
+
+product = Product.find(5)
+product.title = 'cider'
+product.save!
+
+product = Product.find(6)
+product.title = '拉麺'
+product.save!
+
+product = Product.find(7)
+product.title = 'パン'
+product.save!

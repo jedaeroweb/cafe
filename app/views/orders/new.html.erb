@@ -1,10 +1,10 @@
 <div class="row">
 <div id="order-new" class="col-12">
-  <h1 class="order-layer mt-3""><%= t(:select_product) %></h1>
      <% unless @current_branch_setting.branch_setting_user_type.user_type_id==1 %>
       <%= render 'search_user_form' %>
       <% end  %>
   <%= form_with(model: @order, local: true, :html=>{:id=>"order_form", class: 'row'}) do |form| %>
+    <h1 class="order-layer mt-3 mb-2"><%= t(:select_product) %></h1>
     <%= render 'product_categories/list' %>
     <%= render 'products/list' %>
     <aside class="col-12 col-lg-4 left-form order-layer">
