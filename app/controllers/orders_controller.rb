@@ -28,6 +28,7 @@ class OrdersController < ApplicationController
   # GET /orders/1
   # GET /orders/1.json
   def show
+    session[:locale] = I18n.default_locale
   end
 
   # GET /orders/new

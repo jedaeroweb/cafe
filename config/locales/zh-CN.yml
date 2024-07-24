@@ -1,5 +1,5 @@
 zh-CN:
-  service_name: "JW Simple Order System"
+  service_name: "正确网 简单订货系统"
   hello: "Hello world"
 
   korean: '한국어'
@@ -27,10 +27,10 @@ zh-CN:
 
   setting: '설정'
 
-  confirm : '확인'
+  confirm : '确认'
   sign : '등록'
   close : '닫기'
-  close_now : '지금 닫기'
+  close_now : '立即关闭'
   start_order : '주문시작'
   order_complete : '주문완료'
   select_again : '重新选择'

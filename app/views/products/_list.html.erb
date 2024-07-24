@@ -14,7 +14,7 @@
                   <%=image_tag product.product_pictures[0].picture.medium_thumb.url %>
                 <% end %>
                 </div>
-                <p><%= number_to_currency product.price %></p>
+                <p><%= number_to_currency product.price,{locale: I18n.default_locale} %></p>
               </div>
             </div>
             <div class="card-footer">

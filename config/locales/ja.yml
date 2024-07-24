@@ -1,5 +1,5 @@
 ja:
-  service_name: "제대로웹 간단주문 시스템"
+  service_name: "ちゃんとweb かんたん注文システム"
   hello: "Hello world"
 
   title: '제대로웹 카페'
@@ -61,7 +61,7 @@ ja:
   product : "商品"
   price : "価格"
   quantity : "数量"
-  cancel_all : "전부 취소"
+  cancel_all : "全部キャンセル"
   cancel : "キャンセル"
   cash : "현금"
   credit : "신용카드"
