@@ -4,38 +4,33 @@
     <%= render :partial => 'layouts/notice', :locals => {  :notice => notice, :alert => alert } %>
     <%= form_tag new_order_path, method: 'get' do %>
       <div class="row">
-      <article class="col-12 col-sm-6 col-lg-3">
+      <label class="col-12 col-sm-6 col-lg-3">
         <input type="hidden" value="<%=t(:start_order,locale: :ko) %>">
         <input type="hidden" value="<%=t(:select_language,locale: :ko) %>">
-        <label>
-        <%= radio_button_tag 'locale', "ko", true %>
+        <%= radio_button_tag 'locale', "ko",(session[:locale].to_s== 'ko' ? true : false) %>
           <%=t(:korean) %>
-        </label>
-      </article>
-        <article class="col-12 col-sm-6 col-lg-3">
+      </label>
+        <label class="col-12 col-sm-6 col-lg-3">
           <input type="hidden" value="<%=t(:start_order,locale: :en) %>">
           <input type="hidden" value="<%=t(:select_language,locale: :en) %>">
-          <label>
-        <%= radio_button_tag 'locale', "en", false %>
+
+        <%= radio_button_tag 'locale', "en" ,(session[:locale].to_s == 'en' ? true : false) %>
             <%=t(:english) %>
-          </label>
-      </article>
-        <article class="col-12 col-sm-6 col-lg-3">
+          </>
+      </label>
+        <label class="col-12 col-sm-6 col-lg-3">
           <input type="hidden" value="<%=t(:start_order,locale: :ja) %>">
           <input type="hidden" value="<%=t(:select_language,locale: :ja) %>">
-          <label>
-            <%= radio_button_tag 'locale', "ja", false %>
+            <%= radio_button_tag 'locale', "ja", (session[:locale].to_s == 'ja' ? true : false)  %>
             <%=t(:japanese) %>
-          </label>
-        </article>
-        <article class="col-12 col-sm-6 col-lg-3">
+
+        </label>
+        <label class="col-12 col-sm-6 col-lg-3">
           <input type="hidden" value="<%=t(:start_order,locale: :'zh-CN') %>">
           <input type="hidden" value="<%=t(:select_language,locale: :'zh-CN') %>">
-          <label>
-        <%= radio_button_tag 'locale', "zh-CN", false %>
+        <%= radio_button_tag 'locale', "zh-CN", (session[:locale].to_s == 'zh-CN' ? true : false)  %>
             <%=t(:chineses) %>
-          </label>
-      </article>
+      </label>
       </div>
       <div class="row">
     <div class="d-grid gap-2 mt-3">

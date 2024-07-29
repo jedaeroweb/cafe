@@ -540,8 +540,8 @@ var ready=function(){
     });
 
     $('input[name="locale"]').change(function(){
-        $('#order-new input[type="submit"]').val($(this).closest('article').find('input:first').val());
-        $("#order-new h1").text($(this).closest('article').find('input:eq(1)').val());
+        $('#order-new input[type="submit"]').val($(this).closest('label').find('input:first').val());
+        $("#order-new h1").text($(this).closest('label').find('input:eq(1)').val());
     });
 
     $("#anon").change(function(){
