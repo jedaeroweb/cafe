@@ -6,7 +6,7 @@ This Application is composed of [Rails](http://rubyonrails.org/)(user-pages,admi
 
 ## Server Requirements
 
-[Rails](http://rubyonrails.org/) version 6 or newer is recommended.
+[Rails](http://rubyonrails.org/) version 7 or newer is recommended.
 
 
 ## DEMO

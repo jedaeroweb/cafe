@@ -59,8 +59,8 @@
           <td class="text-right"><%= number_to_currency product.price %></td>
           <td class="text-right"><%= product.order_no %></td>
           <td class="text-right">
-            <% if product.product_picture.present? %>
-              <%= image_tag product.product_picture.picture.small_thumb.url %>
+            <% unless product.product_pictures_count.zero? %>
+              <%= image_tag product.product_pictures[0].picture.small_thumb.url %>
             <% else %>
               <%= t(:not_insert) %>
             <% end %>

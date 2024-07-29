@@ -36,7 +36,7 @@ class Admin::ProductsController < Admin::AdminController
   # GET /Products/new
   def new
     @product = Product.new
-    @product.build_product_picture
+    @product.product_pictures.build
 
     if @current_branch_setting.use_product_category
       @product_categories = ProductCategory.where({ branch_id: session[:branch_id], enable: true })

@@ -31,6 +31,7 @@ en:
   close_now : 'close now'
   start_order : 'start order'
   order_complete : 'order complete'
+  select_first : 'Please choose the prize first'
   select_again : 'select again'
   select_language : 'language selection'
   select_complete : 'selection complete'

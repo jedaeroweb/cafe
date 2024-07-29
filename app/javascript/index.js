@@ -517,7 +517,7 @@ var ready=function(){
 
     $("#select-complete").click(function(){
         if($(this).hasClass('disabled')) {
-            alert('먼저 상품을 선택해주세요');
+            alert($("#select_first_text").val());
             return false;
         }
         $('.order-layer').hide();
@@ -537,6 +537,11 @@ var ready=function(){
         $("#order_form tbody").append(no_eo_tr);
 
         make_order();
+    });
+
+    $('input[name="locale"]').change(function(){
+        $('#order-new input[type="submit"]').val($(this).closest('article').find('input:first').val());
+        $("#order-new h1").text($(this).closest('article').find('input:eq(1)').val());
     });
 
     $("#anon").change(function(){

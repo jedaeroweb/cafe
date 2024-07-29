@@ -35,6 +35,7 @@ ko:
   close_now : '지금 닫기'
   start_order : '주문 시작'
   order_complete : '주문 완료'
+  select_first : '먼저 상품을 선택해주세요'
   select_language : '언어 선택'
   select_again : '다시 선택'
   select_complete : '선택 완료'
