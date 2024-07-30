@@ -57,6 +57,7 @@ ko:
   none: '없음'
   use: '사용'
   not_use: '사용안함'
+  order_complete_description: '%{order_id}이 완료되었습니다. <span id="timer_span">10</span>초 후에 닫힙니다.'
 
   add_order : "주문추가"
   order : "주문"

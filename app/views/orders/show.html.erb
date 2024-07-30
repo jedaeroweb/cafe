@@ -3,7 +3,7 @@
     <h1 class="mt-3"><%=t(:order_complete) %></h1>
     <div class="card">
       <div class="card-body">
-        <p>주문(주문번호 <%=@order.id %>)이 완료되었습니다. <br />이 화면은 <span id="timer_span">10</span>초 후에 닫힙니다.</p>
+        <p><%=raw t(:order_complete_description, order_id: @order.id) %></p>
       </div>
     </div>
   </div>

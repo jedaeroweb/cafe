@@ -28,10 +28,10 @@ ja:
   browse: '찾기'
   setting: '설정'
 
-  confirm : '확인'
-  sign : '등록'
-  close : '닫기'
-  close_now : '지금 닫기'
+  confirm : '確認'
+  sign : '登録'
+  close : '閉じる'
+  close_now : '今閉じる'
   start_order : '注文開始'
   order_complete : '注文完了'
   select_first : 'まず、商品を選択してください'
@@ -56,6 +56,7 @@ ja:
   none: '없음'
   use: '사용'
   not_use: '사용안함'
+  order_complete_description: 'ご注文(注文番号 %{order_id})が完了しました. <br><span id="timer_span">10</span>秒後に閉まります'
 
   add_order : "주문추가"
   order : "主文"
