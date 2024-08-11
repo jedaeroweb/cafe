@@ -369,15 +369,12 @@ var ready=function(){
         $("#order_form tbody tr").each(function(){
             var price=$(this).find('.price input:first').val();
             var quantity=$(this).find('.quantity-l input:first').val();
-            var dc_rate = 0;
-
-            var last_price = Number(quantity * (price - (price * (dc_rate / 100))));
 
             total_quantity.push(quantity)
-            total_price.push(last_price);
+            total_price.push(price);
         });
 
-        var total_result_price=total_price.reduce((a, b) => a + b, 0);
+        var total_result_price=total_price.reduce((a, b) => Number(a) + Number(b), 0);
 
         $('#total-price').text(Number(total_result_price).toLocaleString( 'ko-KR',{style:"currency", currency:"KRW"}));
 
