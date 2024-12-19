@@ -1,5 +1,5 @@
 CarrierWave.configure do |config|
-  #if Rails.env.production?
+  if Rails.env.production?
     require 'dotenv/load'
     require 'fog/azurerm'
     config.storage = :fog
@@ -14,9 +14,9 @@ CarrierWave.configure do |config|
     config.fog_directory = ENV['FOG_DIRECTORY']
     #config.fog_public     = false                                   # optional, defaults to true
     config.fog_attributes = { 'Cache-Control' => 'max-age=315576000' } # optional, defaults to {}
-  #else
-  #  config.storage = :file
-  #end
+  else
+    config.storage = :file
+  end
 
   config.cache_dir = File.join(Rails.root, 'tmp', 'uploads', Rails.env)
 end

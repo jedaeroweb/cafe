@@ -1,3 +1,4 @@
+if Rails.env.production?
 session_url = "#{ENV.fetch('REDIS_SESSION_URL', 'redis://127.0.0.1:6379/1')}/session"
 secure = Rails.env.production?
 key = Rails.env.production? ? "_app_session" : "_app_session_#{Rails.env}"
@@ -12,3 +13,4 @@ Rails.application.config.session_store :redis_store,
                                        secure: secure,
                                        same_site: :lax,
                                        httponly: true
+end
