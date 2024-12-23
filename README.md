@@ -1,26 +1,24 @@
-# What is Jedaeroweb Cafe
+# README
 
-Jedaeroweb Cafe is simple order and payment management system(Like Cafe,Store)
+This README would normally document whatever steps are necessary to get the
+application up and running.
 
-This Application is composed of [Rails](http://rubyonrails.org/)(user-pages,admin-pages) + UI [Boostrap](http://getbootstrap.com)
+Things you may want to cover:
 
-## Server Requirements
+* Ruby version
 
-[Rails](http://rubyonrails.org/) version 7 or newer is recommended.
+* System dependencies
 
+* Configuration
 
-## DEMO
-[데모 페이지(Demo Page)](https://cafe.jedaeroweb.co.kr)
+* Database creation
 
+* Database initialization
 
-Go Page(Login Use Email:user@jedaeroweb.co.kr / Password:a12345 ) And Order
+* How to run the test suite
 
-Admin Page  (/admin)
+* Services (job queues, cache servers, search engines, etc.)
 
-## License
+* Deployment instructions
 
-MIT, All Free
-
-## Author
-
-[jedaeroweb](https://www.jedaeroweb.co.kr)
+* ...

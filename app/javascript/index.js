@@ -345,8 +345,9 @@ var ready=function(){
             var last_price = Number(quantity * (price - (price * (dc_rate / 100))));
 
             if(exists_tr) {
-                exists_tr.effect('highlight', 1000).find('.quantity-l input:first').val(quantity);
+                exists_tr.find('.quantity-l input:first').val(quantity);
                 exists_tr.find('.quantity').text(quantity);
+                //exists_tr.find('td')
 
                 exists_tr.find('.price input:first').val(last_price);
                 exists_tr.find('.price_t').text(last_price.toLocaleString( 'ko-KR',{style:"currency", currency:"KRW"}));
@@ -358,7 +359,7 @@ var ready=function(){
                 tr.find('.minus').click(minus_click);
 
                 $("#order_form tbody").append(tr);
-                tr.effect('highlight', 1000);
+                tr.find('td').effect('highlight',1000);
             }
         });
 
@@ -403,11 +404,11 @@ var ready=function(){
 
         $('#myModal').removeData("modal");
         var url = $(this).data('info') + '?popup=true';
-        console.log(url);
 
         $('#myModal').load(url, function () {
-            let myModal = new Modal(document.getElementById('myModal'));
-            myModal.show();
+            var myModal = document.getElementById('myModal');
+            var modal = bootstrap.Modal.getOrCreateInstance(myModal)
+            modal.show();
         });
     }).css('cursor','help');
 
@@ -602,7 +603,4 @@ var ready=function(){
 
 };
 
-$(document).ready(ready);
-document.addEventListener("DOMContentLoaded", (event) => {
-    Rails.start();
-});
+document.addEventListener("turbo:load", ready);
