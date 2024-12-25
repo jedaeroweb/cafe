@@ -20,4 +20,4 @@ MIT, All Free
 
 ## Author
 
-[jedaeroweb](https://www.jedaeroweb.co.kr)
+[Jedaeroweb](https://www.jedaeroweb.co.kr)
