@@ -1,3 +1,7 @@
+![Rails](https://img.shields.io/badge/Rails-7-red)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Template](https://img.shields.io/badge/Template-Repository-blue)
+
 # What is Jedaeroweb Cafe
 
 Jedaeroweb Cafe is simple order and payment management system(like cafe,store)
