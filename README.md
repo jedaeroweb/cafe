@@ -20,7 +20,7 @@ admin page  (/admin)
 
 ## License
 
-MIT, All Free
+MIT License – completely free to use and modify
 
 ## Author
 
