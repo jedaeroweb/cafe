@@ -17,7 +17,7 @@
         <h2><%= t(:service_name) %> <%= t(:login_title) %></h2>
 
 
-        <%= form_for(resource, :as => resource_name, :url => session_path(resource_name), :html => { :class => "form-horizontal", :id => "sl_login_form", :role => "form" }) do |f| %>
+        <%= form_for(resource, :as => resource_name, :url => session_path(resource_name), :html => { :class => "form-horizontal", :id => "sl_login_form", :role => "form" }, data: { turbo: false }) do |f| %>
           <div class="card mb-3">
             <div class="card-body p-3">
 
