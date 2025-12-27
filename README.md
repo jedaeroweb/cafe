@@ -46,8 +46,8 @@ This project aims to be:
 ## 🚀 Getting Started
 
 ```bash
-git clone https://github.com/jedaeroweb/community.git
-cd community
+git clone https://github.com/jedaeroweb/cafe.git
+cd cafe
 bundle install
 rails db:create db:migrate db:seed
 rails server
@@ -71,7 +71,7 @@ http://localhost:3000
 ## 📄 License
 
 MIT License – completely free to use and modify
-> 개인·상업적 사용 모두 자유롭습니다.
+> 개인·상업적 사용 모두 완전히 자유롭습니다.
 
 ## ✍️ Author
 
