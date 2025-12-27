@@ -47,7 +47,7 @@ class Admin::BranchesController < Admin::AdminController
         @branch.build_branch_picture
 
         format.html { render action: 'new' }
-        format.json { render json: @branch.errors, status: :unprocessable_entity }
+        format.json { render json: @branch.errors, status: :unprocessable_content }
       end
     end
   end
@@ -63,7 +63,7 @@ class Admin::BranchesController < Admin::AdminController
         format.json { render :show, status: :ok, location: @point }
       else
         format.html { render :edit }
-        format.json { render json: @branch.errors, status: :unprocessable_entity }
+        format.json { render json: @branch.errors, status: :unprocessable_content }
       end
     end
   end

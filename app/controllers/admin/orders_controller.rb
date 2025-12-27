@@ -121,7 +121,7 @@ class Admin::OrdersController < Admin::AdminController
           format.json { render :show, status: :created, location: @order }
         else
           format.html { render :new }
-          format.json { render json: @order.errors, status: :unprocessable_entity }
+          format.json { render json: @order.errors, status: :unprocessable_content }
         end
       end
 
@@ -140,7 +140,7 @@ class Admin::OrdersController < Admin::AdminController
         format.json { render :show, status: :ok, location: @order }
       else
         format.html { render :edit }
-        format.json { render json: @order.errors, status: :unprocessable_entity }
+        format.json { render json: @order.errors, status: :unprocessable_content }
       end
     end
   end

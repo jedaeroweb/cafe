@@ -52,7 +52,7 @@ class Admin::PointsController < Admin::AdminController
         @point.build_user_point
 
         format.html { render :new }
-        format.json { render json: @point.errors, status: :unprocessable_entity }
+        format.json { render json: @point.errors, status: :unprocessable_content }
       end
     end
   end
@@ -66,7 +66,7 @@ class Admin::PointsController < Admin::AdminController
         format.json { render :show, status: :ok, location: @point }
       else
         format.html { render :edit }
-        format.json { render json: @point.errors, status: :unprocessable_entity }
+        format.json { render json: @point.errors, status: :unprocessable_content }
       end
     end
   end

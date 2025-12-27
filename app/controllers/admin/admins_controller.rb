@@ -39,7 +39,7 @@ class Admin::AdminsController < Admin::AdminController
         format.json { render :show, status: :created, location: @admin }
       else
         format.html { render :new }
-        format.json { render json: @admin.errors, status: :unprocessable_entity }
+        format.json { render json: @admin.errors, status: :unprocessable_content }
       end
     end
   end
@@ -53,7 +53,7 @@ class Admin::AdminsController < Admin::AdminController
         format.json { render :show, status: :ok, location: @admin }
       else
         format.html { render :edit }
-        format.json { render json: @admin.errors, status: :unprocessable_entity }
+        format.json { render json: @admin.errors, status: :unprocessable_content }
       end
     end
   end

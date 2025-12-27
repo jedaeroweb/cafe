@@ -45,7 +45,7 @@ class Admin::AccountsController < Admin::AdminController
         format.json { render :show, status: :created, location: @account }
       else
         format.html { render :new }
-        format.json { render json: @account.errors, status: :unprocessable_entity }
+        format.json { render json: @account.errors, status: :unprocessable_content }
       end
     end
   end
@@ -59,7 +59,7 @@ class Admin::AccountsController < Admin::AdminController
         format.json { render :show, status: :ok, location: @account }
       else
         format.html { render :edit }
-        format.json { render json: @account.errors, status: :unprocessable_entity }
+        format.json { render json: @account.errors, status: :unprocessable_content }
       end
     end
   end

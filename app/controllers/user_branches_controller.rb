@@ -1,6 +1,6 @@
 class UserBranchesController < ApplicationController
   load_and_authorize_resource
-  before_action :set_user_branch, only: [:show, :edit, :create, :update, :destroy]
+  before_action :set_user_branch, only: [:edit, :create, :update]
 
   # GET /Users/new
   def new
@@ -19,7 +19,7 @@ class UserBranchesController < ApplicationController
         format.json { render :show, status: :ok, location: @user }
       else
         format.html { render :edit }
-        format.json { render json: @user.errors, status: :unprocessable_entity }
+        format.json { render json: @user.errors, status: :unprocessable_content }
       end
     end
   end
@@ -33,7 +33,7 @@ class UserBranchesController < ApplicationController
         format.json { render :show, status: :ok, location: @user }
       else
         format.html { render :edit }
-        format.json { render json: @user.errors, status: :unprocessable_entity }
+        format.json { render json: @user.errors, status: :unprocessable_content }
       end
     end
   end

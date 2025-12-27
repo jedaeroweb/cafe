@@ -36,7 +36,7 @@ class Admin::GroupsController < Admin::AdminController
         format.json { render :show, status: :created, location: @group }
       else
         format.html { render action: 'new' }
-        format.json { render json: @group.errors, status: :unprocessable_entity }
+        format.json { render json: @group.errors, status: :unprocessable_content }
       end
     end
   end
@@ -50,7 +50,7 @@ class Admin::GroupsController < Admin::AdminController
         format.json { render :show, status: :ok, location: @group }
       else
         format.html { render :edit }
-        format.json { render json: @group.errors, status: :unprocessable_entity }
+        format.json { render json: @group.errors, status: :unprocessable_content }
       end
     end
   end
