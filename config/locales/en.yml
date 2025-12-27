@@ -6,6 +6,11 @@ en:
   chineses: '汉语'
   english: 'english'
 
+  theme: 'theme'
+  light: 'light'
+  dark: 'dark'
+  auto: 'auto'
+
   search : "search"
   submit : "submit"
   choose_file: '파일선택'

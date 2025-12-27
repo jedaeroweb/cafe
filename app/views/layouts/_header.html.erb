@@ -9,17 +9,56 @@
           <% end %>
         </div>
       <% end %>
-      <div id="mobile-menu-back">&nbsp;</div>
-      <div id="mobile-menu" class="d-block d-lg-none">
-        <%=link_to '' do %>
-          <span class="material-icons">menu</span>
-        <% end %>
-      </div>
 
-      <div id="top-user-menu">
-        <%=link_to '',id: 'mobile-menu-close',class: 'd-block d-lg-none' do %>
-          <span class="material-icons">cancel</span>
+      <div id="language-selector" class="dropdown d-flex align-items-center">
+        <%= link_to '#', { class: 'dropdown-toggle d-flex align-items-center gap-2',
+                           role: "button",
+                           'data-bs-toggle': "dropdown",
+                           'aria-expanded': "false" } do %>
+          <span><%=t(:language) %></span>
+          <span class="material-icons globe-icon">language</span>
+          <span class="lang-text">
+            <% case I18n.locale.to_s %>
+            <% when 'ko' %>
+              🇰🇷 한국어
+            <% when 'en' %>
+              🇺🇸 English
+            <% when 'ja' %>
+              🇯🇵 日本語
+            <% when 'zh-CN' %>
+              🇨🇳 简体中文
+            <% else %>
+              🇰🇷 한국어
+            <% end %>
+          </span>
         <% end %>
+
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" data-bs-language-value="ko" type="button">
+              <span class="icon">🇰🇷</span>
+              한국어
+            </button>
+          </li>
+          <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" data-bs-language-value="en" type="button">
+              <span class="icon">🇺🇸</span>
+              English
+            </button>
+          </li>
+          <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" data-bs-language-value="ja" type="button">
+              <span class="icon">🇯🇵</span>
+              日本語
+            </button>
+          </li>
+          <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" data-bs-language-value="zh-CN" type="button">
+              <span class="icon">🇨🇳</span>
+              简体中文
+            </button>
+          </li>
+        </ul>
       </div>
     </div>
   </div>

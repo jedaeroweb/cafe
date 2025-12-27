@@ -3,7 +3,7 @@ source "https://rubygems.org"
 #ruby "3.3.4"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 7.1.5", ">= 7.1.5.1"
+gem "rails", "~> 7.1.5"
 
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
 gem "sprockets-rails"
@@ -21,7 +21,7 @@ gem "importmap-rails"
 gem "turbo-rails"
 
 # Hotwire's modest JavaScript framework [https://stimulus.hotwired.dev]
-# gem "stimulus-rails"
+gem "stimulus-rails"
 
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
@@ -48,15 +48,12 @@ gem 'rmagick'
 gem 'sitemap_generator'
 gem 'meta-tags'
 gem 'gretel'
-gem 'nokogiri', '>= 1.14.3'
+gem 'nokogiri', '>= 1.18.9'
 gem 'impressionist'
 gem 'acts-as-taggable-on'
 gem 'acts_as_commentable_with_threading'
 gem 'acts_as_votable'
 gem 'globalize'
-
-gem 'sassc-rails'
-gem 'bootstrap', '~> 5.3'
 
 gem 'omniauth'
 gem 'oauth2'
@@ -68,6 +65,9 @@ gem 'omniauth-google-oauth2'
 gem 'omniauth-apple'
 gem 'omniauth-twitter'
 gem 'omniauth-github'
+
+gem 'sassc-rails'
+gem 'bootstrap', '~> 5.3'
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 # gem "image_processing", "~> 1.2"

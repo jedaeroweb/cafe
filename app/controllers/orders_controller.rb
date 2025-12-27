@@ -99,19 +99,16 @@ class OrdersController < ApplicationController
   # POST /orders
   # POST /orders.json
   def create
-    result = false
-
     begin
 
       @order = Order.new(order_params)
-      @order.save!
+      result=@order.save!
 
       OrderUser.create!(:order_id => @order.id, :user_id => current_user.id)
 
       ca = calculate_account(@order.order_products, params[:payment_method])
       OrderPayment.create!(:order_id => @order.id, :payment_id => params[:payment_method])
       @order.update(price: ca[:total_price], payment: ca[:total_price])
-      result = true
 
       respond_to do |format|
         if result
