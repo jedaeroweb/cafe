@@ -1,4 +1,4 @@
-<div class="row">
+<div id="complete-order" class="row">
   <div  class="col-12">
     <h1 class="mt-3"><%=t(:order_complete) %></h1>
     <div class="card">
@@ -11,19 +11,25 @@
 <div class="row">
   <div class="col-12">
     <div class="d-grid gap-2 mt-3">
-      <%=link_to t(:close_now),root_path,:class=>"btn btn-secondary btn-lg" %>
+      <%= link_to t(:close_now),
+                  root_path(
+                    locale: (params[:locale] if params[:locale].to_s != I18n.default_locale.to_s)
+                  ),
+                  class: "btn btn-secondary btn-lg" %>
+
     </div>
   </div>
 </div>
 <script>
-
+    var redirectUrl = "<%= root_path(
+    locale: (params[:locale] if params[:locale].to_s != I18n.default_locale.to_s)
+  ) %>";
     var seconds_left = 10;
     var interval = setInterval(function() {
         document.getElementById('timer_span').innerHTML = --seconds_left;
 
-        if (seconds_left <= 0)
-        {
-            location.href = '/';
+        if (seconds_left <= 0) {
+            location.href = redirectUrl;
             clearInterval(interval);
         }
     }, 1000);

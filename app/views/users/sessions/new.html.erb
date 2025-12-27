@@ -24,13 +24,20 @@
               <div class="form-group row">
                 <label for="sl_email" class="col-sm-2 col-form-label text-end"><%= t(:email) %></label>
                 <div class="col-sm-10">
-                  <%= f.email_field :email, :autofocus => true, :class => "form-control form-control-lg", :required => "required", :placeholder => t(:login_p_email) %>
+                  <%# .env에 DEFAULT_EMAIL / DEFAULT_PASSWORD가 있으면 기본값으로 채우기 %>
+                  <% default_email = ENV['DEFAULT_EMAIL'].presence %>
+                  <% default_password = ENV['DEFAULT_PASSWORD'].presence %>
+
+                  <%# 아래의 입력 필드들에서 value만 기본값으로 주입합니다. %>
+                  <%# email %>
+                  <%= f.email_field :email, value: (f.object.email.presence || default_email), autocomplete: "email" %>
                 </div>
               </div>
               <div class="form-group row">
                 <label for="sl_password" class="col-sm-2 col-form-label text-end"><%= t(:password) %></label>
                 <div class="col-sm-10">
-                  <%= f.password_field :password, :class => "form-control form-control-lg", :required => "required", :placeholder => t(:login_p_password) %>
+                  <%# password %>
+                  <%= f.password_field :password, value: default_password, autocomplete: "new-password" %>
                 </div>
               </div>
             </div>

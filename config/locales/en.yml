@@ -2,6 +2,7 @@ en:
   service_name: "JW Simple Order System"
   hello: "Hello world"
 
+  language: 'language'
   korean: '한국어'
   chineses: '汉语'
   english: 'english'

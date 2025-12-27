@@ -2,6 +2,7 @@ zh-CN:
   service_name: "正确网 简单订货系统"
   hello: "Hello world"
 
+  language: '语言'
   korean: '한국어'
   chineses: '汉语'
   english: 'english'

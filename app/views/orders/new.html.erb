@@ -5,6 +5,7 @@
       <%= render 'search_user_form' %>
       <% end  %>
   <%= form_with(model: @order, local: true, :html=>{:id=>"order_form", class: 'row'}) do |form| %>
+    <%= hidden_field_tag :locale, params[:locale] if params[:locale].present? %>
     <h1 class="order-layer mt-3 mb-2"><%= t(:select_product) %></h1>
     <input type="hidden" id="select_first_text" value="<%=t(:select_first) %>">
     <%= render 'product_categories/list' %>

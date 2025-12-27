@@ -2,26 +2,62 @@
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Template](https://img.shields.io/badge/Template-Repository-blue)
 
-# What is Jedaeroweb Cafe
+## Overview
 
-Jedaeroweb Cafe is simple order and payment management system(like cafe,store)
+This repository contains a simple order system for small stores,
+implemented using Ruby on Rails.
 
-this application is composed of [Rails](http://rubyonrails.org/)(user-pages,admin-pages) + UI [Boostrap](http://getbootstrap.com)
+It is intended for developers who want a minimal, real-world Rails app
+that can be used as-is or adapted for specific shop environments.
 
-## Server Requirements
+## Why this project?
 
-[Rails](http://rubyonrails.org/) version 7 or newer is recommended.
+Most existing order or POS systems are either:
+
+Over-engineered
+
+Expensive
+
+Difficult to customize
+
+This project aims to be:
+
+Small and understandable
+
+Easy to deploy and operate
+
+Friendly to modification and extension
 
 ## Demo
 [demo page](https://cafe.jedaeroweb.co.kr)
 
-go page(login use email:user@jedaeroweb.co.kr / password:a12345 ) and order
-admin page  (/admin)
+---
 
-## License
+## 🚀 Getting Started
+
+```bash
+git clone https://github.com/jedaeroweb/community.git
+cd community
+bundle install
+rails db:create db:migrate db:seed
+rails server
+```
+
+then visit
+
+http://localhost:3000
+
+---
+
+## 📌 Server Requirements
+
+[Rails](http://rubyonrails.org/) version 7 or newer is recommended.
+
+## 📄 License
 
 MIT License – completely free to use and modify
 
-## Author
+## ✍️ Author
 
-[Jedaeroweb](https://www.jedaeroweb.co.kr)
+[Jeedaeroweb](https://www.jedaeroweb.co.kr)
+

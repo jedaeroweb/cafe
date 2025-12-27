@@ -112,7 +112,7 @@ class OrdersController < ApplicationController
 
       respond_to do |format|
         if result
-          format.html { redirect_to order_path(@order) }
+          format.html { redirect_to order_path(@order, locale: params[:locale].presence) }
           format.json { render :show, status: :created, location: @order }
         else
           format.html { render :new }
