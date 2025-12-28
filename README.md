@@ -15,7 +15,7 @@ that can be used as-is or adapted for specific shop environments.
 
 ---
 
-## Why this project?
+## 📄 Why this project?
 
 Most existing order or POS systems are either:
 
@@ -40,6 +40,15 @@ This project aims to be:
 [Demo page](https://cafe.jedaeroweb.co.kr)
 
 > 실제 동작 화면을 확인할 수 있는 데모 페이지입니다.
+
+---
+
+## 🛠 Tech Stack
+
+- Ruby on Rails
+- MySQL / PostgreSQL / SQLite (any database supported by Rails)
+- HTML / CSS
+- JavaScript
 
 ---
 
@@ -75,6 +84,6 @@ MIT License – completely free to use and modify
 
 ## ✍️ Author
 
-[Jeedaeroweb](https://www.jedaeroweb.co.kr)
+[Jedaeroweb](https://www.jedaeroweb.co.kr)
 > 작성자 = 제대로웹
 
