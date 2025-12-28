@@ -1,5 +1,5 @@
 
-## Overview
+## 🔭 Overview
 
 This repository contains a simple order system for small stores,
 implemented using Ruby on Rails.
@@ -35,7 +35,7 @@ This project aims to be:
 
 ---
 
-## Demo
+## 👀 Demo
 
 [Demo page](https://cafe.jedaeroweb.co.kr)
 
