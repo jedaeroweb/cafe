@@ -4,6 +4,7 @@ source "https://rubygems.org"
 gem "rails", "~> 7.1.5"
 
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
+gem "sprockets-rails"
 gem "cssbundling-rails"
 
 # Use sqlite3 as the database for Active Record
@@ -37,7 +38,6 @@ gem "connection_pool", "~> 2.4"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
 # Reduces boot times through caching; required in config/boot.rb
-gem "propshaft"
 gem "bootsnap", require: false
 gem 'devise'
 gem 'cancancan'

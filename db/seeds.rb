@@ -87,8 +87,8 @@ Admin.create!(id: 3, branch_id: 1, name: 'FC',role_admin_attributes: { role_id: 
 #RoleAdmin.create!(role_id: 4,admin_id: 5)
 
 UserAdmin.create!(user_id: 1, admin_id: 1)
-UserAdmin.create!(user_id: 5, admin_id: 2)
-UserAdmin.create!(user_id: 9, admin_id: 3)
+#UserAdmin.create!(user_id: 5, admin_id: 2)
+#UserAdmin.create!(user_id: 9, admin_id: 3)
 
 AccountCategory.create!(id: 1, title: '구입', enable: true)
 AccountCategory.create!(id: 2, title: '수정', enable: true)
@@ -155,17 +155,17 @@ role = Role.find(3)
 role.title = 'sub administrator'
 role.save!
 
-role = Role.find(4)
-role.title = 'operator'
-role.save!
+#role = Role.find(4)
+#role.title = 'operator'
+#role.save!
 
-role = Role.find(5)
-role.title = 'sub operator'
-role.save!
+#role = Role.find(5)
+#role.title = 'sub operator'
+#role.save!
 
-role = Role.find(6)
-role.title = 'reader'
-role.save!
+#role = Role.find(6)
+#role.title = 'reader'
+#role.save!
 
 payment = Payment.find(1)
 payment.title = 'cash'
